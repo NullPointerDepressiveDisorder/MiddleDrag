@@ -47,7 +47,7 @@ jobs:
           SHA=$(shasum -a 256 MiddleDrag.dmg | awk '{print $1}')
           
           # Clone tap repo and update
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/yourusername/homebrew-tap.git
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/nullpointerdepressivedisorder/homebrew-tap.git
           cd homebrew-tap
           
           sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/middledrag.rb
