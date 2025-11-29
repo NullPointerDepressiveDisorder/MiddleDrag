@@ -47,28 +47,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           name: MiddleDrag v${{ steps.version.outputs.VERSION }}
-          body: |
-            ## MiddleDrag v${{ steps.version.outputs.VERSION }}
-            
-            ### Installation
-            
-            **Download:** Download `MiddleDrag-${{ steps.version.outputs.VERSION }}.zip` below
-            
-            **Homebrew:**
-```bash
-            brew tap YOUR_USERNAME/tap
-            brew install --cask middledrag
-```
-            
-            ### SHA256
-```
-            ${{ steps.sha.outputs.SHA256 }}
-```
-            
-            ### Requirements
-            - macOS 14.0 (Sonoma) or later
-            - Accessibility permissions
-          files: |
-            MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
+          body: "## MiddleDrag v${{ steps.version.outputs.VERSION }}\n\n### SHA256\n```\n${{ steps.sha.outputs.SHA256 }}\n```\n\n### Requirements\n- macOS 14.0 or later\n- Accessibility permissions"
+          files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
