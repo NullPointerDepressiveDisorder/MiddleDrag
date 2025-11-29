@@ -4,153 +4,157 @@ import CoreGraphics
 /// Manages gesture recognition from touch input
 class GestureRecognizer {
     
-    // Configuration
+    // MARK: - Properties
+    
+    /// Configuration for gesture detection
     var configuration = GestureConfiguration()
     
-    // State management
+    /// Current gesture state
     private(set) var state: GestureState = .idle
-    private var trackedFingers: [Int32: TrackedFinger] = [:]
     
-    // Timing and position tracking
+    /// Delegate for gesture events
+    weak var delegate: GestureRecognizerDelegate?
+    
+    // Position tracking
+    private var lastFingerPositions: [MTPoint] = []
     private var gestureStartTime: Double = 0
     private var gestureStartPosition: MTPoint?
-    private var lastGesturePosition: MTPoint?  // Track last position for frame-to-frame delta
+    private var lastCentroid: MTPoint?
+    private var frameCount: Int = 0
     
-    // Delegate for gesture events
-    weak var delegate: GestureRecognizerDelegate?
+    // Stability tracking - prevents false gesture ends during brief state transitions
+    private var stableFrameCount: Int = 0
     
     // MARK: - Public Interface
     
-    /// Process new touch data
+    /// Process new touch data from the multitouch device
+    /// - Parameters:
+    ///   - touches: Raw pointer to touch data array
+    ///   - count: Number of touches in the array
+    ///   - timestamp: Timestamp of the touch frame
     func processTouches(_ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double) {
         let touchArray = touches.bindMemory(to: MTTouch.self, capacity: count)
-        // Update tracked fingers
-        updateTrackedFingers(touches: touchArray, count: count, timestamp: timestamp)
         
-        // Analyze gesture based on finger count
-        let activeFingers = trackedFingers.values.filter { $0.isActive }
-        let fingerCount = activeFingers.count
+        // Collect only valid touching fingers (state 3 = touching down, state 4 = active)
+        // Skip state 5 (lifting), 6 (lingering), 7 (gone)
+        var validFingers: [MTPoint] = []
         
-        if shouldProcessGesture(fingerCount: fingerCount) {
-            handleMultiFingerGesture(fingers: Array(activeFingers), timestamp: timestamp)
-        } else if state != .idle {
-            handleGestureEnd(timestamp: timestamp)
+        for i in 0..<count {
+            let touch = touchArray[i]
+            if touch.state == 3 || touch.state == 4 {
+                validFingers.append(touch.normalizedVector.position)
+            }
         }
+        
+        let fingerCount = validFingers.count
+        
+        if fingerCount >= 3 {
+            handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
+        } else if state != .idle {
+            // Only end gesture if we've been below 3 fingers for multiple frames
+            // This prevents ending during brief state transitions
+            stableFrameCount += 1
+            if stableFrameCount >= 2 {
+                handleGestureEnd(timestamp: timestamp)
+            }
+        }
+        
+        frameCount += 1
     }
     
-    /// Reset gesture recognition
+    /// Reset gesture recognition state
     func reset() {
         state = .idle
-        trackedFingers.removeAll()
+        lastFingerPositions = []
         gestureStartPosition = nil
-        lastGesturePosition = nil
+        lastCentroid = nil
         gestureStartTime = 0
+        frameCount = 0
+        stableFrameCount = 0
     }
     
     // MARK: - Private Methods
     
-    private func shouldProcessGesture(fingerCount: Int) -> Bool {
-        if configuration.requiresExactlyThreeFingers {
-            return fingerCount == 3
-        } else {
-            return fingerCount >= 3
-        }
-    }
-    
-    private func updateTrackedFingers(touches: UnsafeMutablePointer<MTTouch>, count: Int, timestamp: Double) {
-        var currentFingerIDs = Set<Int32>()
+    private func handleThreeFingerGesture(fingers: [MTPoint], timestamp: Double) {
+        stableFrameCount = 0  // Reset since we have 3 fingers
         
-        for i in 0..<count {
-            let touch = touches[i]
-            currentFingerIDs.insert(touch.fingerID)
-            
-            // Update or add tracked finger
-            trackedFingers[touch.fingerID] = TrackedFinger(
-                id: touch.fingerID,
-                position: touch.normalizedVector.position,
-                velocity: touch.normalizedVector.velocity,
-                pressure: touch.zTotal,
-                timestamp: timestamp,
-                state: touch.state
-            )
-        }
+        let centroid = calculateCentroid(fingers: fingers)
         
-        // Remove fingers that are no longer present
-        trackedFingers = trackedFingers.filter { currentFingerIDs.contains($0.key) }
-    }
-    
-    private func handleMultiFingerGesture(fingers: [TrackedFinger], timestamp: Double) {
-        let gestureData = calculateGestureData(from: fingers)
+        // Check for large centroid jumps (finger added/removed causing position shift)
+        if let last = lastCentroid {
+            let jump = centroid.distance(to: last)
+            if jump > 0.03 {
+                // Large jump detected - reset reference point
+                lastCentroid = centroid
+                lastFingerPositions = fingers
+                return
+            }
+        }
         
         switch state {
         case .idle:
-            // Starting a new gesture
-            startGesture(at: gestureData.centroid, timestamp: timestamp)
+            // Start new gesture
+            state = .possibleTap
+            gestureStartTime = timestamp
+            gestureStartPosition = centroid
+            lastCentroid = centroid
+            lastFingerPositions = fingers
+            delegate?.gestureRecognizerDidStart(self, at: centroid)
             
         case .possibleTap:
-            // Check if we should transition to dragging
-            checkTapTransition(
-                currentPosition: gestureData.centroid,
-                timestamp: timestamp
-            )
+            // Check if we should transition to drag
+            guard let startPos = gestureStartPosition else { return }
+            let movement = startPos.distance(to: centroid)
+            let elapsed = timestamp - gestureStartTime
             
-        case .dragging:
-            // Continue dragging - only process if we have a previous position
-            if lastGesturePosition != nil {
-                continueGesture(with: gestureData)
+            if movement > configuration.moveThreshold || elapsed > configuration.tapThreshold {
+                state = .dragging
+                lastCentroid = centroid
+                delegate?.gestureRecognizerDidBeginDragging(self)
             } else {
-                // First drag update - initialize last position
-                lastGesturePosition = gestureData.centroid
+                lastCentroid = centroid
             }
             
+        case .dragging:
+            // Calculate delta from last frame
+            if let last = lastCentroid {
+                let deltaX = centroid.x - last.x
+                let deltaY = centroid.y - last.y
+                
+                // Only process small deltas (real movement, not jumps)
+                if abs(deltaX) < 0.03 && abs(deltaY) < 0.03 {
+                    if abs(deltaX) > 0.0001 || abs(deltaY) > 0.0001 {
+                        let gestureData = GestureData(
+                            centroid: centroid,
+                            velocity: MTPoint(x: 0, y: 0),
+                            pressure: 0,
+                            fingerCount: fingers.count,
+                            startPosition: gestureStartPosition,
+                            lastPosition: last
+                        )
+                        delegate?.gestureRecognizerDidUpdateDragging(self, with: gestureData)
+                    }
+                }
+            }
+            lastCentroid = centroid
+            
         case .waitingForRelease:
-            // Wait for all fingers to lift
             break
         }
-    }
-    
-    private func startGesture(at position: MTPoint, timestamp: Double) {
-        state = .possibleTap
-        gestureStartTime = timestamp
-        gestureStartPosition = position
-        lastGesturePosition = position  // Initialize last position
         
-        delegate?.gestureRecognizerDidStart(self, at: position)
-    }
-    
-    private func checkTapTransition(currentPosition: MTPoint, timestamp: Double) {
-        guard let startPos = gestureStartPosition else { return }
-        
-        let timeSinceStart = timestamp - gestureStartTime
-        let movement = startPos.distance(to: currentPosition)
-        
-        if movement > configuration.moveThreshold || timeSinceStart > configuration.tapThreshold {
-            // Transition to drag
-            state = .dragging
-            // Initialize last position for drag tracking
-            lastGesturePosition = currentPosition
-            delegate?.gestureRecognizerDidBeginDragging(self)
-        }
-    }
-    
-    private func continueGesture(with data: GestureData) {
-        // Update last position for next frame's delta calculation
-        lastGesturePosition = data.centroid
-        delegate?.gestureRecognizerDidUpdateDragging(self, with: data)
+        lastFingerPositions = fingers
     }
     
     private func handleGestureEnd(timestamp: Double) {
-        let timeSinceStart = timestamp - gestureStartTime
+        let elapsed = timestamp - gestureStartTime
         
         switch state {
         case .possibleTap:
-            if timeSinceStart < configuration.tapThreshold {
+            if elapsed < configuration.tapThreshold {
                 delegate?.gestureRecognizerDidTap(self)
             }
-            
         case .dragging:
             delegate?.gestureRecognizerDidEndDragging(self)
-            
         default:
             break
         }
@@ -158,74 +162,55 @@ class GestureRecognizer {
         reset()
     }
     
-    private func calculateGestureData(from fingers: [TrackedFinger]) -> GestureData {
-        let centroid = calculateCentroid(fingers: fingers)
-        let averagePressure = fingers.reduce(0) { $0 + $1.pressure } / Float(fingers.count)
-        let averageVelocity = calculateAverageVelocity(fingers: fingers)
-        
-        return GestureData(
-            centroid: centroid,
-            velocity: averageVelocity,
-            pressure: averagePressure,
-            fingerCount: fingers.count,
-            startPosition: gestureStartPosition,
-            lastPosition: lastGesturePosition
-        )
-    }
-    
-    private func calculateCentroid(fingers: [TrackedFinger]) -> MTPoint {
-        let sumX = fingers.reduce(0) { $0 + $1.position.x }
-        let sumY = fingers.reduce(0) { $0 + $1.position.y }
+    private func calculateCentroid(fingers: [MTPoint]) -> MTPoint {
+        let sumX = fingers.reduce(0) { $0 + $1.x }
+        let sumY = fingers.reduce(0) { $0 + $1.y }
         return MTPoint(x: sumX / Float(fingers.count), y: sumY / Float(fingers.count))
-    }
-    
-    private func calculateAverageVelocity(fingers: [TrackedFinger]) -> MTPoint {
-        let sumVX = fingers.reduce(0) { $0 + $1.velocity.x }
-        let sumVY = fingers.reduce(0) { $0 + $1.velocity.y }
-        return MTPoint(x: sumVX / Float(fingers.count), y: sumVY / Float(fingers.count))
     }
 }
 
 // MARK: - Gesture Data
 
+/// Data representing the current state of a gesture
 struct GestureData {
     let centroid: MTPoint
     let velocity: MTPoint
     let pressure: Float
     let fingerCount: Int
     let startPosition: MTPoint?
-    let lastPosition: MTPoint?
+    let lastPosition: MTPoint
     
-    /// Calculate frame-to-frame delta movement
+    /// Calculate frame-to-frame delta with sensitivity applied
     func frameDelta(from configuration: GestureConfiguration) -> (x: CGFloat, y: CGFloat) {
-        guard let last = lastPosition else { return (0, 0) }
+        let deltaX = CGFloat(centroid.x - lastPosition.x)
+        let deltaY = CGFloat(centroid.y - lastPosition.y)
         
-        // Calculate movement since last frame
-        let deltaX = CGFloat(centroid.x - last.x)
-        let deltaY = CGFloat(centroid.y - last.y)
+        // Reject large deltas (likely jumps from finger changes)
+        if abs(deltaX) > 0.03 || abs(deltaY) > 0.03 {
+            return (0, 0)
+        }
+        
         let sensitivity = CGFloat(configuration.effectiveSensitivity(for: velocity))
-        
-        return (deltaX * sensitivity, deltaY * sensitivity)
-    }
-    
-    /// Calculate total delta from start (for tap detection)
-    func totalDelta(from configuration: GestureConfiguration) -> (x: CGFloat, y: CGFloat) {
-        guard let start = startPosition else { return (0, 0) }
-        
-        let deltaX = CGFloat(centroid.x - start.x)
-        let deltaY = CGFloat(centroid.y - start.y)
-        let sensitivity = CGFloat(configuration.effectiveSensitivity(for: velocity))
-        
         return (deltaX * sensitivity, deltaY * sensitivity)
     }
 }
 
 // MARK: - Delegate Protocol
 
+/// Protocol for receiving gesture recognition events
 protocol GestureRecognizerDelegate: AnyObject {
+    /// Called when a gesture starts (3 fingers detected)
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint)
+    
+    /// Called when a tap gesture is recognized
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer)
+    
+    /// Called when dragging begins
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer)
+    
+    /// Called during drag with movement data
     func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
+    
+    /// Called when dragging ends
     func gestureRecognizerDidEndDragging(_ recognizer: GestureRecognizer)
 }

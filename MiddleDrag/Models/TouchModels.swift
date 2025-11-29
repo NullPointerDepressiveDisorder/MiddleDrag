@@ -20,40 +20,52 @@ struct MTPoint {
     }
 }
 
-/// Represents a vector with position and velocity
+/// Represents a vector with position and velocity components
 struct MTVector {
     var position: MTPoint
     var velocity: MTPoint
 }
 
-/// Raw touch data from MultitouchSupport framework
+/// Raw touch data structure from MultitouchSupport framework
+/// This structure must match the memory layout expected by the framework
 struct MTTouch {
     var frame: Int32
     var timestamp: Double
     var pathIndex: Int32
-    var state: UInt32  // 3 = touching down, 4 = active, 5 = lifting
+    var state: UInt32           // Touch state (see TouchState enum)
     var fingerID: Int32
     var handID: Int32
-    var normalizedVector: MTVector
-    var zTotal: Float  // Pressure/size
+    var normalizedVector: MTVector  // Position/velocity in 0-1 normalized coordinates
+    var zTotal: Float           // Pressure/contact size
     var field9: Int32
     var angle: Float
     var majorAxis: Float
     var minorAxis: Float
-    var absoluteVector: MTVector  // Absolute screen coordinates
+    var absoluteVector: MTVector    // Absolute screen coordinates
     var field14: Int32
     var field15: Int32
     var zDensity: Float
 }
 
-/// Touch state enumeration
+/// Touch state values from MultitouchSupport framework
 enum TouchState: UInt32 {
-    case touchingDown = 3
-    case active = 4
-    case lifting = 5
+    case notTracking = 0
+    case starting = 1
+    case hovering = 2
+    case touching = 3      // Finger just made contact
+    case active = 4        // Finger is actively touching
+    case lifting = 5       // Finger is lifting off
+    case lingering = 6     // Brief state after lift
+    case outOfRange = 7
     
-    var isActive: Bool {
-        return self == .active
+    /// Whether this state represents a finger physically on the trackpad
+    var isTouching: Bool {
+        return self == .touching || self == .active
+    }
+    
+    /// Whether this finger should be included in gesture calculations
+    var shouldTrack: Bool {
+        return self == .touching || self == .active
     }
 }
 
@@ -70,7 +82,8 @@ struct TrackedFinger {
         return TouchState(rawValue: state)
     }
     
+    /// Whether this finger should be included in gesture calculations
     var isActive: Bool {
-        return touchState?.isActive ?? false
+        return touchState?.shouldTrack ?? false
     }
 }
