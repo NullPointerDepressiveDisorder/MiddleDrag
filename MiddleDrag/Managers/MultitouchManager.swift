@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import AppKit
 
 /// Main manager that coordinates multitouch monitoring and gesture recognition
 class MultitouchManager {
@@ -120,11 +121,14 @@ class MultitouchManager {
     }
     
     private func setupEventTap() {
-        // Create event tap to optionally block system gestures
-        let eventMask = (1 << CGEventType.gesture.rawValue) |
-                       (1 << CGEventType.magnify.rawValue) |
-                       (1 << CGEventType.swipe.rawValue) |
-                       (1 << CGEventType.rotate.rawValue)
+        // Optional: Event tap for blocking system gestures
+        // Since MultitouchSupport receives data before system processing,
+        // this is typically not needed. Keeping as placeholder for future use.
+        
+        /* Commented out - not essential for operation
+        let eventMask = (1 << CGEventType.leftMouseDown.rawValue) |
+                       (1 << CGEventType.leftMouseUp.rawValue) |
+                       (1 << CGEventType.leftMouseDragged.rawValue)
         
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -154,14 +158,18 @@ class MultitouchManager {
         let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+        */
     }
     
     private func teardownEventTap() {
+        // Clean up event tap if it exists
+        /* Commented out - matches setupEventTap
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
             eventTap = nil
         }
+        */
     }
 }
 
