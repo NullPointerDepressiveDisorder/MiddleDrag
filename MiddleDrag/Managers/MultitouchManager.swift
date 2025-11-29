@@ -7,33 +7,40 @@ class MultitouchManager {
     
     // MARK: - Properties
     
-    /// Shared instance for convenience
+    /// Shared instance
     static let shared = MultitouchManager()
     
-    /// Current configuration
+    /// Current gesture configuration
     var configuration = GestureConfiguration()
     
-    /// Whether monitoring is enabled
+    /// Whether gesture recognition is enabled
     private(set) var isEnabled = false
     
     /// Whether monitoring is active
     private(set) var isMonitoring = false
+    
+    /// Whether currently in a three-finger gesture (used for event suppression)
+    private(set) var isInThreeFingerGesture = false
+    
+    // Timestamp when gesture ended (for delayed event suppression)
+    private var gestureEndTime: Double = 0
     
     // Core components
     private let gestureRecognizer = GestureRecognizer()
     private let mouseGenerator = MouseEventGenerator()
     private var deviceMonitor: DeviceMonitor?
     
+    // Event tap for suppressing system-generated clicks during gestures
+    private var eventTap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+    
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
-    
-    // Optional system gesture blocking
-    private var eventTap: CFMachPort?
     
     // MARK: - Initialization
     
     init() {
-        setupGestureRecognizer()
+        gestureRecognizer.delegate = self
     }
     
     // MARK: - Public Interface
@@ -46,44 +53,31 @@ class MultitouchManager {
             return
         }
         
-        // Apply configuration
         applyConfiguration()
+        setupEventTap()
         
-        // Start device monitoring
         deviceMonitor = DeviceMonitor()
         deviceMonitor?.delegate = self
         deviceMonitor?.start()
         
-        // Optionally set up event tap
-        if configuration.blockSystemGestures {
-            setupEventTap()
-        }
-        
         isMonitoring = true
         isEnabled = true
-        
-        print("✅ MiddleDrag monitoring started")
     }
     
     /// Stop monitoring
     func stop() {
         guard isMonitoring else { return }
         
-        // Clean up any active gestures
         mouseGenerator.cancelDrag()
         gestureRecognizer.reset()
         
-        // Stop device monitoring
         deviceMonitor?.stop()
         deviceMonitor = nil
         
-        // Clean up event tap
         teardownEventTap()
         
         isMonitoring = false
         isEnabled = false
-        
-        print("MiddleDrag monitoring stopped")
     }
     
     /// Toggle enabled state
@@ -100,84 +94,142 @@ class MultitouchManager {
     func updateConfiguration(_ config: GestureConfiguration) {
         configuration = config
         applyConfiguration()
+    }
+    
+    // MARK: - Event Tap
+    
+    private func setupEventTap() {
+        // Build event mask for mouse events to intercept
+        var eventMask: CGEventMask = 0
+        eventMask |= (1 << CGEventType.leftMouseDown.rawValue)
+        eventMask |= (1 << CGEventType.leftMouseUp.rawValue)
+        eventMask |= (1 << CGEventType.leftMouseDragged.rawValue)
+        eventMask |= (1 << CGEventType.rightMouseDown.rawValue)
+        eventMask |= (1 << CGEventType.rightMouseUp.rawValue)
+        eventMask |= (1 << CGEventType.rightMouseDragged.rawValue)
+        eventMask |= (1 << CGEventType.otherMouseDown.rawValue)
+        eventMask |= (1 << CGEventType.otherMouseUp.rawValue)
+        eventMask |= (1 << CGEventType.otherMouseDragged.rawValue)
         
-        // Restart if needed for system gesture blocking
-        if isMonitoring && config.blockSystemGestures != (eventTap != nil) {
-            stop()
-            start()
+        let refcon = Unmanaged.passUnretained(self).toOpaque()
+        
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: eventMask,
+            callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
+                guard let refcon = refcon else {
+                    return Unmanaged.passUnretained(event)
+                }
+                let manager = Unmanaged<MultitouchManager>.fromOpaque(refcon).takeUnretainedValue()
+                return manager.handleEventTapCallback(proxy: proxy, type: type, event: event)
+            },
+            userInfo: refcon
+        ) else {
+            print("⚠️ Could not create event tap")
+            return
         }
+        
+        eventTap = tap
+        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        
+        if let source = runLoopSource {
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+        }
+        
+        CGEvent.tapEnable(tap: tap, enable: true)
+    }
+    
+    private func teardownEventTap() {
+        if let tap = eventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+            CFMachPortInvalidate(tap)
+        }
+        
+        if let source = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+        }
+        
+        eventTap = nil
+        runLoopSource = nil
+    }
+    
+    private func handleEventTapCallback(
+        proxy: CGEventTapProxy,
+        type: CGEventType,
+        event: CGEvent
+    ) -> Unmanaged<CGEvent>? {
+        // Re-enable tap if it was disabled
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            if let tap = eventTap {
+                CGEvent.tapEnable(tap: tap, enable: true)
+            }
+            return Unmanaged.passUnretained(event)
+        }
+        
+        let sourceStateID = event.getIntegerValueField(.eventSourceStateID)
+        let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
+        
+        let now = CACurrentMediaTime()
+        let timeSinceGestureEnd = now - gestureEndTime
+        
+        // Allow our own middle mouse events through
+        let isMiddleButton = buttonNumber == 2
+        let isOurEvent = sourceStateID == 1  // Our private event source
+        
+        if isMiddleButton && isOurEvent {
+            return Unmanaged.passUnretained(event)
+        }
+        
+        // Suppress left/right events during gesture or shortly after
+        let shouldSuppress = isInThreeFingerGesture || timeSinceGestureEnd < 0.15
+        
+        if shouldSuppress && !isMiddleButton {
+            return nil  // Suppress the event
+        }
+        
+        return Unmanaged.passUnretained(event)
     }
     
     // MARK: - Private Methods
-    
-    private func setupGestureRecognizer() {
-        gestureRecognizer.delegate = self
-    }
     
     private func applyConfiguration() {
         gestureRecognizer.configuration = configuration
         mouseGenerator.smoothingFactor = configuration.smoothingFactor
         mouseGenerator.minimumMovementThreshold = CGFloat(configuration.minimumMovementThreshold)
     }
-    
-    private func setupEventTap() {
-        // Optional: Event tap for blocking system gestures
-        // Since MultitouchSupport receives data before system processing,
-        // this is typically not needed. Keeping as placeholder for future use.
-        
-        /* Commented out - not essential for operation
-        let eventMask = (1 << CGEventType.leftMouseDown.rawValue) |
-                       (1 << CGEventType.leftMouseUp.rawValue) |
-                       (1 << CGEventType.leftMouseDragged.rawValue)
-        
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: CGEventMask(eventMask),
-            callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
-                // Only block if actively dragging
-                guard let manager = Unmanaged<MultitouchManager>.fromOpaque(refcon!).takeUnretainedValue() as MultitouchManager? else {
-                    return Unmanaged.passRetained(event)
-                }
-                
-                if manager.isEnabled && manager.gestureRecognizer.state == .dragging {
-                    return nil  // Consume the event
-                }
-                
-                return Unmanaged.passRetained(event)
-            },
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
-            print("Warning: Could not create event tap")
-            return
-        }
-        
-        eventTap = tap
-        
-        let runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
-        */
-    }
-    
-    private func teardownEventTap() {
-        // Clean up event tap if it exists
-        /* Commented out - matches setupEventTap
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            CFMachPortInvalidate(tap)
-            eventTap = nil
-        }
-        */
-    }
 }
 
 // MARK: - DeviceMonitorDelegate
 
 extension MultitouchManager: DeviceMonitorDelegate {
-    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double) {
+    func deviceMonitor(
+        _ monitor: DeviceMonitor,
+        didReceiveTouches touches: UnsafeMutableRawPointer,
+        count: Int32,
+        timestamp: Double
+    ) {
         guard isEnabled else { return }
+        
+        // Count valid touching fingers for event suppression state
+        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: Int(count))
+        var validFingerCount = 0
+        
+        for i in 0..<Int(count) {
+            let state = touchArray[i].state
+            if state == 3 || state == 4 {
+                validFingerCount += 1
+            }
+        }
+        
+        // Update gesture state for event tap
+        let wasInGesture = isInThreeFingerGesture
+        isInThreeFingerGesture = validFingerCount >= 3
+        
+        if wasInGesture && !isInThreeFingerGesture {
+            gestureEndTime = CACurrentMediaTime()
+        }
         
         gestureQueue.async { [weak self] in
             self?.gestureRecognizer.processTouches(touches, count: Int(count), timestamp: timestamp)
@@ -189,8 +241,7 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
 extension MultitouchManager: GestureRecognizerDelegate {
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint) {
-        // Gesture started - prepare for possible tap or drag
-        print("Gesture started at normalized position: (\(position.x), \(position.y))")
+        // Gesture started - ready for tap or drag
     }
     
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
@@ -198,31 +249,18 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
     
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
-        // Use the CURRENT mouse location as the reference point, not the touch position
         let mouseLocation = MouseEventGenerator.currentMouseLocation
-        print("Begin dragging - Mouse at: (\(mouseLocation.x), \(mouseLocation.y))")
         mouseGenerator.startDrag(at: mouseLocation)
     }
     
     func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
-        // Use frame-to-frame delta for smooth movement
         let delta = data.frameDelta(from: configuration)
         
-        // Debug: Check if we're getting reasonable deltas
-        if abs(delta.x) > 0.1 || abs(delta.y) > 0.1 {
-            print("Warning: Large delta detected - x: \(delta.x), y: \(delta.y)")
-        }
+        guard delta.x != 0 || delta.y != 0 else { return }
         
-        // Scale to screen coordinates (delta is in normalized 0-1 space)
-        // Normalized trackpad coordinates are typically much smaller movements
-        let screenBounds = NSScreen.main?.frame ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
-        
-        // Scale factor: typical trackpad is ~130mm wide, movements are small fractions
-        // Don't multiply by full screen width, use a reasonable scaling factor
-        let scaleFactor: CGFloat = 1000.0  // Adjust this based on feel
-        
+        let scaleFactor: CGFloat = 800.0 * CGFloat(configuration.sensitivity)
         let scaledDeltaX = delta.x * scaleFactor
-        let scaledDeltaY = -delta.y * scaleFactor  // Invert Y for natural scrolling
+        let scaledDeltaY = -delta.y * scaleFactor  // Invert Y for natural movement
         
         mouseGenerator.updateDrag(deltaX: scaledDeltaX, deltaY: scaledDeltaY)
     }
