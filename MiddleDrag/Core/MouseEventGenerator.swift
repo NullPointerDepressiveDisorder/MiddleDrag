@@ -1,5 +1,6 @@
 import Foundation
 import CoreGraphics
+import AppKit
 
 /// Manages mouse event generation and cursor movement
 class MouseEventGenerator {

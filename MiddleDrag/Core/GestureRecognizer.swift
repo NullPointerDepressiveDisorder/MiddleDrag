@@ -21,9 +21,10 @@ class GestureRecognizer {
     // MARK: - Public Interface
     
     /// Process new touch data
-    func processTouches(_ touches: UnsafeMutablePointer<MTTouch>, count: Int, timestamp: Double) {
+    func processTouches(_ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double) {
+        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: count)
         // Update tracked fingers
-        updateTrackedFingers(touches: touches, count: count, timestamp: timestamp)
+        updateTrackedFingers(touches: touchArray, count: count, timestamp: timestamp)
         
         // Analyze gesture based on finger count
         let activeFingers = trackedFingers.values.filter { $0.isActive }

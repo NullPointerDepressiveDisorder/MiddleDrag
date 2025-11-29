@@ -1,10 +1,11 @@
 import Foundation
 import CoreFoundation
+import CoreGraphics
 
 // MARK: - Private API Bindings
 
 typealias MTDeviceRef = UnsafeMutableRawPointer
-typealias MTContactCallbackFunction = @convention(c) (MTDeviceRef?, UnsafeMutablePointer<MTTouch>?, Int32, Double, Int32) -> Int32
+typealias MTContactCallbackFunction = @convention(c) (MTDeviceRef?, UnsafeMutableRawPointer?, Int32, Double, Int32) -> Int32
 
 // Device Management
 @_silgen_name("MTDeviceCreateList")
@@ -41,7 +42,7 @@ func MTDeviceGetDriverType(_ device: MTDeviceRef) -> Int32
 
 // Callback Registration
 @_silgen_name("MTRegisterContactFrameCallback")
-func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: @escaping MTContactCallbackFunction)
+func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction)
 
 @_silgen_name("MTUnregisterContactFrameCallback")
 func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)

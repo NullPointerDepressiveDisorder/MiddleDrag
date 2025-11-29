@@ -71,12 +71,12 @@ class DeviceMonitor {
     
     private func setupCallback() {
         // Create callback that captures self weakly
-        contactCallback = { [weak self] (device, touches, numTouches, timestamp, frame) in
+        contactCallback = { [weak self] (device, touchesPtr, numTouches, timestamp, frame) in
             guard let self = self,
-                  let device = device,
-                  let touches = touches else { return 0 }
+                  let touchesPtr = touchesPtr else { return 0 }
             
-            self.delegate?.deviceMonitor(self, didReceiveTouches: touches, count: numTouches, timestamp: timestamp)
+            // Pass the raw pointer directly to the delegate
+            self.delegate?.deviceMonitor(self, didReceiveTouches: touchesPtr, count: numTouches, timestamp: timestamp)
             
             return 0
         }
@@ -86,5 +86,5 @@ class DeviceMonitor {
 // MARK: - Delegate Protocol
 
 protocol DeviceMonitorDelegate: AnyObject {
-    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutablePointer<MTTouch>, count: Int32, timestamp: Double)
+    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double)
 }

@@ -168,7 +168,7 @@ class MultitouchManager {
 // MARK: - DeviceMonitorDelegate
 
 extension MultitouchManager: DeviceMonitorDelegate {
-    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutablePointer<MTTouch>, count: Int32, timestamp: Double) {
+    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double) {
         guard isEnabled else { return }
         
         gestureQueue.async { [weak self] in
