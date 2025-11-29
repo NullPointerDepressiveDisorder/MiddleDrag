@@ -190,6 +190,7 @@ extension MultitouchManager: DeviceMonitorDelegate {
 extension MultitouchManager: GestureRecognizerDelegate {
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint) {
         // Gesture started - prepare for possible tap or drag
+        print("Gesture started at normalized position: (\(position.x), \(position.y))")
     }
     
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
@@ -197,17 +198,31 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
     
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
+        // Use the CURRENT mouse location as the reference point, not the touch position
         let mouseLocation = MouseEventGenerator.currentMouseLocation
+        print("Begin dragging - Mouse at: (\(mouseLocation.x), \(mouseLocation.y))")
         mouseGenerator.startDrag(at: mouseLocation)
     }
     
     func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
-        let delta = data.delta(from: configuration)
+        // Use frame-to-frame delta for smooth movement
+        let delta = data.frameDelta(from: configuration)
         
-        // Scale to screen coordinates
+        // Debug: Check if we're getting reasonable deltas
+        if abs(delta.x) > 0.1 || abs(delta.y) > 0.1 {
+            print("Warning: Large delta detected - x: \(delta.x), y: \(delta.y)")
+        }
+        
+        // Scale to screen coordinates (delta is in normalized 0-1 space)
+        // Normalized trackpad coordinates are typically much smaller movements
         let screenBounds = NSScreen.main?.frame ?? CGRect(x: 0, y: 0, width: 1920, height: 1080)
-        let scaledDeltaX = delta.x * screenBounds.width
-        let scaledDeltaY = -delta.y * screenBounds.height  // Invert Y
+        
+        // Scale factor: typical trackpad is ~130mm wide, movements are small fractions
+        // Don't multiply by full screen width, use a reasonable scaling factor
+        let scaleFactor: CGFloat = 1000.0  // Adjust this based on feel
+        
+        let scaledDeltaX = delta.x * scaleFactor
+        let scaledDeltaY = -delta.y * scaleFactor  // Invert Y for natural scrolling
         
         mouseGenerator.updateDrag(deltaX: scaledDeltaX, deltaY: scaledDeltaY)
     }
