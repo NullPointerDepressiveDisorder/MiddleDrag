@@ -14,6 +14,7 @@ class GestureRecognizer {
     // Timing and position tracking
     private var gestureStartTime: Double = 0
     private var gestureStartPosition: MTPoint?
+    private var lastGesturePosition: MTPoint?  // Track last position for frame-to-frame delta
     
     // Delegate for gesture events
     weak var delegate: GestureRecognizerDelegate?
@@ -42,6 +43,7 @@ class GestureRecognizer {
         state = .idle
         trackedFingers.removeAll()
         gestureStartPosition = nil
+        lastGesturePosition = nil
         gestureStartTime = 0
     }
     
@@ -82,16 +84,24 @@ class GestureRecognizer {
         
         switch state {
         case .idle:
+            // Starting a new gesture
             startGesture(at: gestureData.centroid, timestamp: timestamp)
             
         case .possibleTap:
+            // Check if we should transition to dragging
             checkTapTransition(
                 currentPosition: gestureData.centroid,
                 timestamp: timestamp
             )
             
         case .dragging:
-            continueGesture(with: gestureData)
+            // Continue dragging - only process if we have a previous position
+            if lastGesturePosition != nil {
+                continueGesture(with: gestureData)
+            } else {
+                // First drag update - initialize last position
+                lastGesturePosition = gestureData.centroid
+            }
             
         case .waitingForRelease:
             // Wait for all fingers to lift
@@ -103,6 +113,7 @@ class GestureRecognizer {
         state = .possibleTap
         gestureStartTime = timestamp
         gestureStartPosition = position
+        lastGesturePosition = position  // Initialize last position
         
         delegate?.gestureRecognizerDidStart(self, at: position)
     }
@@ -116,11 +127,15 @@ class GestureRecognizer {
         if movement > configuration.moveThreshold || timeSinceStart > configuration.tapThreshold {
             // Transition to drag
             state = .dragging
+            // Initialize last position for drag tracking
+            lastGesturePosition = currentPosition
             delegate?.gestureRecognizerDidBeginDragging(self)
         }
     }
     
     private func continueGesture(with data: GestureData) {
+        // Update last position for next frame's delta calculation
+        lastGesturePosition = data.centroid
         delegate?.gestureRecognizerDidUpdateDragging(self, with: data)
     }
     
@@ -153,7 +168,8 @@ class GestureRecognizer {
             velocity: averageVelocity,
             pressure: averagePressure,
             fingerCount: fingers.count,
-            startPosition: gestureStartPosition
+            startPosition: gestureStartPosition,
+            lastPosition: lastGesturePosition
         )
     }
     
@@ -178,8 +194,22 @@ struct GestureData {
     let pressure: Float
     let fingerCount: Int
     let startPosition: MTPoint?
+    let lastPosition: MTPoint?
     
-    func delta(from configuration: GestureConfiguration) -> (x: CGFloat, y: CGFloat) {
+    /// Calculate frame-to-frame delta movement
+    func frameDelta(from configuration: GestureConfiguration) -> (x: CGFloat, y: CGFloat) {
+        guard let last = lastPosition else { return (0, 0) }
+        
+        // Calculate movement since last frame
+        let deltaX = CGFloat(centroid.x - last.x)
+        let deltaY = CGFloat(centroid.y - last.y)
+        let sensitivity = CGFloat(configuration.effectiveSensitivity(for: velocity))
+        
+        return (deltaX * sensitivity, deltaY * sensitivity)
+    }
+    
+    /// Calculate total delta from start (for tap detection)
+    func totalDelta(from configuration: GestureConfiguration) -> (x: CGFloat, y: CGFloat) {
         guard let start = startPosition else { return (0, 0) }
         
         let deltaX = CGFloat(centroid.x - start.x)

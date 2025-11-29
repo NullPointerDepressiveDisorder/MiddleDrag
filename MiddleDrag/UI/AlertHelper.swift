@@ -32,7 +32,7 @@ class AlertHelper {
         alert.addButton(withTitle: "Open GitHub")
         
         if alert.runModal() == .alertSecondButtonReturn {
-            if let url = URL(string: "https://github.com/kmohindroo/MiddleDrag") {
+            if let url = URL(string: "https://github.com/NullPointerDepressiveDisorder/MiddleDrag") {
                 NSWorkspace.shared.open(url)
             }
         }
