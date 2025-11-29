@@ -5,13 +5,42 @@
 
 set -e  # Exit on error
 
-echo "🔨 Building MiddleDrag..."
-
 # Configuration
 APP_NAME="MiddleDrag"
 BUILD_DIR="build"
+BUNDLE_ID="com.middledrag.MiddleDrag"
+
+# Parse arguments
 CONFIGURATION="Release"
-BUNDLE_ID="com.kmohindroo.MiddleDrag"
+RUN_AFTER=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug|-d)
+            CONFIGURATION="Debug"
+            shift
+            ;;
+        --run|-r)
+            RUN_AFTER=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: ./build.sh [options]"
+            echo ""
+            echo "Options:"
+            echo "  --debug, -d    Build debug configuration"
+            echo "  --run, -r      Run after building"
+            echo "  --help, -h     Show this help"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+echo "🔨 Building MiddleDrag ($CONFIGURATION)..."
 
 # Clean previous build
 echo "Cleaning previous build..."
@@ -46,27 +75,39 @@ fi
 echo "✅ Build successful!"
 echo "📦 App location: $APP_PATH"
 
-# Optional: Copy to Applications folder
-read -p "Copy to /Applications? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo "Copying to /Applications..."
-    rm -rf "/Applications/$APP_NAME.app" 2>/dev/null || true
-    cp -R "$APP_PATH" "/Applications/"
-    echo "✅ Copied to /Applications/$APP_NAME.app"
-    
-    # Set proper permissions
-    chmod -R 755 "/Applications/$APP_NAME.app"
-    
-    # Kill existing instance if running
-    killall "$APP_NAME" 2>/dev/null || true
-    
-    # Launch the app
-    read -p "Launch $APP_NAME now? (y/n) " -n 1 -r
+# Run if requested
+if [ "$RUN_AFTER" = true ]; then
+    echo ""
+    echo "🚀 Running $APP_NAME..."
+    echo "📝 Debug output:"
+    echo "================"
+    "$APP_PATH/Contents/MacOS/$APP_NAME"
+    exit 0
+fi
+
+# For release builds, offer to copy to Applications
+if [ "$CONFIGURATION" = "Release" ]; then
+    read -p "Copy to /Applications? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        open "/Applications/$APP_NAME.app"
-        echo "🚀 $APP_NAME launched!"
+        echo "Copying to /Applications..."
+        rm -rf "/Applications/$APP_NAME.app" 2>/dev/null || true
+        cp -R "$APP_PATH" "/Applications/"
+        echo "✅ Copied to /Applications/$APP_NAME.app"
+        
+        # Set proper permissions
+        chmod -R 755 "/Applications/$APP_NAME.app"
+        
+        # Kill existing instance if running
+        killall "$APP_NAME" 2>/dev/null || true
+        
+        # Launch the app
+        read -p "Launch $APP_NAME now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            open "/Applications/$APP_NAME.app"
+            echo "🚀 $APP_NAME launched!"
+        fi
     fi
 fi
 

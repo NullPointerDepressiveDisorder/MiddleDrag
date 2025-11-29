@@ -1,285 +1,84 @@
 # MiddleDrag
 
-Three-finger drag for middle mouse button emulation on macOS. Perfect for CAD software navigation using your trackpad.
+A macOS menu bar app that enables middle-click and middle-drag functionality using three-finger trackpad gestures.
 
-![Swift](https://img.shields.io/badge/swift-5.5-orange.svg)
-![Platform](https://img.shields.io/badge/platform-macOS%2011.0%2B-lightgrey.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-2.0.0-green.svg)
+## Features
 
-## 🚀 Features
-
-### Core Functionality
-- 🖱️ **Three-finger drag** → Middle mouse drag (perfect for CAD orbit/pan)
-- 👆 **Three-finger tap** → Middle mouse click
-- ✨ **Works WITH system gestures** - no need to disable Mission Control!
-- ⚡ **Ultra-low latency** with optimized multitouch processing
-- 🎯 **Smart gesture detection** with state management
-- 📊 **Menu bar control** for easy configuration
-
-### New in v2.0
-- **Enhanced Performance**: Rewritten touch processing with dedicated gesture queue
-- **Smooth Cursor Movement**: Exponential smoothing for fluid dragging
-- **Velocity-Based Sensitivity**: Automatically adjusts to movement speed
-- **Advanced Tap Detection**: Configurable timing and movement thresholds
-- **Multi-Device Support**: Works with built-in trackpad and Magic Trackpad
-- **Gesture Blocking**: Optional system gesture suppression while dragging
-- **Precise State Tracking**: Individual finger tracking with pressure sensing
-
-## 🎯 Why MiddleDrag?
-
-Most CAD software (Fusion 360, AutoCAD, SolidWorks, Blender) relies heavily on middle mouse button for navigation. Mac trackpads don't have a middle button, forcing users to use awkward keyboard modifiers or external mice. 
-
-**MiddleDrag is different from other solutions:**
-- ✅ **No system configuration required** - works out of the box
-- ✅ **Preserves your Mission Control gestures** - have both!
-- ✅ **Direct hardware access** - not a hacky workaround
-- ✅ **Professional-grade precision** - designed for CAD work
-
-Using Apple's MultitouchSupport.framework, MiddleDrag receives touch data *before* macOS processes it, allowing perfect three-finger middle mouse emulation without sacrificing system functionality.
-
-## 📥 Installation
-
-### Option 1: Download Release
-1. Download the latest release from [Releases](https://github.com/kmohindroo/MiddleDrag/releases)
-2. Move `MiddleDrag.app` to your Applications folder
-3. Launch MiddleDrag
-4. Grant accessibility permissions when prompted
-
-### Option 2: Build from Source
-```bash
-# Clone the repository
-git clone https://github.com/kmohindroo/MiddleDrag.git
-cd MiddleDrag
-
-# Make build script executable
-chmod +x build.sh
-
-# Build and install
-./build.sh
-```
-
-## ⚙️ Setup
-
-### Just One Step: Grant Accessibility Permissions
-
-**That's it!** MiddleDrag works alongside your existing trackpad gestures - no configuration needed.
-
-Grant permissions when prompted:
-1. Open **System Settings → Privacy & Security → Accessibility**
-2. Add MiddleDrag and enable it
-3. Start using three-finger drag immediately!
-
-### Optional: Optimize for CAD Software
-
-For the absolute best experience with CAD software, you *can* disable system three-finger gestures, but **it's not required**:
-
-1. Open **System Settings → Trackpad → More Gestures**
-2. Change these settings (if desired):
-   - **Swipe between apps**: Set to "Swipe with Four Fingers"
-   - **Mission Control**: Set to "Swipe Up with Four Fingers"
-   - **App Exposé**: Set to "Swipe Down with Four Fingers"
-
-**Why it works:** MiddleDrag uses Apple's MultitouchSupport.framework which receives touch data *before* the system processes gestures. Your three-finger drags work perfectly alongside Mission Control!
-
-## 🎮 Usage
-
-Once running, MiddleDrag appears in your menu bar with a hand icon:
-
-### Basic Controls
-- **Three fingers on trackpad + drag** → Middle mouse drag
 - **Three-finger tap** → Middle mouse click
-- **Menu bar icon** → Access all settings
+- **Three-finger drag** → Middle mouse drag (for panning in apps like Blender, CAD software, browsers, etc.)
+- Works alongside system trackpad gestures without interference
+- Configurable sensitivity and smoothing
+- Menu bar icon with quick access to settings
+- Launch at login support
 
-### Sensitivity Settings
-Choose from five preset sensitivity levels:
-- **Slow (0.5x)**: Ultra-precise for detailed CAD work
-- **Precision (0.75x)**: Fine control for technical drawing
-- **Normal (1x)**: Balanced for general use (default)
-- **Fast (1.5x)**: Quick navigation
-- **Very Fast (2x)**: Rapid movement for large models
+## Requirements
 
-### Advanced Settings
-- **Tap Speed**: Adjust tap detection timing (100-200ms)
-- **Smoothing**: Control cursor smoothness (20-50%)
-- **Finger Mode**: Require exactly 3 fingers or allow 3+
+- macOS 14.0 (Sonoma) or later
+- Built-in trackpad or Magic Trackpad
+- Accessibility permissions (required for mouse event generation)
 
-## 🛠️ Supported Software
+## Installation
 
-### CAD & 3D Modeling
-✅ **Fusion 360** - Full orbit/pan/zoom support
-✅ **AutoCAD** - 3D navigation and selection
-✅ **SolidWorks** (via Parallels) - Native-like experience
-✅ **Blender** - Viewport navigation
-✅ **Rhino** - Complete navigation control
-✅ **SketchUp** - Orbit and pan tools
-✅ **FreeCAD** - Full mouse emulation
-✅ **OnShape** - Browser-based CAD support
-✅ **Inventor** - Assembly navigation
-✅ **CATIA** - DMU navigation
-✅ **Siemens NX** - View manipulation
-✅ **Creo/Pro-E** - Model navigation
+1. Download the latest release from the Releases page
+2. Move `MiddleDrag.app` to your Applications folder
+3. Launch the app
+4. Grant Accessibility permissions when prompted (System Settings → Privacy & Security → Accessibility)
 
-### Engineering & Design
-✅ **MATLAB** - Plot rotation
-✅ **Altium Designer** - PCB navigation
-✅ **KiCad** - Schematic/PCB pan
-✅ **Eagle** - Board view control
+## Usage
 
-## 🔧 Technical Architecture
+Once running, MiddleDrag appears as a hand icon in your menu bar:
 
-### Core Technology
-MiddleDrag uses Apple's private `MultitouchSupport.framework` for direct hardware access:
-- **Raw touch data** at 60-120Hz refresh rate
-- **Individual finger tracking** with persistent IDs
-- **Pressure and velocity** sensing
-- **Pre-gesture processing** to avoid system conflicts
+- **Three-finger tap**: Performs a middle mouse click (useful for opening links in new tabs, closing tabs, etc.)
+- **Three-finger drag**: Performs a middle mouse drag (useful for panning/orbiting in 3D applications)
 
-### Performance Optimizations
-- **Dedicated gesture queue** with QoS `.userInteractive`
-- **Separate mouse event queue** to prevent blocking
-- **Exponential smoothing** algorithm for fluid movement
-- **Velocity-based sensitivity** scaling
-- **Minimal heap allocations** in hot path
-- **Smart threshold detection** to reduce false positives
+### Menu Bar Options
 
-### Implementation Details
-```swift
-// Touch state management
-- State machine: idle → possibleTap → dragging → release
-- Individual finger tracking with 32-bit IDs
-- Centroid calculation for multi-finger gestures
-- Movement delta with screen-space transformation
+- **Enabled**: Toggle gesture recognition on/off
+- **Drag Sensitivity**: Adjust how fast the cursor moves during drag (0.5x - 2x)
+- **Advanced**:
+  - Require Exactly 3 Fingers: Only recognize gestures with exactly 3 fingers
+  - Block System Gestures: Attempt to prevent system gesture interference
+- **Launch at Login**: Start MiddleDrag automatically when you log in
 
-// Event generation
-- CGEvent with .otherMouse* types
-- Direct posting to .cghidEventTap
-- Optional gesture consumption via event tap
-```
+## How It Works
 
-## 🐛 Troubleshooting
+MiddleDrag uses Apple's private MultitouchSupport framework to receive raw touch data from the trackpad before it's processed by the system gesture recognizer. This allows it to:
 
-### Three-finger drag not working
-1. **Verify accessibility permissions** are granted
-2. **Restart MiddleDrag** from menu bar
-3. **Optional**: Try disabling system three-finger gestures if conflicts occur
-4. **Last resort**: Enable "Block System Gestures" in Advanced menu
-5. **Check Console.app** for error messages
+1. Detect three-finger gestures independently
+2. Generate synthetic middle mouse events via the Accessibility API
+3. Suppress conflicting system-generated click events using a CGEventTap
 
-### Cursor jumps or jitters
-1. **Increase smoothing** in Advanced settings
-2. **Lower sensitivity** for more control
-3. **Clean trackpad** surface
-4. **Check for interference** from other utilities
+## Building from Source
 
-### Conflicts with other apps
-- **BetterTouchTool**: Disable three-finger gestures
-- **Karabiner**: Check for conflicting rules
-- **MagicPrefs**: Disable or uninstall
-- **Multitouch**: Close while using MiddleDrag
+1. Clone the repository
+2. Open `MiddleDrag.xcodeproj` in Xcode
+3. Build and run (⌘R)
 
-### High CPU usage
-1. **Check Activity Monitor** for actual usage (should be <1%)
-2. **Reduce smoothing** if needed
-3. **Report issue** with Mac model and macOS version
+### Debug Build
 
-## 🏗️ Building from Source
-
-### Requirements
-- macOS 11.0+
-- Xcode 13+ or Swift 5.5+
-- No developer certificate required (ad-hoc signing)
-
-### Build Commands
+For development with console output:
 
 ```bash
-# Quick build with script
-./build.sh
-
-# Manual Xcode build
-xcodebuild -project MiddleDrag.xcodeproj \
-           -scheme MiddleDrag \
-           -configuration Release \
-           -derivedDataPath build \
-           PRODUCT_BUNDLE_IDENTIFIER="com.yourname.MiddleDrag" \
-           OTHER_LDFLAGS="-F/System/Library/PrivateFrameworks -framework MultitouchSupport" \
-           CODE_SIGN_IDENTITY="-"
-
-# Direct Swift compilation (for testing)
-swiftc MiddleDrag/*.swift \
-       -o MiddleDrag \
-       -F/System/Library/PrivateFrameworks \
-       -framework MultitouchSupport \
-       -framework CoreFoundation \
-       -framework CoreGraphics \
-       -framework AppKit
+./build.sh --debug --run
 ```
 
-### Project Configuration
-In Xcode project settings:
-- **Framework Search Paths**: `/System/Library/PrivateFrameworks`
-- **Other Linker Flags**: `-framework MultitouchSupport`
-- **App Sandbox**: Disabled (required for private framework)
-- **Hardened Runtime**: Disabled (for private API access)
+## Compatibility
 
-## 🤝 Contributing
+- Tested on macOS 14 (Sonoma) and macOS 15 (Sequoia)
+- Compatible with macOS 26 beta (Tahoe) with adjusted API usage
+- Works with both built-in MacBook trackpads and external Magic Trackpads
 
-Contributions are welcome! Please:
+## Known Limitations
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Requires Accessibility permissions to generate mouse events
+- Physical trackpad clicks with 3 fingers may still trigger system gestures (soft taps work best)
+- Some applications may not respond to synthetic middle mouse events
 
-### Current Priorities
-- [ ] Haptic feedback on gesture recognition
-- [ ] Custom gesture patterns (two-finger middle click, etc.)
-- [ ] Per-application profiles with automatic switching
-- [ ] Gesture visualization overlay
-- [ ] Force Touch pressure mapping
-- [ ] Multi-touch gesture macros
-- [ ] Export/import settings
-- [ ] Crash reporting and analytics (opt-in)
+## License
 
-## 📝 License
+MIT License - see LICENSE file for details
 
-MIT License - see [LICENSE](LICENSE) file for details
+## Acknowledgments
 
-## 🙏 Acknowledgments
-
-- [Ryan Hanson's](https://medium.com/ryan-hanson/touching-apples-private-multitouch-framework-64f87611cfc9) pioneering research on MultitouchSupport.framework
-- [M5MultitouchSupport](https://github.com/mhuusko5/M5MultitouchSupport) for framework documentation
-- [MiddleClick](https://github.com/artginzburg/MiddleClick) for initial inspiration
-- [BetterTouchTool](https://folivora.ai) for showing what's possible
-- The CAD community for extensive testing and feedback
-
-## ⚠️ Important Notes
-
-### Private Framework Usage
-This app uses Apple's private `MultitouchSupport.framework`:
-- ❌ **Cannot be distributed** via Mac App Store
-- ⚠️ **May break** with future macOS updates
-- ✅ **Stable since macOS 10.5** (remarkably consistent API)
-- ✅ **Used by** BetterTouchTool, Multitouch, and other utilities
-
-### Security Considerations
-- Requires **Accessibility permissions** for mouse event simulation
-- **App Sandbox disabled** for private framework access
-- **No network access** or data collection
-- **Open source** for transparency
-
-## 📊 Performance Metrics
-
-Tested on MacBook Pro M1 Pro:
-- **CPU Usage**: 0.1-0.3% during active dragging
-- **Memory**: ~8MB resident
-- **Latency**: <5ms from touch to cursor movement
-- **Frame Rate**: 60-120Hz depending on trackpad
-- **Battery Impact**: Negligible (<1% over 8 hours)
-
----
-
-**Made with ❤️ for engineers, designers, and makers who deserve proper middle mouse functionality on Mac.**
-
-*If MiddleDrag helps your workflow, consider starring the repo and sharing with your CAD community!*
+- Inspired by the need for middle-click functionality on macOS trackpads
+- Uses the MultitouchSupport private framework for raw touch access
