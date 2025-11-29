@@ -4,20 +4,46 @@ name: Update Homebrew Tap
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 2.0.1) - leave empty to use latest release'
+        required: false
+        type: string
 
 jobs:
   update-tap:
     runs-on: macos-latest
     steps:
+      - name: Determine version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            # Manual trigger with specified version
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"  # Remove 'v' prefix if present
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            # Release event
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"  # Remove 'v' prefix
+          else
+            # Manual trigger without version - get latest release
+            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
+            VERSION="${VERSION#v}"  # Remove 'v' prefix
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
+
       - name: Update Homebrew Cask
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"  # Remove 'v' prefix
+          VERSION="${{ steps.version.outputs.version }}"
           
           # Download and get SHA
-          curl -L -o MiddleDrag.dmg "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/MiddleDrag-${VERSION}.dmg"
+          curl -L -o MiddleDrag.dmg "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.dmg"
           SHA=$(shasum -a 256 MiddleDrag.dmg | awk '{print $1}')
           
           # Clone tap repo and update
