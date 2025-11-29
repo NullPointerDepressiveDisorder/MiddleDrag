@@ -1,0 +1,34 @@
+# .github/workflows/update-homebrew.yml
+name: Update Homebrew Tap
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-tap:
+    runs-on: macos-latest
+    steps:
+      - name: Update Homebrew Cask
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"  # Remove 'v' prefix
+          
+          # Download and get SHA
+          curl -L -o MiddleDrag.dmg "https://github.com/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/MiddleDrag-${VERSION}.dmg"
+          SHA=$(shasum -a 256 MiddleDrag.dmg | awk '{print $1}')
+          
+          # Clone tap repo and update
+          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/yourusername/homebrew-tap.git
+          cd homebrew-tap
+          
+          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/middledrag.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/middledrag.rb
+          
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add Casks/middledrag.rb
+          git commit -m "Update MiddleDrag to ${VERSION}"
+          git push
