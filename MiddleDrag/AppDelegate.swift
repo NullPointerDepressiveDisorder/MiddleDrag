@@ -22,8 +22,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func initializeApp() {
-        // Check accessibility permissions
-        if !checkAccessibilityPermissions() {
+        // Check Input Monitoring permissions
+        if !checkInputMonitoringPermissions() {
             return
         }
         
@@ -63,21 +63,25 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // MARK: - Setup
     
-    private func checkAccessibilityPermissions() -> Bool {
-        if AXIsProcessTrusted() {
+    private func checkInputMonitoringPermissions() -> Bool {
+        // Test if we can create an event tap (requires Input Monitoring permission)
+        let testTap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .listenOnly,
+            eventsOfInterest: CGEventMask(1 << CGEventType.mouseMoved.rawValue),
+            callback: { _, _, event, _ in Unmanaged.passUnretained(event) },
+            userInfo: nil
+        )
+        
+        if testTap != nil {
+            // Permission granted, clean up test tap
+            CFMachPortInvalidate(testTap!)
             return true
         }
         
-        // Show system accessibility prompt
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
-        
-        if trusted {
-            return true
-        }
-        
-        // Show custom alert
-        let result = AlertHelper.showAccessibilityPermissionRequired()
+        // Show custom alert for Input Monitoring permission
+        let result = AlertHelper.showInputMonitoringPermissionRequired()
         
         if result {
             // User chose to open settings - quit so they can grant permission

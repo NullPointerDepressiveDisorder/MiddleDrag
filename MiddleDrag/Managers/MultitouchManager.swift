@@ -48,10 +48,6 @@ class MultitouchManager {
     /// Start monitoring for gestures
     func start() {
         guard !isMonitoring else { return }
-        guard AXIsProcessTrusted() else {
-            print("⚠️ Accessibility permissions not granted")
-            return
-        }
         
         applyConfiguration()
         setupEventTap()

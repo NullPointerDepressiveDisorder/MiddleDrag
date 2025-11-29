@@ -78,13 +78,16 @@ class AlertHelper {
         alert.runModal()
     }
     
-    static func showAccessibilityPermissionRequired() -> Bool {
+    static func showInputMonitoringPermissionRequired() -> Bool {
         let alert = NSAlert()
-        alert.messageText = "Accessibility Permission Required"
+        alert.messageText = "Input Monitoring Permission Required"
         alert.informativeText = """
-        MiddleDrag needs accessibility permissions to:
-        • Detect three-finger trackpad gestures
-        • Simulate middle mouse button events
+        MiddleDrag needs Input Monitoring permission to:
+        • Detect trackpad gestures
+        • Generate middle mouse button events
+        
+        Please add MiddleDrag to:
+        System Settings → Privacy & Security → Input Monitoring
         
         After granting permission, please restart MiddleDrag.
         """
@@ -93,12 +96,7 @@ class AlertHelper {
         alert.addButton(withTitle: "Quit")
         
         if alert.runModal() == .alertFirstButtonReturn {
-            openAccessibilitySettings()
-            
-            // Trigger system prompt
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            AXIsProcessTrustedWithOptions(options as CFDictionary)
-            
+            openInputMonitoringSettings()
             return true
         }
         
@@ -111,8 +109,8 @@ class AlertHelper {
         }
     }
     
-    private static func openAccessibilitySettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+    private static func openInputMonitoringSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
             NSWorkspace.shared.open(url)
         }
     }
