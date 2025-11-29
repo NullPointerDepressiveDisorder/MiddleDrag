@@ -1,6 +1,7 @@
 import Foundation
 import CoreGraphics
 import CoreFoundation
+import AppKit
 
 // MARK: - MultitouchSupport Framework Structures
 
@@ -36,16 +37,13 @@ struct MTTouch {
 // MARK: - Private API Bindings
 
 typealias MTDeviceRef = UnsafeMutableRawPointer
-typealias MTContactCallbackFunction = @convention(c) (
-    MTDeviceRef, UnsafeMutablePointer<MTTouch>, Int32, Double, Int32
-) -> Int32
+typealias MTContactCallbackFunction = @convention(c) (MTDeviceRef?, UnsafeMutableRawPointer?, Int32, Double, Int32) -> Int32
 
 @_silgen_name("MTDeviceCreateList")
 func MTDeviceCreateList() -> CFArray
 
 @_silgen_name("MTRegisterContactFrameCallback")
-func MTRegisterContactFrameCallback(_ device: MTDeviceRef, 
-                                   _ callback: @escaping MTContactCallbackFunction)
+func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction)
 
 @_silgen_name("MTDeviceStart")
 func MTDeviceStart(_ device: MTDeviceRef, _ mode: Int32)
@@ -55,6 +53,15 @@ func MTDeviceStop(_ device: MTDeviceRef)
 
 @_silgen_name("MTDeviceIsBuiltIn")
 func MTDeviceIsBuiltIn(_ device: MTDeviceRef) -> Bool
+
+// MARK: - C callback trampoline
+private var gMultitouchManager: MultitouchManager?
+@_cdecl("MTContactCallbackTrampoline")
+private func MTContactCallbackTrampoline(_ device: MTDeviceRef?, _ rawTouches: UnsafeMutableRawPointer?, _ numTouches: Int32, _ timestamp: Double, _ frame: Int32) -> Int32 {
+    guard let manager = gMultitouchManager else { return 0 }
+    let touches = rawTouches?.bindMemory(to: MTTouch.self, capacity: Int(numTouches))
+    return manager.handleCContact(device: device, touches: touches, numTouches: numTouches, timestamp: timestamp, frame: frame)
+}
 
 // MARK: - Multitouch Manager
 
@@ -73,21 +80,7 @@ class MultitouchManager {
     private var touchStartTime: Double = 0
     private var touchStartLocation: MTPoint?
     
-    // Callback for multitouch events
-    private lazy var callback: MTContactCallbackFunction = { [weak self] device, touches, numTouches, timestamp, frame in
-        guard let self = self, self.isEnabled else { return 0 }
-        
-        let count = Int(numTouches)
-        
-        if count == 3 {
-            self.handleThreeFingerTouch(touches: touches, count: count, timestamp: timestamp)
-        } else if self.threeFingerActive {
-            // Fingers lifted
-            self.handleFingerLift(timestamp: timestamp)
-        }
-        
-        return 0
-    }
+    // Removed the private lazy var callback closure
     
     // MARK: - Lifecycle
     
@@ -96,6 +89,8 @@ class MultitouchManager {
             print("⚠️ Accessibility permissions not granted")
             return
         }
+        
+        gMultitouchManager = self
         
         let deviceList = MTDeviceCreateList() as [AnyObject]
         print("Found \(deviceList.count) multitouch device(s)")
@@ -107,7 +102,7 @@ class MultitouchManager {
             let isBuiltIn = MTDeviceIsBuiltIn(device)
             print("Device \(index): \(isBuiltIn ? "Built-in Trackpad" : "External Magic Trackpad")")
             
-            MTRegisterContactFrameCallback(device, callback)
+            MTRegisterContactFrameCallback(device, MTContactCallbackTrampoline)
             MTDeviceStart(device, 0)
         }
         
@@ -124,6 +119,7 @@ class MultitouchManager {
             MTDeviceStop(device)
         }
         devices.removeAll()
+        gMultitouchManager = nil
         print("MiddleDrag monitoring stopped")
     }
     
@@ -139,6 +135,19 @@ class MultitouchManager {
     }
     
     // MARK: - Touch Handling
+    
+    @discardableResult
+    fileprivate func handleCContact(device: MTDeviceRef?, touches: UnsafeMutablePointer<MTTouch>?, numTouches: Int32, timestamp: Double, frame: Int32) -> Int32 {
+        guard isEnabled else { return 0 }
+        let count = Int(numTouches)
+        guard let touches = touches else { return 0 }
+        if count == 3 {
+            handleThreeFingerTouch(touches: touches, count: count, timestamp: timestamp)
+        } else if threeFingerActive {
+            handleFingerLift(timestamp: timestamp)
+        }
+        return 0
+    }
     
     private func handleThreeFingerTouch(touches: UnsafeMutablePointer<MTTouch>, count: Int, timestamp: Double) {
         // Calculate average position of three fingers
