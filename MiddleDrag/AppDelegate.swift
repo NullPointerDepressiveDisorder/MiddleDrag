@@ -3,53 +3,58 @@ import Cocoa
 /// Main application delegate
 class AppDelegate: NSObject, NSApplicationDelegate {
     
-    // Core components
+    // MARK: - Properties
+    
     private let multitouchManager = MultitouchManager.shared
-    private var menuBarController: MenuBarController!
+    private var menuBarController: MenuBarController?
     private var preferences: UserPreferences!
     
     // MARK: - Application Lifecycle
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide dock icon (menu bar app)
+        // Hide dock icon (menu bar app only)
         NSApp.setActivationPolicy(.accessory)
         
+        // Defer initialization to ensure app is fully ready
+        DispatchQueue.main.async { [weak self] in
+            self?.initializeApp()
+        }
+    }
+    
+    private func initializeApp() {
         // Check accessibility permissions
         if !checkAccessibilityPermissions() {
-            // App will quit after showing dialog
             return
         }
         
         // Load preferences
         preferences = PreferencesManager.shared.loadPreferences()
         
-        // Configure multitouch manager
-        configureMultitouchManager()
+        // Configure and start multitouch manager
+        multitouchManager.updateConfiguration(preferences.gestureConfig)
+        multitouchManager.start()
         
-        // Set up menu bar UI
+        // Set up menu bar UI after starting (so isEnabled is true)
         menuBarController = MenuBarController(
             multitouchManager: multitouchManager,
             preferences: preferences
         )
         
-        // Set up notifications
+        // Set up notification observers
         setupNotifications()
         
-        // Start monitoring
-        multitouchManager.start()
-        
-        // Configure launch at login if needed
+        // Configure launch at login
         if preferences.launchAtLogin {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
     }
     
     func applicationWillTerminate(_ notification: Notification) {
-        // Clean shutdown
         multitouchManager.stop()
         
-        // Save preferences
-        PreferencesManager.shared.savePreferences(preferences)
+        if preferences != nil {
+            PreferencesManager.shared.savePreferences(preferences)
+        }
     }
     
     func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
@@ -59,28 +64,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Setup
     
     private func checkAccessibilityPermissions() -> Bool {
-        if !AXIsProcessTrusted() {
-            if AlertHelper.showAccessibilityPermissionRequired() {
-                // User chose to open settings
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    NSApplication.shared.terminate(nil)
-                }
-            } else {
-                // User chose to quit
+        if AXIsProcessTrusted() {
+            return true
+        }
+        
+        // Show system accessibility prompt
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+        let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
+        
+        if trusted {
+            return true
+        }
+        
+        // Show custom alert
+        let result = AlertHelper.showAccessibilityPermissionRequired()
+        
+        if result {
+            // User chose to open settings - quit so they can grant permission
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NSApplication.shared.terminate(nil)
             }
-            return false
+        } else {
+            NSApplication.shared.terminate(nil)
         }
-        return true
-    }
-    
-    private func configureMultitouchManager() {
-        // Apply configuration from preferences
-        multitouchManager.updateConfiguration(preferences.gestureConfig)
+        
+        return false
     }
     
     private func setupNotifications() {
-        // Listen for preference changes
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(preferencesChanged(_:)),
@@ -88,7 +99,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
         
-        // Listen for launch at login changes
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(launchAtLoginChanged(_:)),
@@ -97,7 +107,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
     
-    // MARK: - Notifications
+    // MARK: - Notification Handlers
     
     @objc private func preferencesChanged(_ notification: Notification) {
         if let newPreferences = notification.object as? UserPreferences {

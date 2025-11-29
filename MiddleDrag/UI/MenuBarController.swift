@@ -84,13 +84,16 @@ class MenuBarController: NSObject {
     }
     
     private func createStatusItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "MiddleDrag Active", action: nil, keyEquivalent: "")
+        let isEnabled = multitouchManager?.isEnabled ?? false
+        let title = isEnabled ? "MiddleDrag Active" : "MiddleDrag Disabled"
+        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
     
     private func createEnabledItem() -> NSMenuItem {
         let item = NSMenuItem(title: "Enabled", action: #selector(toggleEnabled), keyEquivalent: "e")
+        item.target = self  // IMPORTANT: Set target
         item.state = (multitouchManager?.isEnabled ?? false) ? .on : .off
         item.tag = MenuItemTag.enabled.rawValue
         return item
@@ -98,13 +101,16 @@ class MenuBarController: NSObject {
     
     private func createLaunchAtLoginItem() -> NSMenuItem {
         let item = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin), keyEquivalent: "")
+        item.target = self  // IMPORTANT: Set target
         item.state = preferences.launchAtLogin ? .on : .off
         item.tag = MenuItemTag.launchAtLogin.rawValue
         return item
     }
     
     private func createMenuItem(title: String, action: Selector, keyEquivalent: String = "") -> NSMenuItem {
-        return NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        item.target = self  // IMPORTANT: Set target
+        return item
     }
     
     private func createSensitivityMenu() -> NSMenuItem {
@@ -121,6 +127,7 @@ class MenuBarController: NSObject {
         
         for (title, value) in sensitivities {
             let menuItem = NSMenuItem(title: title, action: #selector(setSensitivity(_:)), keyEquivalent: "")
+            menuItem.target = self  // IMPORTANT: Set target
             menuItem.representedObject = value
             if abs(Float(preferences.dragSensitivity) - value) < 0.01 {
                 menuItem.state = .on
@@ -155,6 +162,7 @@ class MenuBarController: NSObject {
     
     private func createAdvancedMenuItem(title: String, isOn: Bool, action: Selector) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self  // IMPORTANT: Set target
         item.state = isOn ? .on : .off
         return item
     }
@@ -170,6 +178,7 @@ class MenuBarController: NSObject {
         }
         
         updateStatusIcon(enabled: isEnabled)
+        buildMenu()  // Rebuild to update status text
     }
     
     @objc private func setSensitivity(_ sender: NSMenuItem) {
