@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Build Release
+        run: |
+          xcodebuild -scheme MiddleDrag \
+            -project MiddleDrag.xcodeproj \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination "platform=macOS" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+      
+      - name: Create App Zip
+        run: |
+          cd build/Build/Products/Release
+          zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
+          mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
+      
+      - name: Generate SHA256
+        id: sha
+        run: |
+          SHA=$(shasum -a 256 MiddleDrag-${{ steps.version.outputs.VERSION }}.zip | awk '{print $1}')
+          echo "SHA256=$SHA" >> $GITHUB_OUTPUT
+          echo "SHA256: $SHA"
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: MiddleDrag v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## MiddleDrag v${{ steps.version.outputs.VERSION }}
+            
+            ### Installation
+            
+            **Download:** Download `MiddleDrag-${{ steps.version.outputs.VERSION }}.zip` below
+            
+            **Homebrew:**
+```bash
+            brew tap YOUR_USERNAME/tap
+            brew install --cask middledrag
+```
+            
+            ### SHA256
+```
+            ${{ steps.sha.outputs.SHA256 }}
+```
+            
+            ### Requirements
+            - macOS 14.0 (Sonoma) or later
+            - Accessibility permissions
+          files: |
+            MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
