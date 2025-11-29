@@ -11,6 +11,9 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build and Release
@@ -44,7 +47,6 @@ jobs:
       - name: Create App Zip
         run: |
           cd build/Build/Products/Release
-          ls -la
           zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
           mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
       
@@ -62,5 +64,3 @@ jobs:
           name: MiddleDrag v${{ steps.version.outputs.VERSION }}
           body: "## MiddleDrag v${{ steps.version.outputs.VERSION }}\n\n### SHA256\n```\n${{ steps.sha.outputs.SHA256 }}\n```\n\n### Requirements\n- macOS 14.0 or later\n- Accessibility permissions"
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
