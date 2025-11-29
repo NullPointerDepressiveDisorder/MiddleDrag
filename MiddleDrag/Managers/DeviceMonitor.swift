@@ -1,6 +1,19 @@
 import Foundation
 import CoreFoundation
 
+// MARK: - Global callback storage
+// This is necessary because C callbacks cannot capture Swift context
+private var gDeviceMonitor: DeviceMonitor?
+
+// MARK: - C Callback Function
+private let deviceContactCallback: MTContactCallbackFunction = { device, touches, numTouches, timestamp, frame in
+    guard let monitor = gDeviceMonitor,
+          let touches = touches else { return 0 }
+    
+    monitor.handleContact(device: device, touches: touches, count: numTouches, timestamp: timestamp)
+    return 0
+}
+
 /// Monitors multitouch devices and reports touch events
 class DeviceMonitor {
     
@@ -10,16 +23,17 @@ class DeviceMonitor {
     
     private var devices: [MTDeviceRef] = []
     private var deviceInfos: [MTDeviceRef: DeviceInfo] = [:]
-    private var contactCallback: MTContactCallbackFunction?
     
     // MARK: - Lifecycle
     
     init() {
-        setupCallback()
+        // Store reference for callback
+        gDeviceMonitor = self
     }
     
     deinit {
         stop()
+        gDeviceMonitor = nil
     }
     
     // MARK: - Public Interface
@@ -36,10 +50,8 @@ class DeviceMonitor {
             
             print("Monitoring device: \(info.description)")
             
-            if let callback = contactCallback {
-                MTRegisterContactFrameCallback(device, callback)
-            }
-            
+            // Register the global callback
+            MTRegisterContactFrameCallback(device, deviceContactCallback)
             MTDeviceStart(device, 0)
         }
         
@@ -53,9 +65,8 @@ class DeviceMonitor {
                 MTDeviceStop(device)
             }
             
-            if let callback = contactCallback {
-                MTUnregisterContactFrameCallback(device, callback)
-            }
+            // Unregister callback
+            MTUnregisterContactFrameCallback(device, nil)
         }
         
         devices.removeAll()
@@ -67,19 +78,10 @@ class DeviceMonitor {
         return Array(deviceInfos.values)
     }
     
-    // MARK: - Private Methods
+    // MARK: - Internal callback handler
     
-    private func setupCallback() {
-        // Create callback that captures self weakly
-        contactCallback = { [weak self] (device, touchesPtr, numTouches, timestamp, frame) in
-            guard let self = self,
-                  let touchesPtr = touchesPtr else { return 0 }
-            
-            // Pass the raw pointer directly to the delegate
-            self.delegate?.deviceMonitor(self, didReceiveTouches: touchesPtr, count: numTouches, timestamp: timestamp)
-            
-            return 0
-        }
+    fileprivate func handleContact(device: MTDeviceRef?, touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double) {
+        delegate?.deviceMonitor(self, didReceiveTouches: touches, count: count, timestamp: timestamp)
     }
 }
 

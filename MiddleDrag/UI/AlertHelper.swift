@@ -26,7 +26,6 @@ class AlertHelper {
         • Enable gesture blocking only if needed
         
         Created for engineers, designers, and makers.
-        Open source: github.com/kmohindroo/MiddleDrag
         """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
