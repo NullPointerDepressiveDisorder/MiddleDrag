@@ -1,42 +1,50 @@
 import Foundation
 import CoreGraphics
+import AppKit
 
-/// Manages mouse event generation and cursor movement
+/// Generates mouse events for middle-click and middle-drag operations
 class MouseEventGenerator {
     
-    // Configuration
+    // MARK: - Properties
+    
+    /// Smoothing factor for movement (0 = no smoothing, 1 = maximum)
     var smoothingFactor: Float = 0.3
+    
+    /// Minimum movement threshold in pixels to prevent jitter
     var minimumMovementThreshold: CGFloat = 0.5
     
     // State tracking
     private var isMiddleMouseDown = false
     private var eventSource: CGEventSource?
     
-    // Event generation queue
+    // Event generation queue for thread safety
     private let eventQueue = DispatchQueue(label: "com.middledrag.mouse", qos: .userInitiated)
     
     // MARK: - Initialization
     
     init() {
-        // Create a reusable event source
-        eventSource = CGEventSource(stateID: .hidSystemState)
+        // Create event source with private state to avoid interference with system events
+        eventSource = CGEventSource(stateID: .privateState)
     }
     
     // MARK: - Public Interface
     
     /// Start a middle mouse drag operation
+    /// - Parameter screenPosition: Starting position (used for reference, actual position from current cursor)
     func startDrag(at screenPosition: CGPoint) {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
             
             self.isMiddleMouseDown = true
-            
-            // Send middle mouse down at current position (don't move cursor)
-            self.sendMiddleMouseDown(at: screenPosition)
+            let quartzPos = self.currentMouseLocationQuartz
+            self.sendMiddleMouseDown(at: quartzPos)
         }
     }
     
-    /// Update drag position with delta movement (relative movement)
+    /// Update drag position with delta movement
+    /// - Parameters:
+    ///   - deltaX: Horizontal movement delta
+    ///   - deltaY: Vertical movement delta
     func updateDrag(deltaX: CGFloat, deltaY: CGFloat) {
         guard isMiddleMouseDown else { return }
         
@@ -49,7 +57,7 @@ class MouseEventGenerator {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
             
-            // Apply smoothing to delta
+            // Apply smoothing
             var smoothedDeltaX = deltaX
             var smoothedDeltaY = deltaY
             
@@ -59,7 +67,6 @@ class MouseEventGenerator {
                 smoothedDeltaY *= factor
             }
             
-            // Create a relative mouse move event (this moves the cursor relatively)
             self.sendRelativeMouseMove(deltaX: smoothedDeltaX, deltaY: smoothedDeltaY)
         }
     }
@@ -72,10 +79,8 @@ class MouseEventGenerator {
             guard let self = self else { return }
             
             self.isMiddleMouseDown = false
-            
-            // Send middle mouse up at current cursor location
-            let currentLocation = NSEvent.mouseLocation
-            self.sendMiddleMouseUp(at: currentLocation)
+            let currentPos = self.currentMouseLocationQuartz
+            self.sendMiddleMouseUp(at: currentPos)
         }
     }
     
@@ -84,13 +89,36 @@ class MouseEventGenerator {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
             
-            let clickLocation = NSEvent.mouseLocation
-            self.sendMiddleMouseDown(at: clickLocation)
+            let clickLocation = self.currentMouseLocationQuartz
             
-            // Short delay for click
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.005) {
-                self.sendMiddleMouseUp(at: clickLocation)
-            }
+            // Create mouse down event
+            guard let downEvent = CGEvent(
+                mouseEventSource: self.eventSource,
+                mouseType: .otherMouseDown,
+                mouseCursorPosition: clickLocation,
+                mouseButton: .center
+            ) else { return }
+            
+            downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
+            downEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+            downEvent.flags = []
+            
+            // Create mouse up event
+            guard let upEvent = CGEvent(
+                mouseEventSource: self.eventSource,
+                mouseType: .otherMouseUp,
+                mouseCursorPosition: clickLocation,
+                mouseButton: .center
+            ) else { return }
+            
+            upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
+            upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+            upEvent.flags = []
+            
+            // Post events with small delay between them
+            downEvent.post(tap: .cghidEventTap)
+            usleep(10000)  // 10ms delay
+            upEvent.post(tap: .cghidEventTap)
         }
     }
     
@@ -99,6 +127,30 @@ class MouseEventGenerator {
         if isMiddleMouseDown {
             endDrag()
         }
+    }
+    
+    // MARK: - Coordinate Conversion
+    
+    /// Get current mouse position in Quartz coordinates (origin at top-left)
+    private var currentMouseLocationQuartz: CGPoint {
+        if let event = CGEvent(source: nil) {
+            return event.location
+        }
+        
+        // Fallback: convert from Cocoa coordinates (origin at bottom-left)
+        let cocoaLocation = NSEvent.mouseLocation
+        let screenHeight = NSScreen.main?.frame.height ?? 0
+        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+    }
+    
+    /// Get current mouse location in Quartz coordinates (public access)
+    static var currentMouseLocation: CGPoint {
+        if let event = CGEvent(source: nil) {
+            return event.location
+        }
+        let cocoaLocation = NSEvent.mouseLocation
+        let screenHeight = NSScreen.main?.frame.height ?? 0
+        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
     
     // MARK: - Private Methods
@@ -111,7 +163,8 @@ class MouseEventGenerator {
             mouseButton: .center
         ) else { return }
         
-        event.flags = []  // Clear any modifier flags
+        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+        event.flags = []
         event.post(tap: .cghidEventTap)
     }
     
@@ -123,21 +176,19 @@ class MouseEventGenerator {
             mouseButton: .center
         ) else { return }
         
+        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.flags = []
         event.post(tap: .cghidEventTap)
     }
     
     private func sendRelativeMouseMove(deltaX: CGFloat, deltaY: CGFloat) {
-        // Get current mouse location
-        let currentLocation = NSEvent.mouseLocation
+        let currentPos = currentMouseLocationQuartz
         
-        // Calculate new position
         let newLocation = CGPoint(
-            x: currentLocation.x + deltaX,
-            y: currentLocation.y + deltaY
+            x: currentPos.x + deltaX,
+            y: currentPos.y + deltaY
         )
         
-        // Send drag event with middle button held
         guard let event = CGEvent(
             mouseEventSource: eventSource,
             mouseType: .otherMouseDragged,
@@ -145,19 +196,8 @@ class MouseEventGenerator {
             mouseButton: .center
         ) else { return }
         
+        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.flags = []
-        
-        // Post the event
         event.post(tap: .cghidEventTap)
-    }
-}
-
-// MARK: - Screen Utilities
-
-extension MouseEventGenerator {
-    
-    /// Get current mouse location
-    static var currentMouseLocation: CGPoint {
-        return NSEvent.mouseLocation
     }
 }
