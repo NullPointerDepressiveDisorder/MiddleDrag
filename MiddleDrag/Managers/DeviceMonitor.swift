@@ -1,33 +1,44 @@
 import Foundation
 import CoreFoundation
 
-// MARK: - Global callback storage
-// This is necessary because C callbacks cannot capture Swift context
+// MARK: - Global Callback Storage
+
+// Required because C callbacks cannot capture Swift context
 private var gDeviceMonitor: DeviceMonitor?
 
 // MARK: - C Callback Function
+
 private let deviceContactCallback: MTContactCallbackFunction = { device, touches, numTouches, timestamp, frame in
     guard let monitor = gDeviceMonitor,
           let touches = touches else { return 0 }
     
-    monitor.handleContact(device: device, touches: touches, count: numTouches, timestamp: timestamp)
-    return 0
+    let shouldConsume = monitor.handleContact(
+        device: device,
+        touches: touches,
+        count: numTouches,
+        timestamp: timestamp
+    )
+    
+    // Return 1 to attempt to suppress system gesture handling for 3+ fingers
+    return shouldConsume ? 1 : 0
 }
+
+// MARK: - DeviceMonitor
 
 /// Monitors multitouch devices and reports touch events
 class DeviceMonitor {
     
     // MARK: - Properties
     
+    /// Delegate to receive touch events
     weak var delegate: DeviceMonitorDelegate?
     
-    private var devices: [MTDeviceRef] = []
-    private var deviceInfos: [MTDeviceRef: DeviceInfo] = [:]
+    private var device: MTDeviceRef?
+    private var isRunning = false
     
     // MARK: - Lifecycle
     
     init() {
-        // Store reference for callback
         gDeviceMonitor = self
     }
     
@@ -38,55 +49,76 @@ class DeviceMonitor {
     
     // MARK: - Public Interface
     
-    /// Start monitoring all available devices
+    /// Start monitoring the default multitouch device
     func start() {
-        // Get all devices
-        devices = MultitouchFramework.shared.getDevices()
+        guard !isRunning else { return }
         
-        // Store device info and register callbacks
-        for device in devices {
-            let info = MultitouchFramework.shared.getDeviceInfo(device)
-            deviceInfos[device] = info
-            
-            print("Monitoring device: \(info.description)")
-            
-            // Register the global callback
-            MTRegisterContactFrameCallback(device, deviceContactCallback)
-            MTDeviceStart(device, 0)
+        guard let defaultDevice = MultitouchFramework.shared.getDefaultDevice() else {
+            print("⚠️ No multitouch device found")
+            return
         }
         
-        print("Started monitoring \(devices.count) device(s)")
+        device = defaultDevice
+        
+        MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
+        MTDeviceStart(defaultDevice, 0)
+        
+        isRunning = true
     }
     
-    /// Stop monitoring all devices
+    /// Stop monitoring
     func stop() {
-        for device in devices {
-            if MTDeviceIsRunning(device) {
-                MTDeviceStop(device)
+        guard isRunning, let device = device else { return }
+        
+        MTUnregisterContactFrameCallback(device, deviceContactCallback)
+        MTDeviceStop(device)
+        
+        self.device = nil
+        isRunning = false
+    }
+    
+    // MARK: - Internal
+    
+    /// Handle contact from callback and return whether to consume the event
+    fileprivate func handleContact(
+        device: MTDeviceRef?,
+        touches: UnsafeMutableRawPointer,
+        count: Int32,
+        timestamp: Double
+    ) -> Bool {
+        // Count valid touching fingers (state 3 = touching, state 4 = active)
+        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: Int(count))
+        var validFingerCount = 0
+        
+        for i in 0..<Int(count) {
+            let state = touchArray[i].state
+            if state == 3 || state == 4 {
+                validFingerCount += 1
             }
-            
-            // Unregister callback
-            MTUnregisterContactFrameCallback(device, nil)
         }
         
-        devices.removeAll()
-        deviceInfos.removeAll()
-    }
-    
-    /// Get information about monitored devices
-    var monitoredDevices: [DeviceInfo] {
-        return Array(deviceInfos.values)
-    }
-    
-    // MARK: - Internal callback handler
-    
-    fileprivate func handleContact(device: MTDeviceRef?, touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double) {
+        // Pass to delegate
         delegate?.deviceMonitor(self, didReceiveTouches: touches, count: count, timestamp: timestamp)
+        
+        // Consume event if we have 3+ valid fingers
+        return validFingerCount >= 3
     }
 }
 
 // MARK: - Delegate Protocol
 
+/// Protocol for receiving touch events from the device monitor
 protocol DeviceMonitorDelegate: AnyObject {
-    func deviceMonitor(_ monitor: DeviceMonitor, didReceiveTouches touches: UnsafeMutableRawPointer, count: Int32, timestamp: Double)
+    /// Called when new touch data is received
+    /// - Parameters:
+    ///   - monitor: The device monitor
+    ///   - touches: Raw pointer to touch data array
+    ///   - count: Number of touches
+    ///   - timestamp: Timestamp of the touch frame
+    func deviceMonitor(
+        _ monitor: DeviceMonitor,
+        didReceiveTouches touches: UnsafeMutableRawPointer,
+        count: Int32,
+        timestamp: Double
+    )
 }
