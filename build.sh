@@ -1,48 +1,73 @@
 #!/bin/bash
 
-# MiddleDrag build script
-# Builds the app without Xcode, using command line tools
+# MiddleDrag Build Script
+# Builds the app with proper framework linking and code signing
 
-echo "Building MiddleDrag..."
+set -e  # Exit on error
+
+echo "🔨 Building MiddleDrag..."
+
+# Configuration
+APP_NAME="MiddleDrag"
+BUILD_DIR="build"
+CONFIGURATION="Release"
+BUNDLE_ID="com.kmohindroo.MiddleDrag"
+
+# Clean previous build
+echo "Cleaning previous build..."
+rm -rf "$BUILD_DIR"
 
 # Create build directory
-mkdir -p build
+mkdir -p "$BUILD_DIR"
 
-# Compile Swift files
-swiftc \
-    -o build/MiddleDrag \
-    -framework SwiftUI \
-    -framework Cocoa \
-    -framework CoreGraphics \
-    -framework CoreFoundation \
-    -F/System/Library/PrivateFrameworks \
-    -framework MultitouchSupport \
-    MiddleDrag/*.swift
+# Build with xcodebuild
+echo "Building with Xcode..."
+xcodebuild \
+    -project "$APP_NAME.xcodeproj" \
+    -scheme "$APP_NAME" \
+    -configuration "$CONFIGURATION" \
+    -derivedDataPath "$BUILD_DIR" \
+    PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+    OTHER_LDFLAGS="-F/System/Library/PrivateFrameworks -framework MultitouchSupport -framework CoreFoundation -framework CoreGraphics" \
+    FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
+    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGNING_REQUIRED=NO \
+    ARCHS="$(uname -m)" \
+    ONLY_ACTIVE_ARCH=NO
 
-# Check if compilation succeeded
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed"
+# Find the built app
+APP_PATH=$(find "$BUILD_DIR" -name "$APP_NAME.app" -type d | head -n 1)
+
+if [ -z "$APP_PATH" ]; then
+    echo "❌ Build failed: Could not find $APP_NAME.app"
     exit 1
 fi
 
-# Create app bundle structure
-APP_BUNDLE="build/MiddleDrag.app"
-mkdir -p "$APP_BUNDLE/Contents/MacOS"
-mkdir -p "$APP_BUNDLE/Contents/Resources"
+echo "✅ Build successful!"
+echo "📦 App location: $APP_PATH"
 
-# Move executable
-mv build/MiddleDrag "$APP_BUNDLE/Contents/MacOS/"
+# Optional: Copy to Applications folder
+read -p "Copy to /Applications? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Copying to /Applications..."
+    rm -rf "/Applications/$APP_NAME.app" 2>/dev/null || true
+    cp -R "$APP_PATH" "/Applications/"
+    echo "✅ Copied to /Applications/$APP_NAME.app"
+    
+    # Set proper permissions
+    chmod -R 755 "/Applications/$APP_NAME.app"
+    
+    # Kill existing instance if running
+    killall "$APP_NAME" 2>/dev/null || true
+    
+    # Launch the app
+    read -p "Launch $APP_NAME now? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        open "/Applications/$APP_NAME.app"
+        echo "🚀 $APP_NAME launched!"
+    fi
+fi
 
-# Copy Info.plist
-cp MiddleDrag/Info.plist "$APP_BUNDLE/Contents/"
-
-# Create a simple icon (you can replace with actual icon)
-echo "📐" > "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
-
-echo "✅ Build complete!"
-echo "📍 App location: $APP_BUNDLE"
-echo ""
-echo "To run:"
-echo "  open $APP_BUNDLE"
-echo ""
-echo "⚠️  Remember to grant accessibility permissions in System Settings"
+echo "🎉 Done!"
