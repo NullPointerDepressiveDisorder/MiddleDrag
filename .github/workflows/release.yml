@@ -20,9 +20,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Get version from tag
+      - name: Get version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
       
       - name: Build Release
         run: |
@@ -39,6 +44,7 @@ jobs:
       - name: Create App Zip
         run: |
           cd build/Build/Products/Release
+          ls -la
           zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
           mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
       
@@ -52,6 +58,7 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
           name: MiddleDrag v${{ steps.version.outputs.VERSION }}
           body: "## MiddleDrag v${{ steps.version.outputs.VERSION }}\n\n### SHA256\n```\n${{ steps.sha.outputs.SHA256 }}\n```\n\n### Requirements\n- macOS 14.0 or later\n- Accessibility permissions"
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
