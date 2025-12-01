@@ -1,8 +1,9 @@
 import Foundation
 import CoreFoundation
 
-// MARK: - Debug Logging
+// MARK: - Debug Logging (Debug builds only)
 
+#if DEBUG
 private let debugLogPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("middledrag_touch.log")
 private var touchCount = 0
 
@@ -21,6 +22,9 @@ private func logToFile(_ message: String) {
         }
     }
 }
+#else
+@inline(__always) private func logToFile(_ message: String) {}
+#endif
 
 // MARK: - Global Callback Storage
 
@@ -30,10 +34,12 @@ private var gDeviceMonitor: DeviceMonitor?
 // MARK: - C Callback Function
 
 private let deviceContactCallback: MTContactCallbackFunction = { device, touches, numTouches, timestamp, frame in
+    #if DEBUG
     touchCount += 1
     if touchCount <= 5 || touchCount % 100 == 0 {
         logToFile("Touch callback #\(touchCount): \(numTouches) touches")
     }
+    #endif
     
     guard let monitor = gDeviceMonitor,
           let touches = touches else { return 0 }
