@@ -1,6 +1,27 @@
 import Foundation
 import CoreFoundation
 
+// MARK: - Debug Logging
+
+private let debugLogPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("middledrag_touch.log")
+private var touchCount = 0
+
+private func logToFile(_ message: String) {
+    let timestamp = ISO8601DateFormatter().string(from: Date())
+    let line = "[\(timestamp)] \(message)\n"
+    if let data = line.data(using: .utf8) {
+        if FileManager.default.fileExists(atPath: debugLogPath.path) {
+            if let handle = try? FileHandle(forWritingTo: debugLogPath) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                handle.closeFile()
+            }
+        } else {
+            try? data.write(to: debugLogPath)
+        }
+    }
+}
+
 // MARK: - Global Callback Storage
 
 // Required because C callbacks cannot capture Swift context
@@ -9,6 +30,11 @@ private var gDeviceMonitor: DeviceMonitor?
 // MARK: - C Callback Function
 
 private let deviceContactCallback: MTContactCallbackFunction = { device, touches, numTouches, timestamp, frame in
+    touchCount += 1
+    if touchCount <= 5 || touchCount % 100 == 0 {
+        logToFile("Touch callback #\(touchCount): \(numTouches) touches")
+    }
+    
     guard let monitor = gDeviceMonitor,
           let touches = touches else { return 0 }
     
@@ -53,17 +79,44 @@ class DeviceMonitor {
     func start() {
         guard !isRunning else { return }
         
-        guard let defaultDevice = MultitouchFramework.shared.getDefaultDevice() else {
-            print("⚠️ No multitouch device found")
-            return
+        logToFile("DeviceMonitor.start() called")
+        
+        // Try to get all devices
+        if let deviceList = MTDeviceCreateList() {
+            let count = CFArrayGetCount(deviceList)
+            logToFile("Found \(count) multitouch device(s)")
+            
+            for i in 0..<count {
+                let devicePtr = CFArrayGetValueAtIndex(deviceList, i)
+                if let dev = devicePtr {
+                    let deviceRef = UnsafeMutableRawPointer(mutating: dev)
+                    logToFile("Registering callback for device \(i): \(deviceRef)")
+                    MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
+                    MTDeviceStart(deviceRef, 0)
+                    
+                    if device == nil {
+                        device = deviceRef
+                    }
+                }
+            }
+        } else {
+            logToFile("MTDeviceCreateList returned nil, trying default")
         }
         
-        device = defaultDevice
+        // Also try the default device
+        if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
+            logToFile("Also registering default device: \(defaultDevice)")
+            MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
+            MTDeviceStart(defaultDevice, 0)
+            
+            if device == nil {
+                device = defaultDevice
+            }
+        }
         
-        MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
-        MTDeviceStart(defaultDevice, 0)
-        
+        logToFile("Device registration complete")
         isRunning = true
+        logToFile("DeviceMonitor started successfully")
     }
     
     /// Stop monitoring

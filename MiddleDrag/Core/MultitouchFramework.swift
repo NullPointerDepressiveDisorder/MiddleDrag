@@ -29,6 +29,10 @@ typealias MTContactCallbackFunction = @convention(c) (
 @_silgen_name("MTDeviceCreateDefault")
 func MTDeviceCreateDefault() -> MTDeviceRef?
 
+/// Get list of all multitouch devices
+@_silgen_name("MTDeviceCreateList")
+func MTDeviceCreateList() -> CFArray?
+
 // MARK: - Device Control
 
 /// Start the multitouch device
