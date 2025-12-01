@@ -22,17 +22,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func initializeApp() {
-        // Check Input Monitoring permissions
-        if !checkInputMonitoringPermissions() {
-            return
-        }
-        
         // Load preferences
         preferences = PreferencesManager.shared.loadPreferences()
         
         // Configure and start multitouch manager
         multitouchManager.updateConfiguration(preferences.gestureConfig)
         multitouchManager.start()
+        
+        // Check if we actually started successfully
+        if !multitouchManager.isEnabled {
+            // Show permission alert
+            let result = AlertHelper.showInputMonitoringPermissionRequired()
+            if result {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NSApplication.shared.terminate(nil)
+                }
+            } else {
+                NSApplication.shared.terminate(nil)
+            }
+            return
+        }
         
         // Set up menu bar UI after starting (so isEnabled is true)
         menuBarController = MenuBarController(
@@ -62,38 +71,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     // MARK: - Setup
-    
-    private func checkInputMonitoringPermissions() -> Bool {
-        // Test if we can create an event tap (requires Input Monitoring permission)
-        let testTap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .listenOnly,
-            eventsOfInterest: CGEventMask(1 << CGEventType.mouseMoved.rawValue),
-            callback: { _, _, event, _ in Unmanaged.passUnretained(event) },
-            userInfo: nil
-        )
-        
-        if testTap != nil {
-            // Permission granted, clean up test tap
-            CFMachPortInvalidate(testTap!)
-            return true
-        }
-        
-        // Show custom alert for Input Monitoring permission
-        let result = AlertHelper.showInputMonitoringPermissionRequired()
-        
-        if result {
-            // User chose to open settings - quit so they can grant permission
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NSApplication.shared.terminate(nil)
-            }
-        } else {
-            NSApplication.shared.terminate(nil)
-        }
-        
-        return false
-    }
     
     private func setupNotifications() {
         NotificationCenter.default.addObserver(
