@@ -22,15 +22,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func initializeApp() {
+        // Debug logging to file for release debugging
+        let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("middledrag_debug.log")
+        func log(_ message: String) {
+            let timestamp = ISO8601DateFormatter().string(from: Date())
+            let line = "[\(timestamp)] \(message)\n"
+            print(message)
+            if let data = line.data(using: .utf8) {
+                if FileManager.default.fileExists(atPath: logPath.path) {
+                    if let handle = try? FileHandle(forWritingTo: logPath) {
+                        handle.seekToEndOfFile()
+                        handle.write(data)
+                        handle.closeFile()
+                    }
+                } else {
+                    try? data.write(to: logPath)
+                }
+            }
+        }
+        
+        log("MiddleDrag starting...")
+        log("Bundle path: \(Bundle.main.bundlePath)")
+        
         // Load preferences
         preferences = PreferencesManager.shared.loadPreferences()
+        log("Preferences loaded")
         
         // Configure and start multitouch manager
         multitouchManager.updateConfiguration(preferences.gestureConfig)
+        log("About to start multitouch manager")
         multitouchManager.start()
+        log("Multitouch manager started, isEnabled: \(multitouchManager.isEnabled)")
         
         // Check if we actually started successfully
         if !multitouchManager.isEnabled {
+            log("ERROR: Multitouch manager failed to start")
             // Show permission alert
             let result = AlertHelper.showInputMonitoringPermissionRequired()
             if result {
@@ -43,6 +69,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         
+        log("Setting up menu bar")
         // Set up menu bar UI after starting (so isEnabled is true)
         menuBarController = MenuBarController(
             multitouchManager: multitouchManager,
@@ -56,6 +83,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if preferences.launchAtLogin {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
+        log("Initialization complete")
     }
     
     func applicationWillTerminate(_ notification: Notification) {
