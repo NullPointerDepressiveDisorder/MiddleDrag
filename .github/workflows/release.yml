@@ -39,9 +39,10 @@ jobs:
             -configuration Release \
             -derivedDataPath build \
             -destination "platform=macOS" \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
+            OTHER_LDFLAGS="-F/System/Library/PrivateFrameworks -framework MultitouchSupport -framework CoreFoundation -framework CoreGraphics" \
+            FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
             build
       
       - name: Create App Zip
