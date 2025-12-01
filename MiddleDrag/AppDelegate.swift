@@ -22,25 +22,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func initializeApp() {
-        // Check Accessibility permissions (required for CGEvent posting)
-        if !AXIsProcessTrusted() {
-            // Prompt user to grant Accessibility permission
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-            AXIsProcessTrustedWithOptions(options as CFDictionary)
-            
-            // Show additional guidance
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                let alert = NSAlert()
-                alert.messageText = "Accessibility Permission Required"
-                alert.informativeText = "MiddleDrag needs Accessibility permission to simulate mouse clicks.\n\nPlease enable MiddleDrag in:\nSystem Settings → Privacy & Security → Accessibility\n\nThen restart the app."
-                alert.alertStyle = .warning
-                alert.addButton(withTitle: "Quit")
-                alert.runModal()
-                NSApplication.shared.terminate(nil)
-            }
-            return
-        }
-        
         // Load preferences
         preferences = PreferencesManager.shared.loadPreferences()
         
@@ -48,7 +29,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         multitouchManager.updateConfiguration(preferences.gestureConfig)
         multitouchManager.start()
         
-        // Set up menu bar UI after starting (so isEnabled is true)
+        // Set up menu bar UI
         menuBarController = MenuBarController(
             multitouchManager: multitouchManager,
             preferences: preferences
@@ -60,6 +41,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configure launch at login
         if preferences.launchAtLogin {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
+        }
+        
+        // Check Accessibility permission AFTER UI is set up
+        // This way the menu bar icon appears even if permission is missing
+        if !AXIsProcessTrusted() {
+            // Show our custom alert only - don't use the system prompt
+            let alert = NSAlert()
+            alert.messageText = "Accessibility Permission Required"
+            alert.informativeText = """
+            MiddleDrag needs Accessibility permission to simulate mouse clicks.
+            
+            To grant permission:
+            1. Click "Open System Settings" below
+            2. Click the "+" button
+            3. Navigate to this app and add it
+            4. Make sure the checkbox is enabled
+            5. Restart MiddleDrag
+            
+            Note: You may need to remove and re-add the app if you downloaded a new version.
+            """
+            alert.alertStyle = .warning
+            alert.addButton(withTitle: "Open System Settings")
+            alert.addButton(withTitle: "Continue Anyway")
+            
+            if alert.runModal() == .alertFirstButtonReturn {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+            // Don't quit - let user continue and see the menu bar icon
         }
     }
     

@@ -78,39 +78,8 @@ class AlertHelper {
         alert.runModal()
     }
     
-    static func showInputMonitoringPermissionRequired() -> Bool {
-        let alert = NSAlert()
-        alert.messageText = "Input Monitoring Permission Required"
-        alert.informativeText = """
-        MiddleDrag needs Input Monitoring permission to:
-        • Detect trackpad gestures
-        • Generate middle mouse button events
-        
-        Please add MiddleDrag to:
-        System Settings → Privacy & Security → Input Monitoring
-        
-        After granting permission, please restart MiddleDrag.
-        """
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Quit")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            openInputMonitoringSettings()
-            return true
-        }
-        
-        return false
-    }
-    
     private static func openTrackpadSettings() {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.trackpad") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-    
-    private static func openInputMonitoringSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
             NSWorkspace.shared.open(url)
         }
     }
