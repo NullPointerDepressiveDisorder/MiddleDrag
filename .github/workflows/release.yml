@@ -55,6 +55,16 @@ jobs:
           cd build/Build/Products/Release
           zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
           mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v3
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: "v${{ steps.version.outputs.VERSION }}.zip"
       
       - name: Generate SHA256
         id: sha
