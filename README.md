@@ -17,7 +17,7 @@ A macOS menu bar app that enables middle-click and middle-drag functionality usi
 
 ## Requirements
 
-- macOS 14.0 (Sonoma) or later
+- macOS 15.0 (Seqoia) or later
 - Built-in trackpad or Magic Trackpad
 - Accessibility permissions (required for mouse event generation)
 
@@ -78,8 +78,8 @@ MiddleDrag uses Apple's private MultitouchSupport framework to receive raw touch
 
 ### Prerequisites
 
-- Xcode 15.0 or later
-- macOS 14.0 SDK or later
+- Xcode 16.0 or later
+- macOS 15.0 SDK or later
 
 ### Build
 
@@ -127,7 +127,6 @@ MiddleDrag/
 
 | macOS Version | Status |
 |--------------|--------|
-| macOS 14 (Sonoma) | ✅ Fully supported |
 | macOS 15 (Sequoia) | ✅ Fully supported |
 | macOS 26 beta (Tahoe) | ✅ Compatible |
 
