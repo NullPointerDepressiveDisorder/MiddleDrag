@@ -4,7 +4,7 @@
 
 **MiddleDrag** is a macOS menu bar app that enables middle-click and middle-drag functionality using three-finger trackpad gestures. It converts three-finger taps into middle mouse clicks and three-finger drags into middle mouse drags for use in 3D/CAD applications like Blender and Fusion 360.
 
-- **Language**: Swift 5.9+
+- **Language**: Swift 5.0+
 - **Platform**: macOS 15.0+ (Sequoia)
 - **Framework**: SwiftUI + AppKit (menu bar app)
 - **Build Tool**: Xcode 16.0+ / xcodebuild
