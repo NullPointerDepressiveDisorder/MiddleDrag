@@ -5,7 +5,7 @@ import os.log
 
 // MARK: - Sentry Logger
 /// A unified logger that writes to both os_log and Sentry breadcrumbs
-/// Usage: Log.debug("message"), Log.info("message"), Log.warning("message"), Log.error("message")
+/// Usage: Log.debug("message"), Log.info("message"), Log.warning("message"), Log.error("message"), Log.fatal("message")
 enum Log {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.middledrag"
     
