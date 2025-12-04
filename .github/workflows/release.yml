@@ -64,7 +64,7 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         with:
           environment: production
-          version: "v${{ steps.version.outputs.VERSION }}.zip"
+          release: "v${{ steps.version.outputs.VERSION }}"
       
       - name: Generate SHA256
         id: sha
