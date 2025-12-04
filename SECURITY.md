@@ -11,7 +11,7 @@
 
 If you discover a security vulnerability in MiddleDrag, please report it through GitHub's Security Advisory feature:
 
-1. Go to the [Security tab](https://github.com/yourusername/MiddleDrag/security)
+1. Go to the [Security tab](https://github.com/nullpointerdepressivedisorder/MiddleDrag/security)
 2. Click "Report a vulnerability"
 3. Fill out the private form
 
@@ -51,3 +51,4 @@ Release builds are signed with an ad-hoc signature. Users may need to grant perm
 
 We monitor dependencies for known vulnerabilities. Current dependencies:
 - [Sentry](https://github.com/getsentry/sentry-cocoa) - Crash reporting
+- [SimpleAnalytics](https://github.com/simpleanalytics/swift-package) - Anonymous usage analytics
