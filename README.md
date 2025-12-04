@@ -6,6 +6,10 @@ A macOS menu bar app that enables middle-click and middle-drag functionality usi
 ![Swift](https://img.shields.io/badge/Swift-5.9+-orange)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+<p align="center">
+  <img src="assets/demo.gif" width="600" alt="MiddleDrag demo showing three-finger trackpad navigation">
+</p>
+
 ## Features
 
 - **Three-finger tap** → Middle mouse click
