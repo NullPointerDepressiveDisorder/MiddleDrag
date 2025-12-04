@@ -37,12 +37,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         preferences = PreferencesManager.shared.loadPreferences()
         Log.info("Preferences loaded", category: .app)
         
-        // Configure and start multitouch manager
-        multitouchManager.updateConfiguration(preferences.gestureConfig)
-        multitouchManager.start()
-        Log.info("Multitouch manager started", category: .app)
+        // Check Accessibility permission BEFORE starting multitouch manager
+        // This prevents the event tap from being set up without permissions, which causes hangs
+        let hasAccessibilityPermission = AXIsProcessTrusted()
         
-        // Set up menu bar UI
+        if hasAccessibilityPermission {
+            Log.info("Accessibility permission granted", category: .app)
+            AnalyticsManager.shared.trackAccessibilityPermission(granted: true)
+            
+            // Configure and start multitouch manager (only if we have permission)
+            multitouchManager.updateConfiguration(preferences.gestureConfig)
+            multitouchManager.start()
+            Log.info("Multitouch manager started", category: .app)
+        } else {
+            Log.warning("Accessibility permission not granted", category: .app)
+            AnalyticsManager.shared.trackAccessibilityPermission(granted: false)
+            
+            // Still configure the manager, but don't start it
+            multitouchManager.updateConfiguration(preferences.gestureConfig)
+        }
+        
+        // Set up menu bar UI (always initialize, even without permission)
+        // This way the menu bar icon appears and users can interact with the app
         menuBarController = MenuBarController(
             multitouchManager: multitouchManager,
             preferences: preferences
@@ -57,15 +73,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
         
-        // Check Accessibility permission AFTER UI is set up
-        // This way the menu bar icon appears even if permission is missing
-        if !AXIsProcessTrusted() {
-            Log.warning("Accessibility permission not granted", category: .app)
-            AnalyticsManager.shared.trackAccessibilityPermission(granted: false)
+        // Show alert if permission is missing
+        if !hasAccessibilityPermission {
             showAccessibilityAlert()
-        } else {
-            Log.info("Accessibility permission granted", category: .app)
-            AnalyticsManager.shared.trackAccessibilityPermission(granted: true)
         }
         
         // Final cleanup of any stray windows
