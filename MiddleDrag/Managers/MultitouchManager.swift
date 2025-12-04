@@ -123,7 +123,7 @@ class MultitouchManager {
             },
             userInfo: refcon
         ) else {
-            print("⚠️ Could not create event tap")
+            Log.warning("Could not create event tap", category: .device)
             return
         }
         
