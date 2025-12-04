@@ -70,6 +70,7 @@ class DeviceMonitor {
         Log.info("DeviceMonitor starting...", category: .device)
         
         var deviceCount = 0
+        var registeredDevices: Set<UnsafeMutableRawPointer> = []
         
         // Try to get all devices
         if let deviceList = MTDeviceCreateList() {
@@ -82,6 +83,7 @@ class DeviceMonitor {
                     let deviceRef = UnsafeMutableRawPointer(mutating: dev)
                     MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
                     MTDeviceStart(deviceRef, 0)
+                    registeredDevices.insert(deviceRef)
                     deviceCount += 1
                     
                     if device == nil {
@@ -93,14 +95,19 @@ class DeviceMonitor {
             Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
         }
         
-        // Also try the default device
+        // Also try the default device if not already registered
         if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
-            MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
-            MTDeviceStart(defaultDevice, 0)
-            deviceCount += 1
-            
-            if device == nil {
-                device = defaultDevice
+            if !registeredDevices.contains(defaultDevice) {
+                MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
+                MTDeviceStart(defaultDevice, 0)
+                registeredDevices.insert(defaultDevice)
+                deviceCount += 1
+                
+                if device == nil {
+                    device = defaultDevice
+                }
+            } else {
+                Log.debug("Default device already registered from device list", category: .device)
             }
         }
         
