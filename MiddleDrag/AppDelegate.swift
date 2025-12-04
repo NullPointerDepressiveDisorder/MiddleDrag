@@ -41,20 +41,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // This prevents the event tap from being set up without permissions, which causes hangs
         let hasAccessibilityPermission = AXIsProcessTrusted()
         
+        // Configure multitouch manager (always configure, regardless of permission)
+        multitouchManager.updateConfiguration(preferences.gestureConfig)
+        
         if hasAccessibilityPermission {
             Log.info("Accessibility permission granted", category: .app)
             AnalyticsManager.shared.trackAccessibilityPermission(granted: true)
             
-            // Configure and start multitouch manager (only if we have permission)
-            multitouchManager.updateConfiguration(preferences.gestureConfig)
+            // Start multitouch manager (only if we have permission)
             multitouchManager.start()
             Log.info("Multitouch manager started", category: .app)
         } else {
             Log.warning("Accessibility permission not granted", category: .app)
             AnalyticsManager.shared.trackAccessibilityPermission(granted: false)
-            
-            // Still configure the manager, but don't start it
-            multitouchManager.updateConfiguration(preferences.gestureConfig)
         }
         
         // Set up menu bar UI (always initialize, even without permission)
