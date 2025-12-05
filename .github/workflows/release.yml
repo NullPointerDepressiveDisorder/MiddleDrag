@@ -95,8 +95,7 @@ jobs:
           body: "## MiddleDrag v${{ steps.version.outputs.VERSION }}\n\n### SHA256\n```\n${{ steps.sha.outputs.SHA256 }}\n```\n\n### Requirements\n- macOS 14.0 or later\n- Accessibility permissions"
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
 
-      - name: Trigger Homebrew Update workflow
-        run: |
+            -H "Authorization: Bearer ${{ github.token }}" \
           if ! curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
