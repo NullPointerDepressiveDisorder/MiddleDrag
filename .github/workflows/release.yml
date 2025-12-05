@@ -50,7 +50,7 @@ jobs:
           fi
 
           # Validate against MARKETING_VERSION in Xcode project
-          PROJECT_VERSION=$(sed -n 's/.*MARKETING_VERSION = \([0-9.][0-9.]*\);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
+          PROJECT_VERSION=$(sed -n 's/.*MARKETING_VERSION = \([0-9.]*\);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
           if [ "$VERSION" != "$PROJECT_VERSION" ]; then
             echo "Error: Version mismatch! Workflow version: $VERSION, Xcode project version: $PROJECT_VERSION"
             echo "Please ensure project.pbxproj is updated (try running ./bump-version.sh)"
@@ -108,7 +108,7 @@ jobs:
       
       - name: Trigger Homebrew Update workflow
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.VERSION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -X POST \
