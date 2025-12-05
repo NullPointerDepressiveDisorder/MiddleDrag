@@ -86,7 +86,7 @@ jobs:
   update-homebrew:
     name: Update Homebrew Tap
     needs: build
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Trigger Homebrew Update
         uses: actions/github-script@v7
