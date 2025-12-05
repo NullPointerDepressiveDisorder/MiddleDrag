@@ -32,12 +32,24 @@ jobs:
       
       - name: Get version
         id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"  # Remove 'v' prefix if present
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"  # Remove 'v' prefix
+          elif [ -n "${{ github.event.client_payload.version }}" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+            VERSION="${VERSION#v}"  # Remove 'v' prefix
           else
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
+            VERSION="${VERSION#v}"  # Remove 'v' prefix
           fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
       
       - name: Build Release
         run: |
