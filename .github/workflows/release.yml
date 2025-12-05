@@ -93,9 +93,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
               if ["$COUNT" -ne 2]; \
-              -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-              https://api.github.com/repos/${{ github.repository }}/dispatches \
+          VERSION: ${{ steps.version.outputs.VERSION }}
               -d '{"event_type":"homebrew_release","client_payload":{"version":"${{ steps.version.outputs.VERSION }}"}}'; then
               echo "Error: Expected exactly 2 MARKETING_VERSION updates"; exit 1; \
               fi
