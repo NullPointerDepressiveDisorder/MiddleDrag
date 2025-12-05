@@ -45,7 +45,11 @@ jobs:
             VERSION="${{ github.event.client_payload.version }}"
             VERSION="${VERSION#v}"  # Remove 'v' prefix
           else
-            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
+            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName' 2>/dev/null || echo "")
+            if [ -z "$VERSION" ]; then
+              echo "Error: No version found. Please specify a version or create a release first."
+              exit 1
+            fi
             VERSION="${VERSION#v}"  # Remove 'v' prefix
           fi
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
