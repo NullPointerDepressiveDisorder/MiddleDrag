@@ -20,6 +20,11 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
+# Ensure working directory is clean
+if ! git diff-index --quiet HEAD --; then
+    echo "Error: Working directory has uncommitted changes. Please commit or stash them first."
+    exit 1
+fi
 echo "Bumping version to $VERSION..."
 
 # Update Xcode project MARKETING_VERSION (both Debug and Release configs)
