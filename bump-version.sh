@@ -28,7 +28,11 @@ fi
 echo "Bumping version to $VERSION..."
 
 # Update Xcode project MARKETING_VERSION (both Debug and Release configs)
-sed -i '' "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*/MARKETING_VERSION = $VERSION/g" \
+if [ ! -f "MiddleDrag.xcodeproj/project.pbxproj" ]; then
+    echo "Error: MiddleDrag.xcodeproj/project.pbxproj not found. Are you in the project root?"
+    exit 1
+fi
+sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+/MARKETING_VERSION = $VERSION/g" \
     MiddleDrag.xcodeproj/project.pbxproj
 
 # Validate that MARKETING_VERSION was updated
@@ -38,20 +42,20 @@ if ! grep -q "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj
 fi
 echo "✓ Updated MARKETING_VERSION in Xcode project"
 
+# Check if tag already exists
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    echo "Error: Tag v$VERSION already exists"
+    exit 1
+fi
+
 # Stage and commit
 git add MiddleDrag.xcodeproj/project.pbxproj
 git commit -m "Bump version to $VERSION"
 echo "✓ Committed version change"
 
 # Create tag
-if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-    echo "Error: Tag v$VERSION already exists"
-    exit 1
-fi
-
 git tag "v$VERSION"
 echo "✓ Created tag v$VERSION"
-
 echo ""
 echo "Done! To trigger the release workflow, run:"
 echo "  git push && git push --tags"
