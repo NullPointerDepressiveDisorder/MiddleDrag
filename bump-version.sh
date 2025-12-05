@@ -35,12 +35,11 @@ fi
 sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+/MARKETING_VERSION = $VERSION/g" \
     MiddleDrag.xcodeproj/project.pbxproj
 
-elif [ "$COUNT" -lt 2 ]; then
-    echo "Error: Only $COUNT instance(s) of MARKETING_VERSION updated (expected 2)"
+# Verify exactly 2 instances were updated
+COUNT=$(grep -c "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj || echo "0")
+if [ "$COUNT" -ne 2 ]; then
+    echo "Error: Expected exactly 2 MARKETING_VERSION updates, found $COUNT"
     exit 1
-fi
-elif [ "$COUNT" -lt 2 ]; then
-    echo "Warning: Only $COUNT instance(s) of MARKETING_VERSION updated (expected 2)"
 fi
 echo "✓ Updated MARKETING_VERSION in Xcode project"
 
