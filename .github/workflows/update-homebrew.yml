@@ -4,6 +4,8 @@ permissions:
   contents: read
 
 on:
+  repository_dispatch:
+    types: [homebrew_release]
   release:
     types: [published]
   workflow_dispatch:
