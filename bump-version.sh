@@ -35,16 +35,23 @@ fi
 sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+/MARKETING_VERSION = $VERSION/g" \
     MiddleDrag.xcodeproj/project.pbxproj
 
-# Validate that MARKETING_VERSION was updated
-if ! grep -q "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj; then
+# Validate that MARKETING_VERSION was updated (should have 2 instances: Debug and Release)
+COUNT=$(grep -c "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj || true)
+if [ "$COUNT" -eq 0 ]; then
     echo "Error: Failed to update MARKETING_VERSION in project file"
     exit 1
+elif [ "$COUNT" -lt 2 ]; then
+    echo "Warning: Only $COUNT instance(s) of MARKETING_VERSION updated (expected 2)"
 fi
 echo "✓ Updated MARKETING_VERSION in Xcode project"
 
-# Check if tag already exists
+# Check if tag already exists (local or remote)
 if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-    echo "Error: Tag v$VERSION already exists"
+    echo "Error: Tag v$VERSION already exists locally"
+    exit 1
+fi
+if git ls-remote --tags origin | grep -q "refs/tags/v$VERSION$"; then
+    echo "Error: Tag v$VERSION already exists on remote"
     exit 1
 fi
 
