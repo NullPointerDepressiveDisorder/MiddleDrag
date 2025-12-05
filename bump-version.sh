@@ -26,6 +26,11 @@ echo "Bumping version to $VERSION..."
 sed -i '' "s/MARKETING_VERSION = [0-9]*\.[0-9]*\.[0-9]*/MARKETING_VERSION = $VERSION/g" \
     MiddleDrag.xcodeproj/project.pbxproj
 
+# Validate that MARKETING_VERSION was updated
+if ! grep -q "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj; then
+    echo "Error: Failed to update MARKETING_VERSION in project file"
+    exit 1
+fi
 echo "✓ Updated MARKETING_VERSION in Xcode project"
 
 # Stage and commit
