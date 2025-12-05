@@ -62,7 +62,9 @@ jobs:
             fi
 
             BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            git fetch origin "$BRANCH_NAME"
             git checkout "$BRANCH_NAME"
+            git pull --rebase origin "$BRANCH_NAME"
 
             ./bump-version.sh "$VERSION"
 
