@@ -85,9 +85,12 @@ jobs:
 
       - name: Trigger Homebrew Update workflow
         run: |
-          curl -X POST \
+          if ! curl -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d '{"event_type":"homebrew_release","client_payload":{"version":"${{ steps.version.outputs.VERSION }}"}}'
+            -d '{"event_type":"homebrew_release","client_payload":{"version":"${{ steps.version.outputs.VERSION }}"}}'; then
+            echo "Warning: Failed to trigger Homebrew update workflow"
+            exit 1
+          fi
   
