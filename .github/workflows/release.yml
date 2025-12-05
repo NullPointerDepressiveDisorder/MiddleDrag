@@ -83,22 +83,4 @@ jobs:
           body: "## MiddleDrag v${{ steps.version.outputs.VERSION }}\n\n### SHA256\n```\n${{ steps.sha.outputs.SHA256 }}\n```\n\n### Requirements\n- macOS 14.0 or later\n- Accessibility permissions"
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
 
-  update-homebrew:
-    name: Update Homebrew Tap
-    needs: build
-    runs-on: macos-15
-    steps:
-      - name: Trigger Homebrew Update
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              workflow_id: 'update-homebrew.yml',
-              ref: 'main',
-              inputs: {
-                version: '${{ needs.build.outputs.version }}'
-              }
-            })
+# (Lines 86–105 removed; no replacement needed)
