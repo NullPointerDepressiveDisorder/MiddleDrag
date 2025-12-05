@@ -102,6 +102,7 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
+          target_commitish: ${{ github.sha }}
           body: |
             SHA256: ${{ steps.sha.outputs.SHA256 }}
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
