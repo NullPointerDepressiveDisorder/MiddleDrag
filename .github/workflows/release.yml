@@ -91,5 +91,4 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d '{"event_type":"homebrew_release","client_payload":{"version":"${{ steps.version.outputs.VERSION }}"}}'; then
             echo "Warning: Failed to trigger Homebrew update workflow"
-            exit 1
           fi
