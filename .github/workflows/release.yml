@@ -56,7 +56,7 @@ jobs:
             fi
 
             BRANCH_NAME=${GITHUB_REF#refs/heads/}
-            git checkout $BRANCH_NAME
+            git checkout "$BRANCH_NAME"
 
             # Run the bump script
             ./bump-version.sh "$VERSION"
