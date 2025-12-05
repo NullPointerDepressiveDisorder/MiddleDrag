@@ -34,6 +34,11 @@ git commit -m "Bump version to $VERSION"
 echo "✓ Committed version change"
 
 # Create tag
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    echo "Error: Tag v$VERSION already exists"
+    exit 1
+fi
+
 git tag "v$VERSION"
 echo "✓ Created tag v$VERSION"
 
