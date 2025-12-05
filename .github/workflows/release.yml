@@ -48,7 +48,7 @@ jobs:
             VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
             VERSION="${VERSION#v}"  # Remove 'v' prefix
           fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"
       
       - name: Build Release
