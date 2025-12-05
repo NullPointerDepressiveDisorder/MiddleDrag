@@ -48,6 +48,15 @@ jobs:
             fi
             VERSION="${VERSION#v}"  # Remove 'v' prefix
           fi
+
+          # Validate against MARKETING_VERSION in Xcode project
+          PROJECT_VERSION=$(sed -n 's/.*MARKETING_VERSION = \([0-9.]*\);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
+          if [ "$VERSION" != "$PROJECT_VERSION" ]; then
+            echo "Error: Version mismatch! Workflow version: $VERSION, Xcode project version: $PROJECT_VERSION"
+            echo "Please ensure project.pbxproj is updated (try running ./bump-version.sh)"
+            exit 1
+          fi
+
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"
       
@@ -86,6 +95,16 @@ jobs:
           SHA=$(shasum -a 256 MiddleDrag-${{ steps.version.outputs.VERSION }}.zip | awk '{print $1}')
           echo "SHA256=$SHA" >> $GITHUB_OUTPUT
           echo "SHA256: $SHA"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+        with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: v${{ steps.version.outputs.VERSION }}
+          body: |
+            SHA256: ${{ steps.sha.outputs.SHA256 }}
+          files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
       
       - name: Trigger Homebrew Update workflow
         env:
