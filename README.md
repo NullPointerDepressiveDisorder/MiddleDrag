@@ -157,6 +157,16 @@ Works with both built-in MacBook trackpads and external Magic Trackpads.
 1. Check Accessibility permissions
 2. Toggle "Enabled" in the menu
 
+### After updating, gestures stopped working
+When you update MiddleDrag to a new version, macOS may require you to re-grant Accessibility permissions:
+
+1. Open **System Settings → Privacy & Security → Accessibility**
+2. Find MiddleDrag in the list
+3. Toggle it **off**, then **on** again
+4. Restart MiddleDrag
+
+This is a macOS security requirement - each new app version is treated as a different application.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
