@@ -72,15 +72,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
         
-        // Show alert if permission is missing
-        if !hasAccessibilityPermission {
-            showAccessibilityAlert()
-        }
-        
         // Final cleanup of any stray windows
         closeAllWindows()
         
         Log.info("MiddleDrag initialization complete", category: .app)
+        
+        // Show alert if permission is missing (deferred to avoid blocking initialization)
+        if !hasAccessibilityPermission {
+            DispatchQueue.main.async { [weak self] in
+                self?.showAccessibilityAlert()
+            }
+        }
     }
     
     private func showAccessibilityAlert() {
