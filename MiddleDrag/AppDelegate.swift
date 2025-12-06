@@ -81,8 +81,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Show alert if permission is missing
         if !hasAccessibilityPermission {
             let workItem = DispatchWorkItem { [weak self] in
-                // double check that it's not terminating before showing
-                guard let self = self, !workItem.isCancelled else { return }
+                guard let self = self, 
+                    self.accessibilityAlertWorkItem?.isCancelled == false
+                else { return }
+                
                 self.showAccessibilityAlert()
             }
 
