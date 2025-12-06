@@ -158,6 +158,17 @@ jobs:
           echo "SHA256=$SHA" >> $GITHUB_OUTPUT
           echo "SHA256: $SHA"
 
+      - name: Extract Tag Message
+        id: tag_message
+        run: |
+          VERSION="v${{ steps.version.outputs.VERSION }}"
+          # Get tag annotation message (excluding the header lines)
+          TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION" | sed '/^-----BEGIN PGP SIGNATURE-----$/,$d')
+          # Use a delimiter for multiline output
+          echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAG_MSG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -166,7 +177,10 @@ jobs:
           name: v${{ steps.version.outputs.VERSION }}
           target_commitish: ${{ github.sha }}
           body: |
-            SHA256: ${{ steps.sha.outputs.SHA256 }}
+            ${{ steps.tag_message.outputs.MESSAGE }}
+
+            ---
+            **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
       
       - name: Trigger Homebrew Update
