@@ -107,6 +107,14 @@ class MultitouchManager {
         eventMask |= (1 << CGEventType.otherMouseUp.rawValue)
         eventMask |= (1 << CGEventType.otherMouseDragged.rawValue)
         
+        // Add gesture event types (not exposed in Swift's CGEventType enum, but still exist)
+        // These raw values are from CoreGraphics headers:
+        // kCGEventGesture = 29, kCGEventMagnify = 30, kCGEventRotate = 31, kCGEventSwipe = 32
+        eventMask |= (1 << 29)  // gesture
+        eventMask |= (1 << 30)  // magnify
+        eventMask |= (1 << 31)  // rotate
+        eventMask |= (1 << 32)  // swipe
+        
         let refcon = Unmanaged.passUnretained(self).toOpaque()
         
         guard let tap = CGEvent.tapCreate(
@@ -162,6 +170,16 @@ class MultitouchManager {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
             return Unmanaged.passUnretained(event)
+        }
+        
+        let typeRawValue = type.rawValue
+        
+        // Check if this is a gesture event (types 29-32: gesture, magnify, rotate, swipe)
+        let isGestureEvent = typeRawValue >= 29 && typeRawValue <= 32
+        
+        // Suppress gesture events during our three-finger gesture
+        if isGestureEvent && isInThreeFingerGesture {
+            return nil  // Consume the event to prevent system gesture
         }
         
         let sourceStateID = event.getIntegerValueField(.eventSourceStateID)
