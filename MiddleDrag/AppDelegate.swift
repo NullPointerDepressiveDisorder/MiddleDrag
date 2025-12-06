@@ -8,6 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let multitouchManager = MultitouchManager.shared
     private var menuBarController: MenuBarController?
     private var preferences: UserPreferences!
+    private var accessibilityAlertWorkItem: DispatchWorkItem?
     
     // MARK: - Application Lifecycle
     
@@ -77,11 +78,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         Log.info("MiddleDrag initialization complete", category: .app)
         
-        // Show alert if permission is missing (deferred to avoid blocking initialization)
+        // Show alert if permission is missing
         if !hasAccessibilityPermission {
-            DispatchQueue.main.async { [weak self] in
-                self?.showAccessibilityAlert()
+            let workItem = DispatchWorkItem { [weak self] in
+                // double check that its not terminating before showing
+                guard let self = self, !NSApp.isTerminating else {return}
+                self.showAccessibilityAlert()
             }
+
+            self.accessibilityAlertWorkItem = workItem
+
+            DispatchQueue.main.async(execute: workItem)
         }
     }
     
@@ -124,6 +131,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationWillTerminate(_ notification: Notification) {
         Log.info("MiddleDrag terminating", category: .app)
+
+        accessibilityAlertWorkItem?.cancel()
+        accessibilityAlertWorkItem = nil
         
         // Track app termination
         AnalyticsManager.shared.trackTermination()
