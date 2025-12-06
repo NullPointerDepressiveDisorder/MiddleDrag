@@ -82,7 +82,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !hasAccessibilityPermission {
             let workItem = DispatchWorkItem { [weak self] in
                 // double check that it's not terminating before showing
-                guard let self = self, !NSApp.isTerminating else {return}
+                guard let self = self, !NSApp.isTerminating else { return }
                 self.showAccessibilityAlert()
             }
 
