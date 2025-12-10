@@ -15,6 +15,7 @@ class PreferencesManager {
         static let smoothingFactor = "smoothingFactor"
         static let requiresExactlyThreeFingers = "requiresExactlyThreeFingers"
         static let blockSystemGestures = "blockSystemGestures"
+        static let middleDragEnabled = "middleDragEnabled"
     }
     
     private init() {
@@ -29,7 +30,8 @@ class PreferencesManager {
             Keys.tapThreshold: 0.15,
             Keys.smoothingFactor: 0.3,
             Keys.requiresExactlyThreeFingers: true,
-            Keys.blockSystemGestures: false
+            Keys.blockSystemGestures: false,
+            Keys.middleDragEnabled: true
         ])
     }
     
@@ -41,7 +43,8 @@ class PreferencesManager {
             tapThreshold: userDefaults.double(forKey: Keys.tapThreshold),
             smoothingFactor: userDefaults.double(forKey: Keys.smoothingFactor),
             requiresExactlyThreeFingers: userDefaults.bool(forKey: Keys.requiresExactlyThreeFingers),
-            blockSystemGestures: userDefaults.bool(forKey: Keys.blockSystemGestures)
+            blockSystemGestures: userDefaults.bool(forKey: Keys.blockSystemGestures),
+            middleDragEnabled: userDefaults.bool(forKey: Keys.middleDragEnabled)
         )
     }
     
@@ -53,5 +56,6 @@ class PreferencesManager {
         userDefaults.set(preferences.smoothingFactor, forKey: Keys.smoothingFactor)
         userDefaults.set(preferences.requiresExactlyThreeFingers, forKey: Keys.requiresExactlyThreeFingers)
         userDefaults.set(preferences.blockSystemGestures, forKey: Keys.blockSystemGestures)
+        userDefaults.set(preferences.middleDragEnabled, forKey: Keys.middleDragEnabled)
     }
 }
