@@ -10,6 +10,10 @@ on:
         description: 'Version number (e.g., 1.0.0)'
         required: true
         type: string
+      notes:
+        description: 'Version notes'
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -66,7 +70,8 @@ jobs:
             git checkout "$BRANCH_NAME"
             git reset --hard "origin/$BRANCH_NAME"
 
-            ./bump-version.sh "$VERSION"
+            NOTES="${{ inputs.notes }}"
+            ./bump-version.sh "$VERSION" "$NOTES"
 
             # Rebase on latest main in case of new commits
             git fetch origin "$BRANCH_NAME"

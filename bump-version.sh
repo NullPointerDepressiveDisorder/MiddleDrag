@@ -4,10 +4,11 @@
 set -e
 
 VERSION=$1
+NOTES=$2
 
 if [ -z "$VERSION" ]; then
-    echo "Usage: ./bump-version.sh <version>"
-    echo "Example: ./bump-version.sh 1.2.3"
+    echo "Usage: ./bump-version.sh <version> [notes]"
+    echo "Example: ./bump-version.sh 1.2.3 \"Release notes\""
     exit 1
 fi
 
@@ -59,8 +60,13 @@ git commit -m "Bump version to $VERSION"
 echo "✓ Committed version change"
 
 # Create tag
-git tag "v$VERSION"
-echo "✓ Created tag v$VERSION"
+if [ -n "$NOTES" ]; then
+    git tag -a "v$VERSION" -m "$NOTES"
+    echo "✓ Created annotated tag v$VERSION"
+else
+    git tag "v$VERSION"
+    echo "✓ Created tag v$VERSION"
+fi
 echo ""
 echo "Done! To trigger the release workflow, run:"
 echo "  git push && git push --tags"
