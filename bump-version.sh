@@ -61,7 +61,7 @@ echo "✓ Committed version change"
 
 # Create tag
 if [ -n "$NOTES" ]; then
-    git tag -a "v$VERSION" -m "$NOTES"
+    git tag -a "v$VERSION" --message="$NOTES"
     echo "✓ Created annotated tag v$VERSION"
 else
     git tag "v$VERSION"
