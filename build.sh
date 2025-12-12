@@ -49,14 +49,14 @@ done
 echo "🔨 Building MiddleDrag ($CONFIGURATION)..."
 
 # Clean previous build
-if [ "CLEAN_BUILD" = true ]; then
+if [ "$CLEAN_BUILD" = true ]; then
     echo "Cleaning previous build..."
     rm -rf "$BUILD_DIR"
 fi
 
 # Set architecture flags based on configuration
 if [ "$CONFIGURATION" = "Release" ]; then
-    ARCH_FLAGS="ARCHS=arm64 x86_64 ONLY_ACTIVE_ARCH=NO"
+    ARCH_FLAGS="ARCHS=\"arm64 x86_64\" ONLY_ACTIVE_ARCH=NO"
 else
     ARCH_FLAGS="ONLY_ACTIVE_ARCH=YES"
 fi
