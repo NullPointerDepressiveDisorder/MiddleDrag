@@ -60,6 +60,7 @@ mkdir -p "$BUILD_DIR"
 # Build with xcodebuild
 echo "Building with Xcode..."
 xcodebuild \
+    -jobs $(sysctl -n hw.ncpu) \
     -project "$APP_NAME.xcodeproj" \
     -scheme "$APP_NAME" \
     -configuration "$CONFIGURATION" \
