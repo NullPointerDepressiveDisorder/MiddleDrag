@@ -13,9 +13,14 @@ BUNDLE_ID="com.middledrag.MiddleDrag"
 # Parse arguments
 CONFIGURATION="Release"
 RUN_AFTER=false
+CLEAN_BUILD=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --clean|-c)
+            CLEAN_BUILD=true
+            shift
+            ;;
         --debug|-d)
             CONFIGURATION="Debug"
             shift
@@ -28,6 +33,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: ./build.sh [options]"
             echo ""
             echo "Options:"
+            echo "  --clean, -c    Clean previous build"
             echo "  --debug, -d    Build debug configuration"
             echo "  --run, -r      Run after building"
             echo "  --help, -h     Show this help"
@@ -43,8 +49,10 @@ done
 echo "🔨 Building MiddleDrag ($CONFIGURATION)..."
 
 # Clean previous build
-echo "Cleaning previous build..."
-rm -rf "$BUILD_DIR"
+if [ "CLEAN_BUILD" = true ]; then
+    echo "Cleaning previous build..."
+    rm -rf "$BUILD_DIR"
+fi
 
 # Create build directory
 mkdir -p "$BUILD_DIR"
