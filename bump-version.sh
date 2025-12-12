@@ -21,9 +21,9 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-# Ensure working directory is clean
-if ! git diff-index --quiet HEAD --; then
-    echo "Error: Working directory has uncommitted changes. Please commit or stash them first."
+# Ensure working directory is clean (only allow staged changes, not unstaged)
+if ! git diff --quiet; then
+    echo "Error: Working directory has unstaged changes. Please commit or stash them first."
     exit 1
 fi
 echo "Bumping version to $VERSION..."
@@ -54,10 +54,10 @@ if git ls-remote --tags origin | grep -q "refs/tags/v$VERSION$"; then
     exit 1
 fi
 
-# Stage and commit
+# Stage and amend previous commit
 git add MiddleDrag.xcodeproj/project.pbxproj
-git commit -m "Bump version to $VERSION"
-echo "✓ Committed version change"
+git commit --amend --no-edit
+echo "✓ Amended previous commit with version change"
 
 # Create tag
 if [ -n "$NOTES" ]; then
