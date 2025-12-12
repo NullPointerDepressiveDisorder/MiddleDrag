@@ -144,7 +144,7 @@ jobs:
         run: |
           curl -sL https://sentry.io/get-cli/ | bash
 
-      - name: Creat App Zip & Upload dSYM to Sentry
+      - name: Create App Zip & Upload dSYM to Sentry
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
@@ -152,7 +152,7 @@ jobs:
         run: |
           # Run in parallel
           (cd build/Build/Products/Release &&
-          zip -r MiddleDrag-${{ steps.version.outpus.VERSION }}.zip MiddleDrag.app &&
+          zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app &&
           mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/ &
           sentry-cli debug-files upload \
             --include-sources \
