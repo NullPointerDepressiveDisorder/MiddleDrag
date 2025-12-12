@@ -151,9 +151,11 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
           # Run in parallel
-          (cd build/Build/Products/Release &&
-          zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app &&
-          mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/ &
+          (
+            cd build/Build/Products/Release &&
+            zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app &&
+            mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
+          ) &
           sentry-cli debug-files upload \
             --include-sources \
             build/Build/Products/Release/ &
