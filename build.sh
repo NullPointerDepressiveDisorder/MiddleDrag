@@ -73,7 +73,7 @@ xcodebuild \
     ONLY_ACTIVE_ARCH=NO
 
 # Find the built app
-APP_PATH=$(find "$BUILD_DIR" -name "$APP_NAME.app" -type d | head -n 1)
+APP_PATH="$BUILD_DIR/Build/Products/$CONFIGURATION/$APP_NAME.app"
 
 if [ -z "$APP_PATH" ]; then
     echo "❌ Build failed: Could not find $APP_NAME.app"
