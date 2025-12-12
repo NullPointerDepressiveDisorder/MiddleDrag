@@ -138,7 +138,15 @@ jobs:
           zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
           mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
 
+      - name: Cache Sentry CLI
+        id: sentry-cache
+        uses: actions/cache@v4
+        with:
+          path: /usr/local/bin/sentry-cli
+          key: sentry-cli-${{ runner.os }}
+
       - name: Install Sentry CLI
+        if: steps.sentry-cache.outputs.cache-hit != 'true'
         run: |
           curl -sL https://sentry.io/get-cli/ | bash
 
