@@ -131,12 +131,6 @@ jobs:
             OTHER_LDFLAGS="-F/System/Library/PrivateFrameworks -framework MultitouchSupport -framework CoreFoundation -framework CoreGraphics" \
             FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
             build
-      
-      - name: Create App Zip
-        run: |
-          cd build/Build/Products/Release
-          zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app
-          mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
 
       - name: Cache Sentry CLI
         id: sentry-cache
@@ -150,15 +144,20 @@ jobs:
         run: |
           curl -sL https://sentry.io/get-cli/ | bash
 
-      - name: Upload dSYM to Sentry
+      - name: Creat App Zip & Upload dSYM to Sentry
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
+          # Run in parallel
+          (cd build/Build/Products/Release &&
+          zip -r MiddleDrag-${{ setps.version.outpus.VERSION }}.zip MiddleDrag.app &&
+          mv MiddleDrag-${{ setps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/ &
           sentry-cli debug-files upload \
             --include-sources \
-            build/Build/Products/Release/
+            build/Build/Products/Release/ &
+          wait
 
       - name: Create Sentry release
         env:
