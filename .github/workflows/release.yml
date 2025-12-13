@@ -111,13 +111,15 @@ jobs:
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"
 
-      - name: Cache Xcode DerivedData
+      - name: Cache Swift Package Manager dependencies
         uses: actions/cache@v4
         with:
-          path: build
-          key: xcode-${{ runner.os }}-${{ hashFiles('**/*.swift', '**/*.xcodeproj/**') }}
+          path: |
+            build/SourcePackages
+            build/.build
+          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
           restore-keys: |
-            xcode-${{ runner.os }}-
+            spm-${{ runner.os }}-
       
       - name: Build Release
         run: |
