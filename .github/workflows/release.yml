@@ -151,15 +151,20 @@ jobs:
           SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
           # Run in parallel
-          (
-            cd build/Build/Products/Release &&
-            zip -r MiddleDrag-${{ steps.version.outputs.VERSION }}.zip MiddleDrag.app &&
-            mv MiddleDrag-${{ steps.version.outputs.VERSION }}.zip $GITHUB_WORKSPACE/
-          ) &
-          sentry-cli debug-files upload \
-            --include-sources \
-            build/Build/Products/Release/ &
-          wait
+          wait_all() {
+            local failed=0
+            for pid in "$@"; do
+              wait "$pid" || failed=1
+            done
+            return $failed
+          }
+          
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          
+          (cd build/Build/Products/Release && zip -r "$GITHUB_WORKSPACE/MiddleDrag-${VERSION}.zip" MiddleDrag.app) &
+          sentry-cli debug-files upload --include-sources build/Build/Products/Release/ &
+          
+          wait_all $(jobs -p) || { echo "❌ A background job failed"; exit 1; }
 
       - name: Create Sentry release
         env:
