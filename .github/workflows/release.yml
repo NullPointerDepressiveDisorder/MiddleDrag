@@ -134,17 +134,10 @@ jobs:
             FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
             build
 
-      - name: Cache Sentry CLI
-        id: sentry-cache
-        uses: actions/cache@v4
+      - name: Setup Sentry CLI
+        uses: mathieu-bour/setup-sentry-cli@v2
         with:
-          path: /usr/local/bin/sentry-cli
-          key: sentry-cli-${{ runner.os }}
-
-      - name: Install Sentry CLI
-        if: steps.sentry-cache.outputs.cache-hit != 'true'
-        run: |
-          curl -sL https://sentry.io/get-cli/ | bash
+          version: latest
 
       - name: Create App Zip & Upload dSYM to Sentry
         env:
