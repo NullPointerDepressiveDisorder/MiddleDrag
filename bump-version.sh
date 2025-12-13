@@ -55,6 +55,13 @@ if git ls-remote --tags origin | grep -q "refs/tags/v$VERSION$"; then
 fi
 
 # Stage and amend previous commit
+echo "⚠️  Warning: This will amend the last commit. Make sure it hasn't been pushed yet."
+read -p "Continue (y/n) " -n 1 -r 
+echo
+if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+    echo "Aborted."
+    exit 1
+fi
 git add MiddleDrag.xcodeproj/project.pbxproj
 git commit --amend --no-edit
 echo "✓ Amended previous commit with version change"

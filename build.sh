@@ -13,9 +13,14 @@ BUNDLE_ID="com.middledrag.MiddleDrag"
 # Parse arguments
 CONFIGURATION="Release"
 RUN_AFTER=false
+CLEAN_BUILD=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --clean|-c)
+            CLEAN_BUILD=true
+            shift
+            ;;
         --debug|-d)
             CONFIGURATION="Debug"
             shift
@@ -28,6 +33,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: ./build.sh [options]"
             echo ""
             echo "Options:"
+            echo "  --clean, -c    Clean previous build"
             echo "  --debug, -d    Build debug configuration"
             echo "  --run, -r      Run after building"
             echo "  --help, -h     Show this help"
@@ -43,8 +49,17 @@ done
 echo "🔨 Building MiddleDrag ($CONFIGURATION)..."
 
 # Clean previous build
-echo "Cleaning previous build..."
-rm -rf "$BUILD_DIR"
+if [ "$CLEAN_BUILD" = true ]; then
+    echo "Cleaning previous build..."
+    rm -rf "$BUILD_DIR"
+fi
+
+# Set architecture flags based on configuration
+if [ "$CONFIGURATION" = "Release" ]; then
+    ARCH_FLAGS=(ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO)
+else
+    ARCH_FLAGS=(ONLY_ACTIVE_ARCH=YES)
+fi
 
 # Create build directory
 mkdir -p "$BUILD_DIR"
@@ -52,6 +67,7 @@ mkdir -p "$BUILD_DIR"
 # Build with xcodebuild
 echo "Building with Xcode..."
 xcodebuild \
+    -jobs $(sysctl -n hw.ncpu) \
     -project "$APP_NAME.xcodeproj" \
     -scheme "$APP_NAME" \
     -configuration "$CONFIGURATION" \
@@ -61,11 +77,10 @@ xcodebuild \
     FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
     CODE_SIGN_IDENTITY="-" \
     CODE_SIGNING_REQUIRED=NO \
-    ARCHS="$(uname -m)" \
-    ONLY_ACTIVE_ARCH=NO
+    "${ARCH_FLAGS[@]}"
 
 # Find the built app
-APP_PATH=$(find "$BUILD_DIR" -name "$APP_NAME.app" -type d | head -n 1)
+APP_PATH="$BUILD_DIR/Build/Products/$CONFIGURATION/$APP_NAME.app"
 
 if [ -z "$APP_PATH" ]; then
     echo "❌ Build failed: Could not find $APP_NAME.app"

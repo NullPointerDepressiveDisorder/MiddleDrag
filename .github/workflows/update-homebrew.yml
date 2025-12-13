@@ -51,8 +51,10 @@ jobs:
           SHA=$(shasum -a 256 MiddleDrag.zip | awk '{print $1}')
           
           # Clone tap repo and update
-          git clone https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/nullpointerdepressivedisorder/homebrew-tap.git
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/nullpointerdepressivedisorder/homebrew-tap.git
           cd homebrew-tap
+          git sparse-checkout set Casks
           
           sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/middledrag.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/middledrag.rb
