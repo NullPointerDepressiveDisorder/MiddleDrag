@@ -56,9 +56,9 @@ fi
 
 # Set architecture flags based on configuration
 if [ "$CONFIGURATION" = "Release" ]; then
-    ARCH_FLAGS="ARCHS=\"arm64 x86_64\" ONLY_ACTIVE_ARCH=NO"
+    ARCH_FLAGS=(ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO)
 else
-    ARCH_FLAGS="ONLY_ACTIVE_ARCH=YES"
+    ARCH_FLAGS=(ONLY_ACTIVE_ARCH=YES)
 fi
 
 # Create build directory
@@ -77,7 +77,7 @@ xcodebuild \
     FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
     CODE_SIGN_IDENTITY="-" \
     CODE_SIGNING_REQUIRED=NO \
-    $ARCH_FLAGS
+    "${ARCH_FLAGS[@]}"
 
 # Find the built app
 APP_PATH="$BUILD_DIR/Build/Products/$CONFIGURATION/$APP_NAME.app"
