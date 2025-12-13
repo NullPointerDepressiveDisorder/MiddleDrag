@@ -164,9 +164,11 @@ jobs:
           VERSION="${{ steps.version.outputs.VERSION }}"
           
           (cd build/Build/Products/Release && zip -r "$GITHUB_WORKSPACE/MiddleDrag-${VERSION}.zip" MiddleDrag.app) &
+          ZIP_PID=$!
           sentry-cli debug-files upload --include-sources build/Build/Products/Release/ &
+          SENTRY_PID=$!
           
-          wait_all $(jobs -p) || { echo "❌ A background job failed"; exit 1; }
+          wait_all "$ZIP_PID" "$SENTRY_PID" || { echo "❌ A background job failed"; exit 1; }
 
       - name: Create Sentry release
         env:
