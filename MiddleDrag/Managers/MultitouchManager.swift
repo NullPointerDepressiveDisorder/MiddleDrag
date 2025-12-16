@@ -262,8 +262,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
         mouseGenerator.startDrag(at: mouseLocation)
     }
 
-    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
-    {
+    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
         guard configuration.middleDragEnabled else { return }
         let delta = data.frameDelta(from: configuration)
 
