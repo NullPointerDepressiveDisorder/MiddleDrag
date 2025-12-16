@@ -280,7 +280,6 @@ extension MultitouchManager: GestureRecognizerDelegate {
         isActivelyDragging = false
         isInThreeFingerGesture = false
         gestureEndTime = CACurrentMediaTime()
-        guard configuration.middleDragEnabled else { return }
         mouseGenerator.endDrag()
     }
 
