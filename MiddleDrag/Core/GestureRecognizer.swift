@@ -52,13 +52,9 @@ class GestureRecognizer {
 
         let fingerCount = validFingers.count
 
-        // When requiresExactlyThreeFingers is enabled (default):
-        // - 4+ fingers = immediate cancel (user doing Mission Control)
-        // - 3 fingers = process gesture (unless in cooldown)
-        // - 0-2 fingers = end gesture normally / clear cooldown
-        if configuration.requiresExactlyThreeFingers && fingerCount >= 4 {
-            // IMMEDIATELY cancel any in-progress gesture when 4+ fingers detected
-            // This allows Mission Control to work without interference
+        // ALWAYS cancel on 4+ fingers regardless of configuration
+        // This ensures Mission Control and other system gestures always work
+        if fingerCount >= 4 {
             if state != .idle {
                 handleGestureCancel()
             }
@@ -74,12 +70,16 @@ class GestureRecognizer {
         }
 
         // Determine if we should process this as a three-finger gesture
+        // Note: Both modes now only accept exactly 3 fingers to preserve Mission Control
+        // The requiresExactlyThreeFingers setting affects whether we're strict about it
         let isValidThreeFingerGesture: Bool
-        if configuration.requiresExactlyThreeFingers {
-            // Don't start new gesture if in cooldown from 4-finger cancellation
-            isValidThreeFingerGesture = fingerCount == 3 && !isInCancellationCooldown
+        if isInCancellationCooldown {
+            isValidThreeFingerGesture = false
+        } else if configuration.requiresExactlyThreeFingers {
+            isValidThreeFingerGesture = fingerCount == 3
         } else {
-            isValidThreeFingerGesture = fingerCount >= 3
+            // Even in "3+" mode, we only process exactly 3 to preserve 4-finger gestures
+            isValidThreeFingerGesture = fingerCount == 3
         }
 
         if isValidThreeFingerGesture {
@@ -94,8 +94,6 @@ class GestureRecognizer {
                     handleGestureEnd(timestamp: timestamp)
                 }
             } else {
-                // Finger count is 3+ but not valid (e.g., in cooldown, or exceeds max)
-                // This means an unexpected state change - cancel immediately
                 handleGestureCancel()
             }
         }
