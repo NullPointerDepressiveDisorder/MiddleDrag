@@ -1,10 +1,10 @@
-import Foundation
 import CoreFoundation
+import Foundation
 
 // MARK: - Debug Touch Counter (Debug builds only)
 
 #if DEBUG
-private var touchCount = 0
+    private var touchCount = 0
 #endif
 
 // MARK: - Global Callback Storage
@@ -14,25 +14,27 @@ private var gDeviceMonitor: DeviceMonitor?
 
 // MARK: - C Callback Function
 
-private let deviceContactCallback: MTContactCallbackFunction = { device, touches, numTouches, timestamp, frame in
+private let deviceContactCallback: MTContactCallbackFunction = {
+    device, touches, numTouches, timestamp, frame in
     #if DEBUG
-    touchCount += 1
-    // Log sparingly to avoid performance impact
-    if touchCount <= 5 || touchCount % 500 == 0 {
-        Log.debug("Touch callback #\(touchCount): \(numTouches) touches", category: .device)
-    }
+        touchCount += 1
+        // Log sparingly to avoid performance impact
+        if touchCount <= 5 || touchCount % 500 == 0 {
+            Log.debug("Touch callback #\(touchCount): \(numTouches) touches", category: .device)
+        }
     #endif
-    
+
     guard let monitor = gDeviceMonitor,
-          let touches = touches else { return 0 }
-    
+        let touches = touches
+    else { return 0 }
+
     let shouldConsume = monitor.handleContact(
         device: device,
         touches: touches,
         count: numTouches,
         timestamp: timestamp
     )
-    
+
     // Return 1 to attempt to suppress system gesture handling for 3+ fingers
     return shouldConsume ? 1 : 0
 }
@@ -41,42 +43,42 @@ private let deviceContactCallback: MTContactCallbackFunction = { device, touches
 
 /// Monitors multitouch devices and reports touch events
 class DeviceMonitor {
-    
+
     // MARK: - Properties
-    
+
     /// Delegate to receive touch events
     weak var delegate: DeviceMonitorDelegate?
-    
+
     private var device: MTDeviceRef?
     private var isRunning = false
-    
+
     // MARK: - Lifecycle
-    
+
     init() {
         gDeviceMonitor = self
     }
-    
+
     deinit {
         stop()
         gDeviceMonitor = nil
     }
-    
+
     // MARK: - Public Interface
-    
+
     /// Start monitoring the default multitouch device
     func start() {
         guard !isRunning else { return }
-        
+
         Log.info("DeviceMonitor starting...", category: .device)
-        
+
         var deviceCount = 0
         var registeredDevices: Set<UnsafeMutableRawPointer> = []
-        
+
         // Try to get all devices
         if let deviceList = MTDeviceCreateList() {
             let count = CFArrayGetCount(deviceList)
             Log.info("Found \(count) multitouch device(s)", category: .device)
-            
+
             for i in 0..<count {
                 let devicePtr = CFArrayGetValueAtIndex(deviceList, i)
                 if let dev = devicePtr {
@@ -85,7 +87,7 @@ class DeviceMonitor {
                     MTDeviceStart(deviceRef, 0)
                     registeredDevices.insert(deviceRef)
                     deviceCount += 1
-                    
+
                     if device == nil {
                         device = deviceRef
                     }
@@ -94,7 +96,7 @@ class DeviceMonitor {
         } else {
             Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
         }
-        
+
         // Also try the default device if not already registered
         if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
             if !registeredDevices.contains(defaultDevice) {
@@ -102,7 +104,7 @@ class DeviceMonitor {
                 MTDeviceStart(defaultDevice, 0)
                 registeredDevices.insert(defaultDevice)
                 deviceCount += 1
-                
+
                 if device == nil {
                     device = defaultDevice
                 }
@@ -110,31 +112,31 @@ class DeviceMonitor {
                 Log.debug("Default device already registered from device list", category: .device)
             }
         }
-        
+
         if device == nil {
             Log.error("No multitouch device found!", category: .device)
         } else {
             Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
         }
-        
+
         isRunning = true
     }
-    
+
     /// Stop monitoring
     func stop() {
         guard isRunning, let device = device else { return }
-        
+
         MTUnregisterContactFrameCallback(device, deviceContactCallback)
         MTDeviceStop(device)
-        
+
         self.device = nil
         isRunning = false
-        
+
         Log.info("DeviceMonitor stopped", category: .device)
     }
-    
+
     // MARK: - Internal
-    
+
     /// Handle contact from callback and return whether to consume the event
     fileprivate func handleContact(
         device: MTDeviceRef?,
@@ -142,22 +144,14 @@ class DeviceMonitor {
         count: Int32,
         timestamp: Double
     ) -> Bool {
-        // Count valid touching fingers (state 3 = touching, state 4 = active)
-        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: Int(count))
-        var validFingerCount = 0
-        
-        for i in 0..<Int(count) {
-            let state = touchArray[i].state
-            if state == 3 || state == 4 {
-                validFingerCount += 1
-            }
-        }
-        
-        // Pass to delegate
-        delegate?.deviceMonitor(self, didReceiveTouches: touches, count: count, timestamp: timestamp)
-        
-        // Consume event if we have 3+ valid fingers
-        return validFingerCount >= 3
+        // Pass touch data to delegate for gesture processing
+        delegate?.deviceMonitor(
+            self, didReceiveTouches: touches, count: count, timestamp: timestamp)
+
+        // Never consume at the device level - let all touches through to the system
+        // Event suppression is handled by the CGEventTap in MultitouchManager
+        // This ensures 4-finger gestures (Mission Control) and 2-finger scrolling work
+        return false
     }
 }
 
