@@ -245,19 +245,25 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
 extension MultitouchManager: GestureRecognizerDelegate {
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint) {
-        // Gesture started - update state for event suppression
-        isInThreeFingerGesture = true
+        // Dispatch to main thread for thread-safe access from event tap callback
+        DispatchQueue.main.async { [weak self] in
+            self?.isInThreeFingerGesture = true
+        }
     }
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
-        isInThreeFingerGesture = false
-        gestureEndTime = CACurrentMediaTime()
+        DispatchQueue.main.async { [weak self] in
+            self?.isInThreeFingerGesture = false
+            self?.gestureEndTime = CACurrentMediaTime()
+        }
         mouseGenerator.performClick()
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
         guard configuration.middleDragEnabled else { return }
-        isActivelyDragging = true
+        DispatchQueue.main.async { [weak self] in
+            self?.isActivelyDragging = true
+        }
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
@@ -276,23 +282,31 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidEndDragging(_ recognizer: GestureRecognizer) {
-        isActivelyDragging = false
-        isInThreeFingerGesture = false
-        gestureEndTime = CACurrentMediaTime()
+        DispatchQueue.main.async { [weak self] in
+            self?.isActivelyDragging = false
+            self?.isInThreeFingerGesture = false
+            self?.gestureEndTime = CACurrentMediaTime()
+        }
+        // Always call endDrag to ensure mouse generator state is cleaned up
+        // even if middleDragEnabled was toggled off during an active drag
         mouseGenerator.endDrag()
     }
 
     func gestureRecognizerDidCancel(_ recognizer: GestureRecognizer) {
         // Cancel from early state (e.g., possibleTap) - reset state
-        isInThreeFingerGesture = false
-        gestureEndTime = CACurrentMediaTime()
+        DispatchQueue.main.async { [weak self] in
+            self?.isInThreeFingerGesture = false
+            self?.gestureEndTime = CACurrentMediaTime()
+        }
     }
 
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
         // Cancel drag immediately - user added 4th finger for Mission Control
-        isActivelyDragging = false
-        isInThreeFingerGesture = false
-        gestureEndTime = CACurrentMediaTime()
+        DispatchQueue.main.async { [weak self] in
+            self?.isActivelyDragging = false
+            self?.isInThreeFingerGesture = false
+            self?.gestureEndTime = CACurrentMediaTime()
+        }
         mouseGenerator.cancelDrag()
     }
 }
