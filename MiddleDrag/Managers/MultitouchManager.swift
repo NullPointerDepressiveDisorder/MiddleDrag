@@ -143,7 +143,8 @@ class MultitouchManager {
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
 
         if let source = runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+            // Explicitly use main run loop to match where state updates are dispatched
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
@@ -156,7 +157,7 @@ class MultitouchManager {
         }
 
         if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .commonModes)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
 
         eventTap = nil
