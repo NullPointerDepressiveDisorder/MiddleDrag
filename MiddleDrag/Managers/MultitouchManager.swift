@@ -99,6 +99,9 @@ class MultitouchManager {
 
     private func setupEventTap() {
         // Build event mask for mouse events to intercept
+        // We ONLY intercept mouse events - NOT gesture events
+        // Intercepting gesture events (even just registering for them) causes
+        // macOS to freeze when doing 4-finger Mission Control swipes
         var eventMask: CGEventMask = 0
         eventMask |= (1 << CGEventType.leftMouseDown.rawValue)
         eventMask |= (1 << CGEventType.leftMouseUp.rawValue)
@@ -110,13 +113,8 @@ class MultitouchManager {
         eventMask |= (1 << CGEventType.otherMouseUp.rawValue)
         eventMask |= (1 << CGEventType.otherMouseDragged.rawValue)
 
-        // Add gesture event types (not exposed in Swift's CGEventType enum, but still exist)
-        // These raw values are from CoreGraphics headers:
-        // kCGEventGesture = 29, kCGEventMagnify = 30, kCGEventRotate = 31, kCGEventSwipe = 32
-        eventMask |= (1 << 29)  // gesture
-        eventMask |= (1 << 30)  // magnify
-        eventMask |= (1 << 31)  // rotate
-        eventMask |= (1 << 32)  // swipe
+        // NOTE: We intentionally do NOT intercept gesture events (29-32)
+        // Doing so causes Mission Control and other system gestures to freeze
 
         let refcon = Unmanaged.passUnretained(self).toOpaque()
 
@@ -176,18 +174,6 @@ class MultitouchManager {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
             return Unmanaged.passUnretained(event)
-        }
-
-        let typeRawValue = type.rawValue
-
-        // Check if this is a gesture event (types 29-32: gesture, magnify, rotate, swipe)
-        let isGestureEvent = typeRawValue >= 29 && typeRawValue <= 32
-
-        // Only suppress gesture events during ACTIVE dragging, not just finger detection
-        // This allows Mission Control (4-finger swipe) and other gestures to work
-        // when we're not actively using middle-drag
-        if isGestureEvent && isActivelyDragging {
-            return nil  // Consume the event to prevent system gesture during drag
         }
 
         let sourceStateID = event.getIntegerValueField(.eventSourceStateID)
