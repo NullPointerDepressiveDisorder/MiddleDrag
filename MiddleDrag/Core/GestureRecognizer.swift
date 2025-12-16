@@ -93,9 +93,12 @@ class GestureRecognizer {
                 if stableFrameCount >= 2 {
                     handleGestureEnd(timestamp: timestamp)
                 }
-            } else {
+            } else if !isInCancellationCooldown {
+                // Finger count is 3+ but not valid (exceeds max) - cancel once
+                // Don't cancel repeatedly if we're already in cooldown
                 handleGestureCancel()
             }
+            // If in cooldown with 3 fingers, just wait for cooldown to clear
         }
 
         frameCount += 1
@@ -110,6 +113,7 @@ class GestureRecognizer {
         gestureStartTime = 0
         frameCount = 0
         stableFrameCount = 0
+        isInCancellationCooldown = false  // Clear cooldown on reset
     }
 
     // MARK: - Private Methods

@@ -220,21 +220,8 @@ extension MultitouchManager: DeviceMonitorDelegate {
     ) {
         guard isEnabled else { return }
 
-        // Count valid touching fingers for event suppression state
-        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: Int(count))
-        var validFingerCount = 0
-
-        for i in 0..<Int(count) {
-            let state = touchArray[i].state
-            if state == 3 || state == 4 {
-                validFingerCount += 1
-            }
-        }
-
-        // Determine if this is a valid three-finger gesture based on configuration
-        // Note: We no longer update isInThreeFingerGesture here to avoid race condition
-        // with async gesture processing. State is updated in delegate callbacks instead.
-
+        // Gesture recognition and finger counting is done inside processTouches
+        // State updates happen in delegate callbacks dispatched to main thread
         gestureQueue.async { [weak self] in
             self?.gestureRecognizer.processTouches(touches, count: Int(count), timestamp: timestamp)
         }
@@ -268,7 +255,8 @@ extension MultitouchManager: GestureRecognizerDelegate {
         mouseGenerator.startDrag(at: mouseLocation)
     }
 
-    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
+    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
+    {
         guard configuration.middleDragEnabled else { return }
         let delta = data.frameDelta(from: configuration)
 
