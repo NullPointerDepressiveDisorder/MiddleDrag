@@ -204,6 +204,9 @@ class GestureRecognizer {
     /// Cancel gesture without completing it (e.g., when 4th finger detected)
     private func handleGestureCancel() {
         switch state {
+        case .possibleTap:
+            // Cancel the possible tap - notify delegate so it can reset state
+            delegate?.gestureRecognizerDidCancel(self)
         case .dragging:
             // Cancel the drag - don't complete it normally
             delegate?.gestureRecognizerDidCancelDragging(self)
@@ -265,6 +268,9 @@ protocol GestureRecognizerDelegate: AnyObject {
 
     /// Called when dragging ends normally (user lifted fingers)
     func gestureRecognizerDidEndDragging(_ recognizer: GestureRecognizer)
+
+    /// Called when gesture is cancelled from early state (e.g., possibleTap when 4th finger added)
+    func gestureRecognizerDidCancel(_ recognizer: GestureRecognizer)
 
     /// Called when dragging is cancelled (e.g., 4th finger added for Mission Control)
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer)

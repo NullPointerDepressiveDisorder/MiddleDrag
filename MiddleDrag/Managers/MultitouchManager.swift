@@ -284,6 +284,12 @@ extension MultitouchManager: GestureRecognizerDelegate {
         mouseGenerator.endDrag()
     }
 
+    func gestureRecognizerDidCancel(_ recognizer: GestureRecognizer) {
+        // Cancel from early state (e.g., possibleTap) - reset state
+        isInThreeFingerGesture = false
+        gestureEndTime = CACurrentMediaTime()
+    }
+
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
         // Cancel drag immediately - user added 4th finger for Mission Control
         isActivelyDragging = false
