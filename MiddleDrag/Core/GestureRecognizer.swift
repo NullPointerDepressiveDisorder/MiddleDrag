@@ -85,12 +85,18 @@ class GestureRecognizer {
         if isValidThreeFingerGesture {
             handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
         } else if state != .idle {
-            // End gesture normally when finger count drops below 3
-            // (user lifted fingers to end the gesture)
-            // Use stable frame count to prevent false ends during brief transitions
-            stableFrameCount += 1
-            if stableFrameCount >= 2 {
-                handleGestureEnd(timestamp: timestamp)
+            // Gesture state changed - determine if we should end or cancel
+            if fingerCount < 3 {
+                // Finger count dropped below 3 - user is ending the gesture normally
+                // Use stable frame count to prevent false ends during brief transitions
+                stableFrameCount += 1
+                if stableFrameCount >= 2 {
+                    handleGestureEnd(timestamp: timestamp)
+                }
+            } else {
+                // Finger count is 3+ but not valid (e.g., in cooldown, or exceeds max)
+                // This means an unexpected state change - cancel immediately
+                handleGestureCancel()
             }
         }
 
