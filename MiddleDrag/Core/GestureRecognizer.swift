@@ -48,11 +48,22 @@ class GestureRecognizer {
         
         let fingerCount = validFingers.count
         
-        if fingerCount >= 3 {
+        // Determine if we should process this as a three-finger gesture
+        // When requiresExactlyThreeFingers is true (default), ignore 4+ fingers
+        // This allows Mission Control and other system gestures to work
+        let isValidThreeFingerGesture: Bool
+        if configuration.requiresExactlyThreeFingers {
+            isValidThreeFingerGesture = fingerCount == 3
+        } else {
+            isValidThreeFingerGesture = fingerCount >= 3
+        }
+        
+        if isValidThreeFingerGesture {
             handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
         } else if state != .idle {
-            // Only end gesture if we've been below 3 fingers for multiple frames
-            // This prevents ending during brief state transitions
+            // End gesture if finger count changed to something we don't handle
+            // (e.g., went from 3 to 4 fingers, or lifted fingers)
+            // Use stable frame count to prevent false ends during brief transitions
             stableFrameCount += 1
             if stableFrameCount >= 2 {
                 handleGestureEnd(timestamp: timestamp)
