@@ -304,4 +304,10 @@ extension MultitouchManager: GestureRecognizerDelegate {
         guard configuration.middleDragEnabled else { return }
         mouseGenerator.endDrag()
     }
+
+    func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
+        // Cancel drag immediately - user added 4th finger for Mission Control
+        isActivelyDragging = false
+        mouseGenerator.cancelDrag()
+    }
 }
