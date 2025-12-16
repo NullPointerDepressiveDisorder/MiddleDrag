@@ -25,6 +25,10 @@ class GestureRecognizer {
     // Stability tracking - prevents false gesture ends during brief state transitions
     private var stableFrameCount: Int = 0
 
+    // Cooldown after 4-finger cancellation
+    // Prevents accidental gesture triggers when lifting one finger during Mission Control
+    private var isInCancellationCooldown: Bool = false
+
     // MARK: - Public Interface
 
     /// Process new touch data from the multitouch device
@@ -50,21 +54,30 @@ class GestureRecognizer {
 
         // When requiresExactlyThreeFingers is enabled (default):
         // - 4+ fingers = immediate cancel (user doing Mission Control)
-        // - 3 fingers = process gesture
-        // - 0-2 fingers = end gesture normally (user lifted fingers)
+        // - 3 fingers = process gesture (unless in cooldown)
+        // - 0-2 fingers = end gesture normally / clear cooldown
         if configuration.requiresExactlyThreeFingers && fingerCount >= 4 {
             // IMMEDIATELY cancel any in-progress gesture when 4+ fingers detected
             // This allows Mission Control to work without interference
             if state != .idle {
                 handleGestureCancel()
             }
+            // Enter cooldown to prevent restart when finger is briefly lifted
+            isInCancellationCooldown = true
             return
+        }
+
+        // Clear cooldown when finger count drops to 0-2
+        // User must fully release before starting a new gesture after cancellation
+        if fingerCount <= 2 {
+            isInCancellationCooldown = false
         }
 
         // Determine if we should process this as a three-finger gesture
         let isValidThreeFingerGesture: Bool
         if configuration.requiresExactlyThreeFingers {
-            isValidThreeFingerGesture = fingerCount == 3
+            // Don't start new gesture if in cooldown from 4-finger cancellation
+            isValidThreeFingerGesture = fingerCount == 3 && !isInCancellationCooldown
         } else {
             isValidThreeFingerGesture = fingerCount >= 3
         }
