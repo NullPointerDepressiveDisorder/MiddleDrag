@@ -69,36 +69,22 @@ class GestureRecognizer {
             isInCancellationCooldown = false
         }
 
-        // Determine if we should process this as a three-finger gesture
-        // Note: Both modes now only accept exactly 3 fingers to preserve Mission Control
-        // The requiresExactlyThreeFingers setting affects whether we're strict about it
-        let isValidThreeFingerGesture: Bool
-        if isInCancellationCooldown {
-            isValidThreeFingerGesture = false
-        } else if configuration.requiresExactlyThreeFingers {
-            isValidThreeFingerGesture = fingerCount == 3
-        } else {
-            // Even in "3+" mode, we only process exactly 3 to preserve 4-finger gestures
-            isValidThreeFingerGesture = fingerCount == 3
-        }
+        // Process exactly 3-finger gestures only
+        // 4+ fingers are cancelled above, 0-2 fingers end the gesture below
+        // Note: requiresExactlyThreeFingers no longer has an effect since we always
+        // require exactly 3 to preserve Mission Control - could be deprecated
+        let isValidThreeFingerGesture = !isInCancellationCooldown && fingerCount == 3
 
         if isValidThreeFingerGesture {
             handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
         } else if state != .idle {
-            // Gesture state changed - determine if we should end or cancel
-            if fingerCount < 3 {
-                // Finger count dropped below 3 - user is ending the gesture normally
-                // Use stable frame count to prevent false ends during brief transitions
-                stableFrameCount += 1
-                if stableFrameCount >= 2 {
-                    handleGestureEnd(timestamp: timestamp)
-                }
-            } else if !isInCancellationCooldown {
-                // Finger count is 3+ but not valid (exceeds max) - cancel once
-                // Don't cancel repeatedly if we're already in cooldown
-                handleGestureCancel()
+            // Gesture state changed - finger count dropped below 3
+            // (4+ fingers case is handled by cancellation above before we get here)
+            // Use stable frame count to prevent false ends during brief transitions
+            stableFrameCount += 1
+            if stableFrameCount >= 2 {
+                handleGestureEnd(timestamp: timestamp)
             }
-            // If in cooldown with 3 fingers, just wait for cooldown to clear
         }
 
         frameCount += 1

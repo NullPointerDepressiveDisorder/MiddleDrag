@@ -232,8 +232,13 @@ extension MultitouchManager: DeviceMonitorDelegate {
 // MARK: - GestureRecognizerDelegate
 
 extension MultitouchManager: GestureRecognizerDelegate {
+    // NOTE: State updates are dispatched async to main thread for thread safety.
+    // There's a brief window (~1 frame) where events could pass through before
+    // suppression activates. Using DispatchQueue.main.sync would eliminate this
+    // but could cause UI blocking on the gesture processing queue. The current
+    // approach trades minimal event leakage for responsiveness.
+
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint) {
-        // Dispatch to main thread for thread-safe access from event tap callback
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = true
         }
