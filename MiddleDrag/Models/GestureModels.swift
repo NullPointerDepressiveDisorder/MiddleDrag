@@ -32,6 +32,7 @@ struct GestureConfiguration {
     var moveThreshold: Float = 0.015  // Movement threshold for tap vs drag
     
     // Finger requirements
+    @available(*, deprecated, message: "Always requires exactly 3 fingers now to support Mission Control")
     var requiresExactlyThreeFingers: Bool = true
     var blockSystemGestures: Bool = false
     
@@ -63,6 +64,7 @@ struct UserPreferences: Codable {
     var dragSensitivity: Double = 1.0
     var tapThreshold: Double = 0.15
     var smoothingFactor: Double = 0.3
+    @available(*, deprecated, message: "Always requires exactly 3 fingers now to support Mission Control")
     var requiresExactlyThreeFingers: Bool = true
     var blockSystemGestures: Bool = false
     var middleDragEnabled: Bool = true  // Allow disabling drag while keeping tap
