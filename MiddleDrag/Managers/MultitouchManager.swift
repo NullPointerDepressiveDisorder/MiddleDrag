@@ -23,6 +23,7 @@ class MultitouchManager {
     private(set) var isInThreeFingerGesture = false
 
     /// Whether actively dragging (more restrictive than isInThreeFingerGesture)
+    /// Currently unused for suppression but tracks the drag state precisely
     private(set) var isActivelyDragging = false
 
     // Timestamp when gesture ended (for delayed event suppression)
@@ -253,16 +254,15 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
-        guard configuration.middleDragEnabled else { return }
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = true
         }
+        guard configuration.middleDragEnabled else { return }
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
 
-    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
-    {
+    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
         guard configuration.middleDragEnabled else { return }
         let delta = data.frameDelta(from: configuration)
 

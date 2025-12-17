@@ -13,7 +13,6 @@ class PreferencesManager {
         static let dragSensitivity = "dragSensitivity"
         static let tapThreshold = "tapThreshold"
         static let smoothingFactor = "smoothingFactor"
-        static let requiresExactlyThreeFingers = "requiresExactlyThreeFingers"
         static let blockSystemGestures = "blockSystemGestures"
         static let middleDragEnabled = "middleDragEnabled"
     }
@@ -29,7 +28,6 @@ class PreferencesManager {
             Keys.dragSensitivity: 1.0,
             Keys.tapThreshold: 0.15,
             Keys.smoothingFactor: 0.3,
-            Keys.requiresExactlyThreeFingers: true,
             Keys.blockSystemGestures: false,
             Keys.middleDragEnabled: true
         ])
@@ -42,7 +40,6 @@ class PreferencesManager {
             dragSensitivity: userDefaults.double(forKey: Keys.dragSensitivity),
             tapThreshold: userDefaults.double(forKey: Keys.tapThreshold),
             smoothingFactor: userDefaults.double(forKey: Keys.smoothingFactor),
-            requiresExactlyThreeFingers: userDefaults.bool(forKey: Keys.requiresExactlyThreeFingers),
             blockSystemGestures: userDefaults.bool(forKey: Keys.blockSystemGestures),
             middleDragEnabled: userDefaults.bool(forKey: Keys.middleDragEnabled)
         )
@@ -54,7 +51,6 @@ class PreferencesManager {
         userDefaults.set(preferences.dragSensitivity, forKey: Keys.dragSensitivity)
         userDefaults.set(preferences.tapThreshold, forKey: Keys.tapThreshold)
         userDefaults.set(preferences.smoothingFactor, forKey: Keys.smoothingFactor)
-        userDefaults.set(preferences.requiresExactlyThreeFingers, forKey: Keys.requiresExactlyThreeFingers)
         userDefaults.set(preferences.blockSystemGestures, forKey: Keys.blockSystemGestures)
         userDefaults.set(preferences.middleDragEnabled, forKey: Keys.middleDragEnabled)
     }

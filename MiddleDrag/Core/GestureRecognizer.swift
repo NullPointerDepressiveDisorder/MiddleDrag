@@ -63,9 +63,9 @@ class GestureRecognizer {
             return
         }
 
-        // Clear cooldown when finger count drops to 0-2
-        // User must fully release before starting a new gesture after cancellation
-        if fingerCount <= 2 {
+        // Clear cooldown when finger count drops to 0-2,
+        // or when finger count is 3 and we're idle (so user can start a new gesture)
+        if fingerCount <= 2 || (fingerCount == 3 && state == .idle) {
             isInCancellationCooldown = false
         }
 
