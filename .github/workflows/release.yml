@@ -209,10 +209,10 @@ jobs:
           echo "GENERATE_NOTES=$([ -z "$TAG_MSG" ] && echo true || echo false)" >> $GITHUB_OUTPUT
 
       - name: Create Release
+        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
