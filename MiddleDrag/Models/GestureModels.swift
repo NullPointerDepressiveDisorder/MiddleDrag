@@ -75,7 +75,7 @@ struct UserPreferences: Codable {
             sensitivity: Float(dragSensitivity),
             smoothingFactor: Float(smoothingFactor),
             tapThreshold: tapThreshold,
-            requiresExactlyThreeFingers: requiresExactlyThreeFingers,
+            requiresExactlyThreeFingers: true, // Always true now
             blockSystemGestures: blockSystemGestures,
             middleDragEnabled: middleDragEnabled
         )

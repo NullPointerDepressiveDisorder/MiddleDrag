@@ -158,12 +158,6 @@ class MenuBarController: NSObject {
         
         // Add advanced options
         submenu.addItem(createAdvancedMenuItem(
-            title: "Require Exactly 3 Fingers",
-            isOn: preferences.requiresExactlyThreeFingers,
-            action: #selector(toggleFingerRequirement)
-        ))
-        
-        submenu.addItem(createAdvancedMenuItem(
             title: "Block System Gestures",
             isOn: preferences.blockSystemGestures,
             action: #selector(toggleSystemGestureBlocking)
@@ -244,14 +238,6 @@ class MenuBarController: NSObject {
         multitouchManager?.configuration.sensitivity = value
         
         // Notify delegate to save preferences
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-    
-    @objc private func toggleFingerRequirement() {
-        preferences.requiresExactlyThreeFingers.toggle()
-        multitouchManager?.configuration.requiresExactlyThreeFingers = preferences.requiresExactlyThreeFingers
-        buildMenu()  // Rebuild to update checkmark
-        
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
     
