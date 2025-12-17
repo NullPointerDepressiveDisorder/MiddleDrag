@@ -1,0 +1,21 @@
+name: Close Issues on Release
+on:
+  release:
+    types: [published]
+
+jobs:
+  close-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Close issues with 'fixed-pending-release' label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Find all open issues with the specific label
+          issues=$(gh issue list --label "fixed-pending-release" --json number --jq '.[].number')
+          
+          for issue in $issues; do
+            gh issue close "$issue" --comment "Closed by release ${{ github.event.release.tag_name }}"
+          done
