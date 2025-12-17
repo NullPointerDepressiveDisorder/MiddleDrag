@@ -54,29 +54,32 @@ jobs:
         run: |
           VERSION="${{ inputs.version }}"
           VERSION="${VERSION#v}"
-
-          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
-
+      
+          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project. pbxproj | head -n 1)
+      
           if [ "$VERSION" != "$PROJECT_VERSION" ]; then
             echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping..."
-
-            if [[ "$GITHUB_REF" != refs/heads/* ]]; then
-               echo "Error: Can only bump version when running on a branch."
-               exit 1
+      
+            # For workflow_dispatch, determine the branch
+            if [[ "$GITHUB_REF" == refs/heads/* ]]; then
+              BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            else
+              # Fallback to main branch for workflow_dispatch
+              BRANCH_NAME="main"
+              echo "Not on a branch ref, using $BRANCH_NAME"
             fi
-
-            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+      
             git fetch origin "$BRANCH_NAME"
             git checkout "$BRANCH_NAME"
             git reset --hard "origin/$BRANCH_NAME"
-
+      
             NOTES="${{ inputs.notes }}"
             ./bump-version.sh "$VERSION" "$NOTES"
-
+      
             # Rebase on latest main in case of new commits
             git fetch origin "$BRANCH_NAME"
             git rebase "origin/$BRANCH_NAME"
-
+      
             git push origin "$BRANCH_NAME"
             git push origin "v$VERSION"
           else
