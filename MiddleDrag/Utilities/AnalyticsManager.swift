@@ -238,23 +238,3 @@ final class CrashReporter {
         SentrySDK.addBreadcrumb(breadcrumb)
     }
 }
-
-// MARK: - AnalyticsManager (Compatibility Shim)
-/// Maintains backward compatibility with existing code while delegating to CrashReporter
-/// TODO: Remove this after updating all call sites to use CrashReporter directly
-
-final class AnalyticsManager {
-    static let shared = AnalyticsManager()
-    private init() {}
-    
-    /// Whether crash reporting is enabled (delegates to CrashReporter)
-    var isEnabled: Bool {
-        get { CrashReporter.shared.isEnabled }
-        set { CrashReporter.shared.isEnabled = newValue }
-    }
-    
-    /// Initialize crash reporting if user has opted in
-    func initialize() {
-        CrashReporter.shared.initializeIfEnabled()
-    }
-}

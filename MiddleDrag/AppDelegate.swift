@@ -14,7 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize crash reporting only if user has opted in (offline by default)
-        AnalyticsManager.shared.initialize()
+        CrashReporter.shared.initializeIfEnabled()
         
         Log.info("MiddleDrag starting...", category: .app)
         
