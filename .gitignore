@@ -20,3 +20,4 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+.vscode/settings.json
