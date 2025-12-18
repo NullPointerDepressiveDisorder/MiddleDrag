@@ -80,8 +80,12 @@ jobs:
             git fetch origin "$BRANCH_NAME"
             git rebase "origin/$BRANCH_NAME"
 
+            # Re-create the tag to point to HEAD after rebase (bump-version.sh creates it before rebase)
+            # This ensures the tag points to a commit that's actually on the branch
+            git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
+
             git push origin "$BRANCH_NAME" --force-with-lease
-            git push origin "v$VERSION"
+            git push origin "v$VERSION" --force
 
             # Capture the new commit SHA after amendment
             echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
@@ -220,9 +224,9 @@ jobs:
           name: v${{ steps.version.outputs.VERSION }}
           target_commitish: ${{ env.NEW_SHA || github.sha }}
           generate_release_notes: ${{ steps.tag_message.outputs.GENERATE_NOTES }}
+          append_body: ${{ steps.tag_message.outputs.GENERATE_NOTES }}
           body: |
             ${{ steps.tag_message.outputs.MESSAGE }}
-
             ---
             **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
           files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
