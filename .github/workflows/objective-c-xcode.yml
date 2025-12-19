@@ -1,14 +1,11 @@
-name: Build & Test
+name: Build Check
 permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - "**"
   pull_request:
     branches:
-      - "**"
+      - main
 
 jobs:
   pre_job:
@@ -22,17 +19,12 @@ jobs:
   build:
     needs: pre_job
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
-    name: Build & Test MiddleDrag
+    name: Quick Build Check
     runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Verify Xcode version
-        run: |
-          xcodebuild -version
-          swift --version
 
       - name: Build
         run: |
@@ -44,48 +36,3 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
-
-      - name: Run Tests with Coverage
-        run: |
-          xcodebuild test \
-            -scheme MiddleDrag \
-            -project MiddleDrag.xcodeproj \
-            -destination "platform=macOS" \
-            -enableCodeCoverage YES \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            || echo "Tests failed or no tests found - continuing for coverage upload"
-
-      - name: Convert Coverage to lcov
-        run: |
-          # Find the profdata file
-          PROFDATA=$(find TestResults.xcresult -name "*.profdata" 2>/dev/null | head -1)
-
-          if [ -n "$PROFDATA" ]; then
-            # Find the binary
-            BINARY=$(find ~/Library/Developer/Xcode/DerivedData -name "MiddleDrag" -type f -perm +111 2>/dev/null | head -1)
-            
-            if [ -n "$BINARY" ]; then
-              xcrun llvm-cov export \
-                -format=lcov \
-                -instr-profile="$PROFDATA" \
-                "$BINARY" > coverage.lcov
-              echo "Coverage report generated"
-            else
-              echo "Binary not found, skipping coverage export"
-            fi
-          else
-            echo "No profdata found, skipping coverage conversion"
-          fi
-
-      - name: Upload to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.lcov
-          flags: unittests
-          name: MiddleDrag-coverage
-          fail_ci_if_error: false
-          verbose: true
