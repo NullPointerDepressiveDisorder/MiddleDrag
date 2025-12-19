@@ -27,6 +27,8 @@
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
 		MDT00000001 /* GestureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000003 /* GestureModelsTests.swift */; };
 		MDT00000002 /* TouchModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000004 /* TouchModelsTests.swift */; };
+		MDT00000016 /* GestureRecognizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000017 /* GestureRecognizerTests.swift */; };
+		MDT00000018 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +64,7 @@
 		EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		MDT00000003 /* GestureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureModelsTests.swift; sourceTree = "<group>"; };
 		MDT00000004 /* TouchModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModelsTests.swift; sourceTree = "<group>"; };
+		MDT00000017 /* GestureRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizerTests.swift; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -173,6 +176,7 @@
 			children = (
 				MDT00000003 /* GestureModelsTests.swift */,
 				MDT00000004 /* TouchModelsTests.swift */,
+				MDT00000017 /* GestureRecognizerTests.swift */,
 			);
 			path = MiddleDragTests;
 			sourceTree = "<group>";
@@ -325,6 +329,8 @@
 			files = (
 				MDT00000001 /* GestureModelsTests.swift in Sources */,
 				MDT00000002 /* TouchModelsTests.swift in Sources */,
+				MDT00000016 /* GestureRecognizerTests.swift in Sources */,
+				MDT00000018 /* GestureRecognizer.swift in Sources */,
 				EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */,
 				EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */,
 			);
