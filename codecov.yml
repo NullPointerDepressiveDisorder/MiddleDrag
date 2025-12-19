@@ -1,0 +1,37 @@
+# Codecov Configuration for MiddleDrag
+# https://docs.codecov.io/docs/codecovyml-reference
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%
+        informational: true # Don't block PRs until we have established baseline
+    patch:
+      default:
+        target: 80%
+        informational: true
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "header, diff, flags, files"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "**/*Tests.swift"
+  - "**/AppDelegate.swift"
+  - "**/MiddleDragApp.swift"
+  - "**/Assets.xcassets/**"
