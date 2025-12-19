@@ -1,3 +1,4 @@
+import Cocoa
 import CoreGraphics
 import Foundation
 
@@ -39,14 +40,57 @@ class GestureRecognizer {
     func processTouches(_ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double) {
         let touchArray = touches.bindMemory(to: MTTouch.self, capacity: count)
 
+        // Check modifier key requirement first (if enabled)
+        if configuration.requireModifierKey {
+            let modifierFlags = getModifierFlags()
+            let requiredFlagPresent: Bool
+            switch configuration.modifierKeyType {
+            case .shift:
+                requiredFlagPresent = modifierFlags.contains(.shift)
+            case .control:
+                requiredFlagPresent = modifierFlags.contains(.control)
+            case .option:
+                requiredFlagPresent = modifierFlags.contains(.option)
+            case .command:
+                requiredFlagPresent = modifierFlags.contains(.command)
+            }
+
+            if !requiredFlagPresent {
+                // Required modifier not held - cancel any active gesture and return
+                if state != .idle {
+                    handleGestureCancel()
+                }
+                return
+            }
+        }
+
         // Collect only valid touching fingers (state 3 = touching down, state 4 = active)
         // Skip state 5 (lifting), 6 (lingering), 7 (gone)
+        // Apply palm rejection filters
         var validFingers: [MTPoint] = []
 
         for i in 0..<count {
             let touch = touchArray[i]
             if touch.state == 3 || touch.state == 4 {
-                validFingers.append(touch.normalizedVector.position)
+                let position = touch.normalizedVector.position
+
+                // Palm rejection: Exclusion zone filter
+                // Skip touches in the bottom portion of trackpad (where palm rests)
+                if configuration.exclusionZoneEnabled {
+                    if position.y < configuration.exclusionZoneSize {
+                        continue  // Skip this touch
+                    }
+                }
+
+                // Palm rejection: Contact size filter
+                // Skip touches that are too large (palms have larger contact area)
+                if configuration.contactSizeFilterEnabled {
+                    if touch.zTotal > configuration.maxContactSize {
+                        continue  // Skip this touch - likely a palm
+                    }
+                }
+
+                validFingers.append(position)
             }
         }
 
@@ -88,6 +132,19 @@ class GestureRecognizer {
         }
 
         frameCount += 1
+    }
+
+    /// Get current modifier key flags
+    /// Must be called from main thread for accurate results
+    private func getModifierFlags() -> NSEvent.ModifierFlags {
+        // CGEventSource provides real-time modifier state without requiring an event
+        let flags = CGEventSource.flagsState(.hidSystemState)
+        var result: NSEvent.ModifierFlags = []
+        if flags.contains(.maskShift) { result.insert(.shift) }
+        if flags.contains(.maskControl) { result.insert(.control) }
+        if flags.contains(.maskAlternate) { result.insert(.option) }
+        if flags.contains(.maskCommand) { result.insert(.command) }
+        return result
     }
 
     /// Reset gesture recognition state
