@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		EC3F440F2EDE4B9B00BD36A8 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */; };
+		EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0A2ED8E37A0053F6A9 /* GestureModels.swift */; };
+		EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0B2ED8E37A0053F6A9 /* TouchModels.swift */; };
 		EC5F1E152ED8E37A0053F6A9 /* MultitouchFramework.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */; };
 		EC5F1E162ED8E37A0053F6A9 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E102ED8E37A0053F6A9 /* MenuBarController.swift */; };
 		EC5F1E172ED8E37A0053F6A9 /* AlertHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0F2ED8E37A0053F6A9 /* AlertHelper.swift */; };
@@ -323,6 +325,8 @@
 			files = (
 				MDT00000001 /* GestureModelsTests.swift in Sources */,
 				MDT00000002 /* TouchModelsTests.swift in Sources */,
+				EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */,
+				EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
