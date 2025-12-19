@@ -23,6 +23,8 @@
 		EC5F1E222ED8E37A0053F6A9 /* MiddleDragApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E092ED8E37A0053F6A9 /* MiddleDragApp.swift */; };
 		EC5F1E232ED8E37A0053F6A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */; };
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
+		MDT00000001 /* GestureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000003 /* GestureModelsTests.swift */; };
+		MDT00000002 /* TouchModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000004 /* TouchModelsTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,6 +48,9 @@
 		EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
 		EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesManager.swift; sourceTree = "<group>"; };
 		EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		MDT00000003 /* GestureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureModelsTests.swift; sourceTree = "<group>"; };
+		MDT00000004 /* TouchModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModelsTests.swift; sourceTree = "<group>"; };
+		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				1A0000009 /* MiddleDrag */,
+				MDT00000006 /* MiddleDragTests */,
 				1A0000010 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -91,8 +97,18 @@
 			isa = PBXGroup;
 			children = (
 				1A0000004 /* MiddleDrag.app */,
+				MDT00000005 /* MiddleDragTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		MDT00000006 /* MiddleDragTests */ = {
+			isa = PBXGroup;
+			children = (
+				MDT00000003 /* GestureModelsTests.swift */,
+				MDT00000004 /* TouchModelsTests.swift */,
+			);
+			path = MiddleDragTests;
 			sourceTree = "<group>";
 		};
 		EC5F1E022ED8E37A0053F6A9 /* Core */ = {
@@ -163,6 +179,24 @@
 			productReference = 1A0000004 /* MiddleDrag.app */;
 			productType = "com.apple.product-type.application";
 		};
+		MDT00000007 /* MiddleDragTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = MDT00000008 /* Build configuration list for PBXNativeTarget "MiddleDragTests" */;
+			buildPhases = (
+				MDT00000009 /* Sources */,
+				MDT00000010 /* Frameworks */,
+				MDT00000011 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				MDT00000012 /* PBXTargetDependency */,
+			);
+			name = MiddleDragTests;
+			productName = MiddleDragTests;
+			productReference = MDT00000005 /* MiddleDragTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -175,6 +209,10 @@
 				TargetAttributes = {
 					1A0000011 = {
 						CreatedOnToolsVersion = 14.0;
+					};
+					MDT00000007 = {
+						CreatedOnToolsVersion = 14.0;
+						TestTargetID = 1A0000011;
 					};
 				};
 			};
@@ -195,6 +233,7 @@
 			projectRoot = "";
 			targets = (
 				1A0000011 /* MiddleDrag */,
+				MDT00000007 /* MiddleDragTests */,
 			);
 		};
 /* End PBXProject section */
@@ -255,7 +294,54 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		MDT00000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				MDT00000001 /* GestureModelsTests.swift in Sources */,
+				MDT00000002 /* TouchModelsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXFrameworksBuildPhase section for Tests */
+		MDT00000010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section for Tests */
+
+/* Begin PBXResourcesBuildPhase section for Tests */
+		MDT00000011 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section for Tests */
+
+/* Begin PBXTargetDependency section */
+		MDT00000012 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1A0000011 /* MiddleDrag */;
+			targetProxy = MDT00000015 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		MDT00000015 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A0000015 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A0000011;
+			remoteInfo = MiddleDrag;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin XCBuildConfiguration section */
 		1A0000017 /* Debug */ = {
@@ -468,7 +554,53 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		MDT00000008 /* Build configuration list for PBXNativeTarget "MiddleDragTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				MDT00000013 /* Debug */,
+				MDT00000014 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCBuildConfiguration section for Tests */
+		MDT00000013 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/Contents/MacOS/MiddleDrag";
+			};
+			name = Debug;
+		};
+		MDT00000014 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/Contents/MacOS/MiddleDrag";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section for Tests */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
