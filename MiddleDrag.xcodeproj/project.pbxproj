@@ -455,6 +455,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MiddleDrag/MiddleDrag.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -466,6 +467,7 @@
 					"$(inherited)",
 					/System/Library/PrivateFrameworks,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MiddleDrag/Info.plist;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
@@ -493,6 +495,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MiddleDrag/MiddleDrag.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
@@ -504,6 +507,7 @@
 					"$(inherited)",
 					/System/Library/PrivateFrameworks,
 				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MiddleDrag/Info.plist;
 				INFOPLIST_KEY_NSMainStoryboardFile = "";
