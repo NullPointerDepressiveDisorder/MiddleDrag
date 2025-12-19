@@ -37,22 +37,25 @@ class GestureRecognizer {
     ///   - touches: Raw pointer to touch data array
     ///   - count: Number of touches in the array
     ///   - timestamp: Timestamp of the touch frame
-    func processTouches(_ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double) {
+    ///   - modifierFlags: Current modifier key flags (captured on main thread by caller)
+    func processTouches(
+        _ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double,
+        modifierFlags: CGEventFlags
+    ) {
         let touchArray = touches.bindMemory(to: MTTouch.self, capacity: count)
 
         // Check modifier key requirement first (if enabled)
         if configuration.requireModifierKey {
-            let modifierFlags = getModifierFlags()
             let requiredFlagPresent: Bool
             switch configuration.modifierKeyType {
             case .shift:
-                requiredFlagPresent = modifierFlags.contains(.shift)
+                requiredFlagPresent = modifierFlags.contains(.maskShift)
             case .control:
-                requiredFlagPresent = modifierFlags.contains(.control)
+                requiredFlagPresent = modifierFlags.contains(.maskControl)
             case .option:
-                requiredFlagPresent = modifierFlags.contains(.option)
+                requiredFlagPresent = modifierFlags.contains(.maskAlternate)
             case .command:
-                requiredFlagPresent = modifierFlags.contains(.command)
+                requiredFlagPresent = modifierFlags.contains(.maskCommand)
             }
 
             if !requiredFlagPresent {
@@ -132,19 +135,6 @@ class GestureRecognizer {
         }
 
         frameCount += 1
-    }
-
-    /// Get current modifier key flags
-    /// Must be called from main thread for accurate results
-    private func getModifierFlags() -> NSEvent.ModifierFlags {
-        // CGEventSource provides real-time modifier state without requiring an event
-        let flags = CGEventSource.flagsState(.hidSystemState)
-        var result: NSEvent.ModifierFlags = []
-        if flags.contains(.maskShift) { result.insert(.shift) }
-        if flags.contains(.maskControl) { result.insert(.control) }
-        if flags.contains(.maskAlternate) { result.insert(.option) }
-        if flags.contains(.maskCommand) { result.insert(.command) }
-        return result
     }
 
     /// Reset gesture recognition state

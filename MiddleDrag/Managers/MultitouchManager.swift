@@ -222,10 +222,15 @@ extension MultitouchManager: DeviceMonitorDelegate {
     ) {
         guard isEnabled else { return }
 
+        // Capture modifier flags on main thread for accurate results
+        // CGEventSource.flagsState must be called from main thread to get reliable HID state
+        let modifierFlags = CGEventSource.flagsState(.hidSystemState)
+
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
         gestureQueue.async { [weak self] in
-            self?.gestureRecognizer.processTouches(touches, count: Int(count), timestamp: timestamp)
+            self?.gestureRecognizer.processTouches(
+                touches, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
         }
     }
 }
@@ -262,7 +267,8 @@ extension MultitouchManager: GestureRecognizerDelegate {
         mouseGenerator.startDrag(at: mouseLocation)
     }
 
-    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData) {
+    func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
+    {
         guard configuration.middleDragEnabled else { return }
         let delta = data.frameDelta(from: configuration)
 
