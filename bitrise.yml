@@ -1,0 +1,110 @@
+---
+format_version: "13"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: macos
+
+app:
+  envs:
+    - BITRISE_PROJECT_PATH: MiddleDrag.xcodeproj
+    - BITRISE_SCHEME: MiddleDrag
+    - BITRISE_DISTRIBUTION_METHOD: development
+
+workflows:
+  primary:
+    steps:
+      - activate-ssh-key@4:
+          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+      - git-clone@8: {}
+      - cache-pull@2: {}
+
+      - xcode-build-for-test@4:
+          inputs:
+            - project_path: $BITRISE_PROJECT_PATH
+            - scheme: $BITRISE_SCHEME
+            - destination: platform=macOS
+            - configuration: Debug
+
+      - xcode-test@5:
+          inputs:
+            - project_path: $BITRISE_PROJECT_PATH
+            - scheme: $BITRISE_SCHEME
+            - destination: platform=macOS
+            - generate_code_coverage_files: "yes"
+            - xcresult_path: $BITRISE_DEPLOY_DIR/TestResults.xcresult
+
+      - script@1:
+          title: Convert Coverage to lcov
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+
+                # Find profdata
+                PROFDATA=$(find "$BITRISE_DEPLOY_DIR/TestResults.xcresult" -name "*.profdata" 2>/dev/null | head -1)
+
+                if [ -n "$PROFDATA" ]; then
+                  # Find the test binary
+                  BINARY=$(find ~/Library/Developer/Xcode/DerivedData -name "MiddleDrag" -type f -perm +111 2>/dev/null | head -1)
+
+                  if [ -n "$BINARY" ]; then
+                    xcrun llvm-cov export \
+                      -format=lcov \
+                      -instr-profile="$PROFDATA" \
+                      "$BINARY" > "$BITRISE_DEPLOY_DIR/coverage.lcov"
+                    echo "Coverage report generated"
+                    envman add --key COVERAGE_FILE --value "$BITRISE_DEPLOY_DIR/coverage.lcov"
+                  else
+                    echo "Binary not found, skipping coverage export"
+                  fi
+                else
+                  echo "No profdata found, skipping coverage conversion"
+                fi
+
+      - script@1:
+          title: Upload to Codecov
+          inputs:
+            - content: |
+                #!/bin/bash
+                set -ex
+
+                if [ -f "$COVERAGE_FILE" ]; then
+                  curl -Os https://uploader.codecov.io/latest/macos/codecov
+                  chmod +x codecov
+                  ./codecov \
+                    -t "$CODECOV_TOKEN" \
+                    -f "$COVERAGE_FILE" \
+                    -F unittests \
+                    -n "MiddleDrag-bitrise" \
+                    --verbose
+                else
+                  echo "No coverage file found, skipping upload"
+                fi
+
+      - cache-push@2:
+          inputs:
+            - cache_paths: |
+                ~/Library/Developer/Xcode/DerivedData
+
+      - deploy-to-bitrise-io@2: {}
+
+  deploy:
+    description: Build for release/distribution
+    steps:
+      - activate-ssh-key@4:
+          run_if: '{{getenv "SSH_RSA_PRIVATE_KEY" | ne ""}}'
+      - git-clone@8: {}
+      - cache-pull@2: {}
+
+      - xcode-archive-mac@2:
+          inputs:
+            - project_path: $BITRISE_PROJECT_PATH
+            - scheme: $BITRISE_SCHEME
+            - distribution_method: $BITRISE_DISTRIBUTION_METHOD
+
+      - cache-push@2: {}
+      - deploy-to-bitrise-io@2: {}
+
+meta:
+  bitrise.io:
+    stack: osx-xcode-16.2.x
+    machine_type_id: g2-m1.4core
