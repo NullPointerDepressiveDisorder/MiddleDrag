@@ -222,8 +222,9 @@ extension MultitouchManager: DeviceMonitorDelegate {
     ) {
         guard isEnabled else { return }
 
-        // Capture modifier flags on main thread for accurate results
-        // CGEventSource.flagsState must be called from main thread to get reliable HID state
+        // Capture modifier flags before dispatching to gesture queue
+        // Note: This callback runs on a framework-managed background thread, not main thread
+        // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
         // Gesture recognition and finger counting is done inside processTouches
