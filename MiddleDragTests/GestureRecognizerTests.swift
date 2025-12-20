@@ -292,6 +292,98 @@ final class GestureRecognizerTests: XCTestCase {
             "Gesture should start with large contacts when filter is disabled")
     }
 
+    // MARK: - Partial Filter Tests (Some touches filtered, some pass)
+
+    func testExclusionZone_PartialFiltering_FiveTouchesThreePass() {
+        recognizer.configuration.exclusionZoneEnabled = true
+        recognizer.configuration.exclusionZoneSize = 0.2  // Bottom 20%
+
+        // 5 touches: 2 in exclusion zone, 3 above - should activate gesture
+        let touches = [
+            createTouch(x: 0.2, y: 0.1),  // Filtered (y < 0.2)
+            createTouch(x: 0.3, y: 0.5),  // Passes
+            createTouch(x: 0.5, y: 0.6),  // Passes
+            createTouch(x: 0.7, y: 0.5),  // Passes
+            createTouch(x: 0.8, y: 0.05),  // Filtered (y < 0.2)
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        XCTAssertTrue(
+            mockDelegate.didStartCalled,
+            "Gesture should start when 5 touches detected but only 3 pass exclusion zone filter")
+    }
+
+    func testContactSizeFilter_PartialFiltering_FiveTouchesThreePass() {
+        recognizer.configuration.contactSizeFilterEnabled = true
+        recognizer.configuration.maxContactSize = 1.5
+
+        // 5 touches: 2 too large (palm), 3 normal - should activate gesture
+        let touches = [
+            createTouch(x: 0.2, y: 0.5, zTotal: 3.0),  // Filtered (too large)
+            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),  // Passes
+            createTouch(x: 0.5, y: 0.5, zTotal: 0.8),  // Passes
+            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes
+            createTouch(x: 0.8, y: 0.5, zTotal: 5.0),  // Filtered (too large)
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        XCTAssertTrue(
+            mockDelegate.didStartCalled,
+            "Gesture should start when 5 touches detected but only 3 pass contact size filter")
+    }
+
+    func testCombinedFilters_PartialFiltering_SixTouchesThreePass() {
+        recognizer.configuration.exclusionZoneEnabled = true
+        recognizer.configuration.exclusionZoneSize = 0.2
+        recognizer.configuration.contactSizeFilterEnabled = true
+        recognizer.configuration.maxContactSize = 1.5
+
+        // 6 touches: 2 in exclusion zone, 1 too large, 3 pass both - should activate
+        let touches = [
+            createTouch(x: 0.1, y: 0.1, zTotal: 0.5),  // Filtered (exclusion zone)
+            createTouch(x: 0.2, y: 0.5, zTotal: 3.0),  // Filtered (too large)
+            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),  // Passes both
+            createTouch(x: 0.5, y: 0.6, zTotal: 0.8),  // Passes both
+            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes both
+            createTouch(x: 0.9, y: 0.05, zTotal: 0.5),  // Filtered (exclusion zone)
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        XCTAssertTrue(
+            mockDelegate.didStartCalled,
+            "Gesture should start when 6 touches detected but only 3 pass all filters")
+    }
+
+    func testPartialFiltering_InsufficientRemainingTouches() {
+        recognizer.configuration.exclusionZoneEnabled = true
+        recognizer.configuration.exclusionZoneSize = 0.2
+
+        // 4 touches: 2 filtered, only 2 remain - should NOT activate (need exactly 3)
+        let touches = [
+            createTouch(x: 0.2, y: 0.1),  // Filtered (exclusion zone)
+            createTouch(x: 0.3, y: 0.5),  // Passes
+            createTouch(x: 0.7, y: 0.5),  // Passes
+            createTouch(x: 0.8, y: 0.05),  // Filtered (exclusion zone)
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        XCTAssertFalse(
+            mockDelegate.didStartCalled,
+            "Gesture should not start when only 2 touches remain after filtering")
+    }
+
     // MARK: - Combined Filter Tests
 
     func testCombinedFilters_AllFiltersWorking() {
