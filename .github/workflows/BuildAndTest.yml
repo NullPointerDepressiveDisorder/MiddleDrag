@@ -70,7 +70,7 @@ jobs:
           flags: coverage
           name: middledrag-coverage
           swift_project: MiddleDrag
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -79,12 +79,12 @@ jobs:
         uses: codecov/codecov-action@v5
         if: ${{ !cancelled() }}
         with:
-          report_type: test-results
+          report_type: test_results
           files: ./junit.xml
           flags: unittests
           name: middledrag-unittests
           swift_project: MiddleDrag
-          fail_ci_if_error: false
+          fail_ci_if_error: true
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
