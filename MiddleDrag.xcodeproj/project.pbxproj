@@ -29,6 +29,16 @@
 		MDT00000002 /* TouchModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000004 /* TouchModelsTests.swift */; };
 		MDT00000016 /* GestureRecognizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000017 /* GestureRecognizerTests.swift */; };
 		MDT00000018 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */; };
+		MDT00000019 /* MouseEventGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000020 /* MouseEventGeneratorTests.swift */; };
+		MDT00000021 /* PreferencesManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000022 /* PreferencesManagerTests.swift */; };
+		MDT00000023 /* AnalyticsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000024 /* AnalyticsManagerTests.swift */; };
+		MDT00000025 /* MultitouchFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000026 /* MultitouchFrameworkTests.swift */; };
+		MDT00000027 /* MouseEventGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E002ED8E37A0053F6A9 /* MouseEventGenerator.swift */; };
+		MDT00000028 /* PreferencesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */; };
+		MDT00000029 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */; };
+		MDT00000030 /* MultitouchFramework.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */; };
+		MDT00000031 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */; };
+		MDT00000032 /* DeviceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E052ED8E37A0053F6A9 /* DeviceMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -66,6 +76,10 @@
 		MDT00000004 /* TouchModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModelsTests.swift; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		MDT00000017 /* GestureRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizerTests.swift; sourceTree = "<group>"; };
+		MDT00000020 /* MouseEventGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseEventGeneratorTests.swift; sourceTree = "<group>"; };
+		MDT00000022 /* PreferencesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesManagerTests.swift; sourceTree = "<group>"; };
+		MDT00000024 /* AnalyticsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManagerTests.swift; sourceTree = "<group>"; };
+		MDT00000026 /* MultitouchFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultitouchFrameworkTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -173,6 +187,9 @@
 				MDT00000003 /* GestureModelsTests.swift */,
 				MDT00000004 /* TouchModelsTests.swift */,
 				MDT00000017 /* GestureRecognizerTests.swift */,
+				MDT00000020 /* MouseEventGeneratorTests.swift */,
+				MDT00000022 /* PreferencesManagerTests.swift */,
+				MDT00000024 /* AnalyticsManagerTests.swift */,
 			);
 			path = MiddleDragTests;
 			sourceTree = "<group>";
@@ -328,6 +345,13 @@
 				MDT00000018 /* GestureRecognizer.swift in Sources */,
 				EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */,
 				EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */,
+				MDT00000019 /* MouseEventGeneratorTests.swift in Sources */,
+				MDT00000021 /* PreferencesManagerTests.swift in Sources */,
+				MDT00000023 /* AnalyticsManagerTests.swift in Sources */,
+				MDT00000027 /* MouseEventGenerator.swift in Sources */,
+				MDT00000028 /* PreferencesManager.swift in Sources */,
+				MDT00000029 /* AnalyticsManager.swift in Sources */,
+				MDT00000031 /* LaunchAtLoginManager.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
