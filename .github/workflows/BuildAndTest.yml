@@ -53,27 +53,38 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
           || echo "Tests completed (some may have failed)"
 
+      - name: Install and cache xcresultparser
+        uses: gerlero/brew-install@main
+        with:
+          packages: xcresultparser
+
       - name: Convert Coverage to Codecov Format
         run: |
-          xcrun xcresulttool get --format json --path TestResults.xcresult > coverage.json || true
-          # Alternative: Use xcrun llvm-cov for more detailed reports
-          xcrun xccov view --report --json TestResults.xcresult > xccov-report.json || true
+          xcresultparser --output-format cobertura TestResults.xcresult > coverage.xml
+          xcresultparser --output-format junit TestResults.xcresult > junit.xml
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
-          files: ./xccov-report.json
-          flags: unittests
+          files: ./coverage.xml
+          flags: coverage
           name: middledrag-coverage
+          swift_project: MiddleDrag
           fail_ci_if_error: false
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v4
-        if: always()
+        uses: codecov/codecov-action@v5
+        if: ${{ !cancelled() }}
         with:
-          name: test-results
-          path: TestResults.xcresult
-          retention-days: 7
+          report_type: test-results
+          files: ./junit.xml
+          flags: unittests
+          name: middledrag-unittests
+          swift_project: MiddleDrag
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
