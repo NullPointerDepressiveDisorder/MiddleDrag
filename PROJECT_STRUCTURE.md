@@ -6,31 +6,55 @@ The project has been refactored from two large files into a modular, maintainabl
 
 ```
 MiddleDrag/
-├── Core/                       # Core functionality
-│   ├── MultitouchFramework.swift    # Private API bindings and framework management
-│   ├── GestureRecognizer.swift      # Gesture detection and state management
-│   └── MouseEventGenerator.swift    # Mouse event generation and cursor control
+├── Core/                           # Core functionality
+│   ├── MultitouchFramework.swift       # Private API bindings and framework management
+│   ├── GestureRecognizer.swift         # Gesture detection and state management
+│   └── MouseEventGenerator.swift       # Mouse event generation and cursor control
 │
-├── Models/                     # Data models
-│   ├── TouchModels.swift           # Touch data structures (MTPoint, MTTouch, etc.)
-│   └── GestureModels.swift         # Gesture state and configuration models
+├── Models/                         # Data models
+│   ├── TouchModels.swift               # Touch data structures (MTPoint, MTTouch, etc.)
+│   └── GestureModels.swift             # Gesture state and configuration models
 │
-├── Managers/                   # Business logic managers
-│   ├── MultitouchManager.swift     # Main coordinator for gesture system
-│   └── DeviceMonitor.swift         # Device monitoring and callback management
+├── Managers/                       # Business logic managers
+│   ├── MultitouchManager.swift         # Main coordinator for gesture system
+│   └── DeviceMonitor.swift             # Device monitoring and callback management
 │
-├── UI/                         # User interface
-│   ├── MenuBarController.swift     # Menu bar UI management
-│   └── AlertHelper.swift           # Alert dialogs and user notifications
+├── UI/                             # User interface
+│   ├── MenuBarController.swift         # Menu bar UI management
+│   └── AlertHelper.swift               # Alert dialogs and user notifications
 │
-├── Utilities/                  # Helper utilities
-│   ├── PreferencesManager.swift    # User preferences persistence
-│   └── LaunchAtLoginManager.swift  # Launch at login functionality
+├── Utilities/                      # Helper utilities
+│   ├── PreferencesManager.swift        # User preferences persistence
+│   ├── LaunchAtLoginManager.swift      # Launch at login functionality
+│   └── AnalyticsManager.swift          # Analytics and telemetry management
 │
-├── MiddleDragApp.swift        # SwiftUI app entry point
-├── AppDelegate.swift           # Application delegate
-├── Info.plist                  # App configuration
-└── MiddleDrag.entitlements    # App entitlements
+├── MiddleDragApp.swift             # SwiftUI app entry point
+├── AppDelegate.swift               # Application delegate
+├── Info.plist                      # App configuration
+└── MiddleDrag.entitlements         # App entitlements
+│
+MiddleDragTests/                    # Unit test target
+├── GestureModelsTests.swift            # Tests for gesture models
+├── GestureRecognizerTests.swift        # Tests for gesture recognition logic
+└── TouchModelsTests.swift              # Tests for touch data structures
+│
+.github/                            # GitHub configuration
+├── workflows/                          # CI/CD workflows
+│   └── *.yml                           # GitHub Actions workflow files
+├── ISSUE_TEMPLATE/                     # Issue templates
+└── copilot-instructions.md             # Copilot configuration
+│
+Root Files:
+├── README.md                       # Project documentation
+├── PROJECT_STRUCTURE.md            # This file
+├── LICENSE                         # MIT License
+├── CODE_OF_CONDUCT.md              # Community guidelines
+├── CONTRIBUTING.md                 # Contribution guide
+├── SECURITY.md                     # Security policy
+├── build.sh                        # Build automation script
+├── bump-version.sh                 # Version bump script
+├── codecov.yml                     # Codecov configuration
+└── .gitignore                      # Git ignore rules
 ```
 
 ## Architecture Benefits
@@ -82,6 +106,12 @@ MiddleDrag/
 ### Utility Layer
 - **PreferencesManager**: UserDefaults persistence
 - **LaunchAtLoginManager**: System integration for auto-launch
+- **AnalyticsManager**: Analytics and telemetry management
+
+### Test Layer
+- **GestureModelsTests**: Unit tests for gesture state and configuration
+- **GestureRecognizerTests**: Unit tests for gesture recognition logic including palm rejection
+- **TouchModelsTests**: Unit tests for touch data structures
 
 ## Design Patterns Used
 
@@ -97,9 +127,10 @@ To add a new feature, identify which layer it belongs to:
 
 1. **New gesture type?** → Modify GestureRecognizer
 2. **New mouse action?** → Extend MouseEventGenerator
-3. **New preference?** → Update UserPreferences model
+3. **New preference?** → Update PreferencesManager and GestureModels
 4. **New menu item?** → Add to MenuBarController
 5. **New device support?** → Extend DeviceMonitor
+6. **New test?** → Add to MiddleDragTests target
 
 ## Dependencies
 
@@ -107,3 +138,9 @@ The refactored code maintains minimal dependencies:
 - No external Swift packages required
 - Uses only system frameworks
 - Private framework access isolated to one file
+
+## CI/CD Infrastructure
+
+- **GitHub Actions**: Automated build, test, and release workflows
+- **Codecov**: Code coverage reporting and tracking
+- **Build Scripts**: `build.sh` for local builds, `bump-version.sh` for version management
