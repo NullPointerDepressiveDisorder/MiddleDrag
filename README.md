@@ -10,6 +10,7 @@ Finally use your MacBook for CAD work without carrying a mouse.
 [![Homebrew](https://img.shields.io/badge/Homebrew-tap-brown?logo=homebrew)](https://github.com/NullPointerDepressiveDisorder/homebrew-tap)
 [![GitHub release](https://img.shields.io/github/v/release/NullPointerDepressiveDisorder/MiddleDrag)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
 [![Downloads](https://img.shields.io/github/downloads/NullPointerDepressiveDisorder/MiddleDrag/total?color=brightgreen)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_shield)
 
 <p align="center">
   <img src="assets/demo.gif" width="600" alt="MiddleDrag demo showing three-finger trackpad navigation in CAD software">
@@ -206,3 +207,6 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 <p align="center">
   <i>Built for the CAD users who've been asking for this since 2017.</i>
 </p>
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large)
