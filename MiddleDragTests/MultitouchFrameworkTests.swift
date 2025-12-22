@@ -14,12 +14,12 @@ final class MultitouchFrameworkTests: XCTestCase {
 
     // MARK: - Device Availability Tests
 
-    func testIsAvailableReturnsBoolean() {
+    func testIsAvailableDoesNotCrash() {
         let framework = MultitouchFramework.shared
-        let isAvailable = framework.isAvailable
-        // On most Macs with trackpads, this should be true
-        // But we just verify it returns a boolean without crashing
-        XCTAssertTrue(isAvailable || !isAvailable)  // Tautology to ensure no crash
+        let isAvailable1 = framework.isAvailable
+        let isAvailable2 = framework.isAvailable
+        // Verify that calling isAvailable does not crash and returns a consistent value
+        XCTAssertEqual(isAvailable1, isAvailable2)
     }
 
     func testGetDefaultDeviceDoesNotCrash() {
