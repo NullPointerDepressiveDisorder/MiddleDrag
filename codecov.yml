@@ -35,3 +35,9 @@ ignore:
   - "**/AppDelegate.swift"
   - "**/MiddleDragApp.swift"
   - "**/Assets.xcassets/**"
+
+github_checks:
+  annotations: true
+
+ai:
+  enabled: true
