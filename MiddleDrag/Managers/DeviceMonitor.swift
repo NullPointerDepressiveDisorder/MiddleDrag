@@ -51,10 +51,12 @@ class DeviceMonitor {
 
     private var device: MTDeviceRef?
     private var isRunning = false
+    private let framework: MultitouchFrameworkProtocol
 
     // MARK: - Lifecycle
 
-    init() {
+    init(framework: MultitouchFrameworkProtocol = MultitouchFramework.shared) {
+        self.framework = framework
         gDeviceMonitor = self
     }
 
@@ -75,7 +77,7 @@ class DeviceMonitor {
         var registeredDevices: Set<UnsafeMutableRawPointer> = []
 
         // Try to get all devices
-        if let deviceList = MTDeviceCreateList() {
+        if let deviceList = framework.getAllDevices() {
             let count = CFArrayGetCount(deviceList)
             Log.info("Found \(count) multitouch device(s)", category: .device)
 
@@ -83,8 +85,8 @@ class DeviceMonitor {
                 let devicePtr = CFArrayGetValueAtIndex(deviceList, i)
                 if let dev = devicePtr {
                     let deviceRef = UnsafeMutableRawPointer(mutating: dev)
-                    MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
-                    MTDeviceStart(deviceRef, 0)
+                    framework.registerContactFrameCallback(deviceRef, deviceContactCallback)
+                    framework.startDevice(deviceRef, mode: 0)
                     registeredDevices.insert(deviceRef)
                     deviceCount += 1
 
@@ -98,10 +100,10 @@ class DeviceMonitor {
         }
 
         // Also try the default device if not already registered
-        if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
+        if let defaultDevice = framework.getDefaultDevice() {
             if !registeredDevices.contains(defaultDevice) {
-                MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
-                MTDeviceStart(defaultDevice, 0)
+                framework.registerContactFrameCallback(defaultDevice, deviceContactCallback)
+                framework.startDevice(defaultDevice, mode: 0)
                 registeredDevices.insert(defaultDevice)
                 deviceCount += 1
 
@@ -126,8 +128,8 @@ class DeviceMonitor {
     func stop() {
         guard isRunning, let device = device else { return }
 
-        MTUnregisterContactFrameCallback(device, deviceContactCallback)
-        MTDeviceStop(device)
+        framework.unregisterContactFrameCallback(device, deviceContactCallback)
+        framework.stopDevice(device)
 
         self.device = nil
         isRunning = false

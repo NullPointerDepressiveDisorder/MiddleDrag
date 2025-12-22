@@ -1,12 +1,58 @@
 import ServiceManagement
 import Cocoa
 
+// MARK: - Protocol
+
+/// Protocol for managing login items
+protocol LoginItemServiceProtocol {
+    var isEnabled: Bool { get }
+    func register() throws
+    func unregister() throws
+}
+
+// MARK: - Implementation
+
+/// Wrapper around SMAppService
+@available(macOS 13.0, *)
+class SystemLoginItemService: LoginItemServiceProtocol {
+
+    private let service = SMAppService.mainApp
+
+    var isEnabled: Bool {
+        return service.status == .enabled
+    }
+
+    func register() throws {
+        try service.register()
+    }
+
+    func unregister() throws {
+        try service.unregister()
+    }
+}
+
+// MARK: - Manager
+
 /// Manages launch at login functionality
 class LaunchAtLoginManager {
     
     static let shared = LaunchAtLoginManager()
     
-    private init() {}
+    // Injected dependency
+    private let service: LoginItemServiceProtocol?
+
+    private init() {
+        if #available(macOS 13.0, *) {
+            self.service = SystemLoginItemService()
+        } else {
+            self.service = nil
+        }
+    }
+
+    // Testable init
+    init(service: LoginItemServiceProtocol) {
+        self.service = service
+    }
     
     /// Configure launch at login
     func setLaunchAtLogin(_ enabled: Bool) {
@@ -19,12 +65,14 @@ class LaunchAtLoginManager {
     
     @available(macOS 13.0, *)
     private func configureLaunchAtLoginModern(_ enabled: Bool) {
+        guard let service = service else { return }
+
         do {
             if enabled {
-                try SMAppService.mainApp.register()
+                try service.register()
                 Log.info("Launch at login enabled", category: .app)
             } else {
-                try SMAppService.mainApp.unregister()
+                try service.unregister()
                 Log.info("Launch at login disabled", category: .app)
             }
         } catch {
@@ -41,7 +89,7 @@ class LaunchAtLoginManager {
     /// Check if launch at login is enabled
     var isEnabled: Bool {
         if #available(macOS 13.0, *) {
-            return SMAppService.mainApp.status == .enabled
+            return service?.isEnabled ?? false
         } else {
             return false
         }

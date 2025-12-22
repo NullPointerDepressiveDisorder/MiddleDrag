@@ -60,10 +60,22 @@ func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContact
 @_silgen_name("MTUnregisterContactFrameCallback")
 func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
 
+// MARK: - Protocol
+
+protocol MultitouchFrameworkProtocol {
+    var isAvailable: Bool { get }
+    func getAllDevices() -> CFArray?
+    func getDefaultDevice() -> MTDeviceRef?
+    func startDevice(_ device: MTDeviceRef, mode: Int32)
+    func stopDevice(_ device: MTDeviceRef)
+    func registerContactFrameCallback(_ device: MTDeviceRef, _ callback: @escaping MTContactCallbackFunction)
+    func unregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
+}
+
 // MARK: - Framework Helper
 
 /// Helper class to manage MultitouchSupport framework access
-class MultitouchFramework {
+class MultitouchFramework: MultitouchFrameworkProtocol {
     
     /// Shared instance
     static let shared = MultitouchFramework()
@@ -79,5 +91,30 @@ class MultitouchFramework {
     /// - Returns: Device reference, or nil if no device available
     func getDefaultDevice() -> MTDeviceRef? {
         return MTDeviceCreateDefault()
+    }
+
+    /// Get list of all multitouch devices
+    func getAllDevices() -> CFArray? {
+        return MTDeviceCreateList()
+    }
+
+    /// Start the multitouch device
+    func startDevice(_ device: MTDeviceRef, mode: Int32) {
+        MTDeviceStart(device, mode)
+    }
+
+    /// Stop the multitouch device
+    func stopDevice(_ device: MTDeviceRef) {
+        MTDeviceStop(device)
+    }
+
+    /// Register a callback to receive touch frame data
+    func registerContactFrameCallback(_ device: MTDeviceRef, _ callback: @escaping MTContactCallbackFunction) {
+        MTRegisterContactFrameCallback(device, callback)
+    }
+
+    /// Unregister a previously registered callback
+    func unregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?) {
+        MTUnregisterContactFrameCallback(device, callback)
     }
 }
