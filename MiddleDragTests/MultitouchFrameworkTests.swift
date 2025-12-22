@@ -25,15 +25,17 @@ final class MultitouchFrameworkTests: XCTestCase {
     func testGetDefaultDeviceDoesNotCrash() {
         let framework = MultitouchFramework.shared
         let device = framework.getDefaultDevice()
-        // Device might be nil on some systems, or non-nil on trackpad systems
-        // Just verify the call doesn't crash
-        _ = device
+        let deviceAgain = framework.getDefaultDevice()
+        // Verify that calling getDefaultDevice() does not crash and returns a consistent value
+        XCTAssertEqual(device, deviceAgain)
     }
 
     func testGetDefaultDeviceReturnsConsistentValue() {
         let framework = MultitouchFramework.shared
         let device1 = framework.getDefaultDevice()
         let device2 = framework.getDefaultDevice()
-        XCTAssertEqual(device1, device2)
+        // Verify that repeated calls are consistent in availability (both nil or both non-nil),
+        // without relying on pointer identity, which may legitimately differ.
+        XCTAssertEqual(device1 != nil, device2 != nil)
     }
 }
