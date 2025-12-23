@@ -7,38 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EC3F440F2EDE4B9B00BD36A8 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */; };
-		EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0A2ED8E37A0053F6A9 /* GestureModels.swift */; };
-		EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0B2ED8E37A0053F6A9 /* TouchModels.swift */; };
-		EC5F1E152ED8E37A0053F6A9 /* MultitouchFramework.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */; };
-		EC5F1E162ED8E37A0053F6A9 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E102ED8E37A0053F6A9 /* MenuBarController.swift */; };
-		EC5F1E172ED8E37A0053F6A9 /* AlertHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0F2ED8E37A0053F6A9 /* AlertHelper.swift */; };
-		EC5F1E192ED8E37A0053F6A9 /* TouchModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0B2ED8E37A0053F6A9 /* TouchModels.swift */; };
-		EC5F1E1A2ED8E37A0053F6A9 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */; };
-		EC5F1E1B2ED8E37A0053F6A9 /* MultitouchManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E062ED8E37A0053F6A9 /* MultitouchManager.swift */; };
-		EC5F1E1C2ED8E37A0053F6A9 /* PreferencesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */; };
-		EC5F1E1D2ED8E37A0053F6A9 /* DeviceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E052ED8E37A0053F6A9 /* DeviceMonitor.swift */; };
-		EC5F1E1E2ED8E37A0053F6A9 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */; };
-		EC5F1E1F2ED8E37A0053F6A9 /* GestureModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E0A2ED8E37A0053F6A9 /* GestureModels.swift */; };
-		EC5F1E202ED8E37A0053F6A9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1DFE2ED8E37A0053F6A9 /* AppDelegate.swift */; };
-		EC5F1E212ED8E37A0053F6A9 /* MouseEventGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E002ED8E37A0053F6A9 /* MouseEventGenerator.swift */; };
-		EC5F1E222ED8E37A0053F6A9 /* MiddleDragApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E092ED8E37A0053F6A9 /* MiddleDragApp.swift */; };
-		EC5F1E232ED8E37A0053F6A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */; };
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
-		MDT00000001 /* GestureModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000003 /* GestureModelsTests.swift */; };
-		MDT00000002 /* TouchModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000004 /* TouchModelsTests.swift */; };
-		MDT00000016 /* GestureRecognizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000017 /* GestureRecognizerTests.swift */; };
-		MDT00000018 /* GestureRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */; };
-		MDT00000019 /* MouseEventGeneratorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000020 /* MouseEventGeneratorTests.swift */; };
-		MDT00000021 /* PreferencesManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000022 /* PreferencesManagerTests.swift */; };
-		MDT00000023 /* AnalyticsManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000024 /* AnalyticsManagerTests.swift */; };
-		MDT00000025 /* MultitouchFrameworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = MDT00000026 /* MultitouchFrameworkTests.swift */; };
-		MDT00000027 /* MouseEventGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E002ED8E37A0053F6A9 /* MouseEventGenerator.swift */; };
-		MDT00000028 /* PreferencesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */; };
-		MDT00000029 /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */; };
-		MDT00000030 /* MultitouchFramework.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */; };
-		MDT00000031 /* LaunchAtLoginManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */; };
-		MDT00000032 /* DeviceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC5F1E052ED8E37A0053F6A9 /* DeviceMonitor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,34 +22,57 @@
 
 /* Begin PBXFileReference section */
 		1A0000004 /* MiddleDrag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiddleDrag.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManager.swift; sourceTree = "<group>"; };
-		EC5F1DFE2ED8E37A0053F6A9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
-		EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizer.swift; sourceTree = "<group>"; };
-		EC5F1E002ED8E37A0053F6A9 /* MouseEventGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseEventGenerator.swift; sourceTree = "<group>"; };
-		EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultitouchFramework.swift; sourceTree = "<group>"; };
-		EC5F1E042ED8E37A0053F6A9 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		EC5F1E052ED8E37A0053F6A9 /* DeviceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceMonitor.swift; sourceTree = "<group>"; };
-		EC5F1E062ED8E37A0053F6A9 /* MultitouchManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultitouchManager.swift; sourceTree = "<group>"; };
-		EC5F1E082ED8E37A0053F6A9 /* MiddleDrag.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MiddleDrag.entitlements; sourceTree = "<group>"; };
-		EC5F1E092ED8E37A0053F6A9 /* MiddleDragApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiddleDragApp.swift; sourceTree = "<group>"; };
-		EC5F1E0A2ED8E37A0053F6A9 /* GestureModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureModels.swift; sourceTree = "<group>"; };
-		EC5F1E0B2ED8E37A0053F6A9 /* TouchModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModels.swift; sourceTree = "<group>"; };
-		EC5F1E0D2ED8E37A0053F6A9 /* PROJECT_STRUCTURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PROJECT_STRUCTURE.md; sourceTree = "<group>"; };
-		EC5F1E0E2ED8E37A0053F6A9 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		EC5F1E0F2ED8E37A0053F6A9 /* AlertHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlertHelper.swift; sourceTree = "<group>"; };
-		EC5F1E102ED8E37A0053F6A9 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
-		EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLoginManager.swift; sourceTree = "<group>"; };
-		EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesManager.swift; sourceTree = "<group>"; };
-		EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		MDT00000003 /* GestureModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureModelsTests.swift; sourceTree = "<group>"; };
-		MDT00000004 /* TouchModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TouchModelsTests.swift; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		MDT00000017 /* GestureRecognizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureRecognizerTests.swift; sourceTree = "<group>"; };
-		MDT00000020 /* MouseEventGeneratorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseEventGeneratorTests.swift; sourceTree = "<group>"; };
-		MDT00000022 /* PreferencesManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesManagerTests.swift; sourceTree = "<group>"; };
-		MDT00000024 /* AnalyticsManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsManagerTests.swift; sourceTree = "<group>"; };
-		MDT00000026 /* MultitouchFrameworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultitouchFrameworkTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		ECB8686C2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				MiddleDragTests/AnalyticsManagerTests.swift,
+				MiddleDragTests/GestureModelsTests.swift,
+				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/LaunchAtLoginManagerTests.swift,
+				MiddleDragTests/MouseEventGeneratorTests.swift,
+				MiddleDragTests/MultitouchFrameworkTests.swift,
+				MiddleDragTests/PreferencesManagerTests.swift,
+				MiddleDragTests/TouchModelsTests.swift,
+				PROJECT_STRUCTURE.md,
+				README.md,
+			);
+			target = 1A0000011 /* MiddleDrag */;
+		};
+		ECB8686D2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppDelegate.swift,
+				Assets.xcassets,
+				Core/MultitouchFramework.swift,
+				Info.plist,
+				Managers/DeviceMonitor.swift,
+				Managers/MultitouchManager.swift,
+				MiddleDragApp.swift,
+				PROJECT_STRUCTURE.md,
+				README.md,
+				UI/AlertHelper.swift,
+				UI/MenuBarController.swift,
+			);
+			target = MDT00000007 /* MiddleDragTests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		ECB868372EFAC6C200DC9C8F /* MiddleDrag */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				ECB8686C2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
+				ECB8686D2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */,
+			);
+			path = MiddleDrag;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		1A0000007 /* Frameworks */ = {
@@ -100,29 +92,9 @@
 		1A0000008 = {
 			isa = PBXGroup;
 			children = (
-				1A0000009 /* MiddleDrag */,
-				MDT00000006 /* MiddleDragTests */,
+				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 				1A0000010 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		1A0000009 /* MiddleDrag */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1DFE2ED8E37A0053F6A9 /* AppDelegate.swift */,
-				EC5F1E092ED8E37A0053F6A9 /* MiddleDragApp.swift */,
-				EC5F1E022ED8E37A0053F6A9 /* Core */,
-				EC5F1E072ED8E37A0053F6A9 /* Managers */,
-				EC5F1E0C2ED8E37A0053F6A9 /* Models */,
-				EC5F1E112ED8E37A0053F6A9 /* UI */,
-				EC5F1E142ED8E37A0053F6A9 /* Utilities */,
-				EC5F1E242ED8E37A0053F6A9 /* Assets.xcassets */,
-				EC5F1E042ED8E37A0053F6A9 /* Info.plist */,
-				EC5F1E082ED8E37A0053F6A9 /* MiddleDrag.entitlements */,
-				EC5F1E0D2ED8E37A0053F6A9 /* PROJECT_STRUCTURE.md */,
-				EC5F1E0E2ED8E37A0053F6A9 /* README.md */,
-			);
-			path = MiddleDrag;
 			sourceTree = "<group>";
 		};
 		1A0000010 /* Products */ = {
@@ -132,66 +104,6 @@
 				MDT00000005 /* MiddleDragTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		EC5F1E022ED8E37A0053F6A9 /* Core */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1DFF2ED8E37A0053F6A9 /* GestureRecognizer.swift */,
-				EC5F1E002ED8E37A0053F6A9 /* MouseEventGenerator.swift */,
-				EC5F1E012ED8E37A0053F6A9 /* MultitouchFramework.swift */,
-			);
-			path = Core;
-			sourceTree = "<group>";
-		};
-		EC5F1E072ED8E37A0053F6A9 /* Managers */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1E052ED8E37A0053F6A9 /* DeviceMonitor.swift */,
-				EC5F1E062ED8E37A0053F6A9 /* MultitouchManager.swift */,
-			);
-			path = Managers;
-			sourceTree = "<group>";
-		};
-		EC5F1E0C2ED8E37A0053F6A9 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1E0A2ED8E37A0053F6A9 /* GestureModels.swift */,
-				EC5F1E0B2ED8E37A0053F6A9 /* TouchModels.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		EC5F1E112ED8E37A0053F6A9 /* UI */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1E0F2ED8E37A0053F6A9 /* AlertHelper.swift */,
-				EC5F1E102ED8E37A0053F6A9 /* MenuBarController.swift */,
-			);
-			path = UI;
-			sourceTree = "<group>";
-		};
-		EC5F1E142ED8E37A0053F6A9 /* Utilities */ = {
-			isa = PBXGroup;
-			children = (
-				EC5F1E122ED8E37A0053F6A9 /* LaunchAtLoginManager.swift */,
-				EC5F1E132ED8E37A0053F6A9 /* PreferencesManager.swift */,
-				EC3F440E2EDE4B9B00BD36A8 /* AnalyticsManager.swift */,
-			);
-			path = Utilities;
-			sourceTree = "<group>";
-		};
-		MDT00000006 /* MiddleDragTests */ = {
-			isa = PBXGroup;
-			children = (
-				MDT00000003 /* GestureModelsTests.swift */,
-				MDT00000004 /* TouchModelsTests.swift */,
-				MDT00000017 /* GestureRecognizerTests.swift */,
-				MDT00000020 /* MouseEventGeneratorTests.swift */,
-				MDT00000022 /* PreferencesManagerTests.swift */,
-				MDT00000024 /* AnalyticsManagerTests.swift */,
-			);
-			path = MiddleDragTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -207,6 +119,9 @@
 				EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */,
 			);
 			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
 			productName = MiddleDrag;
@@ -225,6 +140,9 @@
 			);
 			dependencies = (
 				MDT00000012 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDragTests;
 			productName = MiddleDragTests;
@@ -275,7 +193,6 @@
 		1A0000014 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				EC5F1E232ED8E37A0053F6A9 /* Assets.xcassets in Resources */,
 			);
 		};
 		MDT00000011 /* Resources */ = {
@@ -320,38 +237,11 @@
 		1A0000013 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				EC5F1E152ED8E37A0053F6A9 /* MultitouchFramework.swift in Sources */,
-				EC5F1E162ED8E37A0053F6A9 /* MenuBarController.swift in Sources */,
-				EC5F1E172ED8E37A0053F6A9 /* AlertHelper.swift in Sources */,
-				EC5F1E192ED8E37A0053F6A9 /* TouchModels.swift in Sources */,
-				EC5F1E1A2ED8E37A0053F6A9 /* GestureRecognizer.swift in Sources */,
-				EC5F1E1B2ED8E37A0053F6A9 /* MultitouchManager.swift in Sources */,
-				EC5F1E1C2ED8E37A0053F6A9 /* PreferencesManager.swift in Sources */,
-				EC5F1E1D2ED8E37A0053F6A9 /* DeviceMonitor.swift in Sources */,
-				EC3F440F2EDE4B9B00BD36A8 /* AnalyticsManager.swift in Sources */,
-				EC5F1E1E2ED8E37A0053F6A9 /* LaunchAtLoginManager.swift in Sources */,
-				EC5F1E1F2ED8E37A0053F6A9 /* GestureModels.swift in Sources */,
-				EC5F1E202ED8E37A0053F6A9 /* AppDelegate.swift in Sources */,
-				EC5F1E212ED8E37A0053F6A9 /* MouseEventGenerator.swift in Sources */,
-				EC5F1E222ED8E37A0053F6A9 /* MiddleDragApp.swift in Sources */,
 			);
 		};
 		MDT00000009 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				MDT00000001 /* GestureModelsTests.swift in Sources */,
-				MDT00000002 /* TouchModelsTests.swift in Sources */,
-				MDT00000016 /* GestureRecognizerTests.swift in Sources */,
-				MDT00000018 /* GestureRecognizer.swift in Sources */,
-				EC5522602EF5441F00BBEF33 /* GestureModels.swift in Sources */,
-				EC5522612EF5441F00BBEF33 /* TouchModels.swift in Sources */,
-				MDT00000019 /* MouseEventGeneratorTests.swift in Sources */,
-				MDT00000021 /* PreferencesManagerTests.swift in Sources */,
-				MDT00000023 /* AnalyticsManagerTests.swift in Sources */,
-				MDT00000027 /* MouseEventGenerator.swift in Sources */,
-				MDT00000028 /* PreferencesManager.swift in Sources */,
-				MDT00000029 /* AnalyticsManager.swift in Sources */,
-				MDT00000031 /* LaunchAtLoginManager.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
