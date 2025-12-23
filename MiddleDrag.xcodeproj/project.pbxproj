@@ -46,10 +46,8 @@
 		ECB8686D2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AppDelegate.swift,
 				Assets.xcassets,
 				Info.plist,
-				MiddleDragApp.swift,
 				PROJECT_STRUCTURE.md,
 				README.md,
 			);
@@ -446,6 +444,7 @@
 		MDT00000013 /* Debug configuration for PBXNativeTarget "MiddleDragTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -455,12 +454,14 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/Contents/MacOS/MiddleDrag";
 			};
 			name = Debug;
 		};
 		MDT00000014 /* Release configuration for PBXNativeTarget "MiddleDragTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -470,6 +471,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/Contents/MacOS/MiddleDrag";
 			};
 			name = Release;
 		};
