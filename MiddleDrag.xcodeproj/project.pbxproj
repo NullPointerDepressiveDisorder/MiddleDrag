@@ -48,15 +48,10 @@
 			membershipExceptions = (
 				AppDelegate.swift,
 				Assets.xcassets,
-				Core/MultitouchFramework.swift,
 				Info.plist,
-				Managers/DeviceMonitor.swift,
-				Managers/MultitouchManager.swift,
 				MiddleDragApp.swift,
 				PROJECT_STRUCTURE.md,
 				README.md,
-				UI/AlertHelper.swift,
-				UI/MenuBarController.swift,
 			);
 			target = MDT00000007 /* MiddleDragTests */;
 		};
