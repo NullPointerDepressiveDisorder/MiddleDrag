@@ -27,7 +27,7 @@ parsers:
 
 comment:
   layout: "header, diff, flags, files"
-  behavior: default
+  behavior: new
   require_changes: false
 
 ignore:
