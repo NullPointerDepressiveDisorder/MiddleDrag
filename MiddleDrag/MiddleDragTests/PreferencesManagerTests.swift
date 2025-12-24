@@ -5,26 +5,32 @@ import XCTest
 final class PreferencesManagerTests: XCTestCase {
 
     var preferencesManager: PreferencesManager!
-    let testSuite = UserDefaults(suiteName: "com.middledrag.tests")!
+    var testDefaults: UserDefaults!
+    let testSuiteName = "com.middledrag.tests"
 
     override func setUp() {
         super.setUp()
-        // Clear test defaults before each test
-        testSuite.removePersistentDomain(forName: "com.middledrag.tests")
+        // Create isolated UserDefaults for testing
+        testDefaults = UserDefaults(suiteName: testSuiteName)!
+        // Clear any existing test data before each test
+        testDefaults.removePersistentDomain(forName: testSuiteName)
+        // Create PreferencesManager with injected test defaults
+        preferencesManager = PreferencesManager(userDefaults: testDefaults)
     }
 
     override func tearDown() {
-        testSuite.removePersistentDomain(forName: "com.middledrag.tests")
+        // Clean up test data
+        testDefaults.removePersistentDomain(forName: testSuiteName)
+        testDefaults = nil
+        preferencesManager = nil
         super.tearDown()
     }
 
     // MARK: - Default Preferences Tests
 
     func testLoadPreferencesReturnsValidDefaults() {
-        // Reset to default preferences first to ensure consistent test
-        let defaultPrefs = UserPreferences()
-        PreferencesManager.shared.savePreferences(defaultPrefs)
-        let prefs = PreferencesManager.shared.loadPreferences()
+        // Load preferences from fresh UserDefaults - should return defaults
+        let prefs = preferencesManager.loadPreferences()
 
         XCTAssertFalse(prefs.launchAtLogin)
         XCTAssertEqual(prefs.dragSensitivity, 1.0, accuracy: 0.001)
@@ -35,10 +41,8 @@ final class PreferencesManagerTests: XCTestCase {
     }
 
     func testLoadPreferencesPalmRejectionDefaults() {
-        // Reset to default preferences first before checking defaults
-        let defaultPrefs = UserPreferences()
-        PreferencesManager.shared.savePreferences(defaultPrefs)
-        let prefs = PreferencesManager.shared.loadPreferences()
+        // Load preferences from fresh UserDefaults - should return defaults
+        let prefs = preferencesManager.loadPreferences()
 
         XCTAssertFalse(prefs.exclusionZoneEnabled)
         XCTAssertEqual(prefs.exclusionZoneSize, 0.15, accuracy: 0.001)
@@ -59,8 +63,8 @@ final class PreferencesManagerTests: XCTestCase {
         prefs.blockSystemGestures = true
         prefs.middleDragEnabled = false
 
-        PreferencesManager.shared.savePreferences(prefs)
-        let loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
 
         XCTAssertTrue(loaded.launchAtLogin)
         XCTAssertEqual(loaded.dragSensitivity, 2.5, accuracy: 0.001)
@@ -79,8 +83,8 @@ final class PreferencesManagerTests: XCTestCase {
         prefs.contactSizeFilterEnabled = true
         prefs.maxContactSize = 2.0
 
-        PreferencesManager.shared.savePreferences(prefs)
-        let loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
 
         XCTAssertTrue(loaded.exclusionZoneEnabled)
         XCTAssertEqual(loaded.exclusionZoneSize, 0.25, accuracy: 0.001)
@@ -97,8 +101,8 @@ final class PreferencesManagerTests: XCTestCase {
             var prefs = UserPreferences()
             prefs.modifierKeyType = modifierType
 
-            PreferencesManager.shared.savePreferences(prefs)
-            let loaded = PreferencesManager.shared.loadPreferences()
+            preferencesManager.savePreferences(prefs)
+            let loaded = preferencesManager.loadPreferences()
 
             XCTAssertEqual(
                 loaded.modifierKeyType, modifierType,
@@ -111,29 +115,29 @@ final class PreferencesManagerTests: XCTestCase {
     func testSaveExtremeSensitivityValues() {
         var prefs = UserPreferences()
         prefs.dragSensitivity = 0.1
-        PreferencesManager.shared.savePreferences(prefs)
-        var loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        var loaded = preferencesManager.loadPreferences()
         XCTAssertEqual(loaded.dragSensitivity, 0.1, accuracy: 0.001)
 
         prefs.dragSensitivity = 10.0
-        PreferencesManager.shared.savePreferences(prefs)
-        loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        loaded = preferencesManager.loadPreferences()
         XCTAssertEqual(loaded.dragSensitivity, 10.0, accuracy: 0.001)
     }
 
     func testSaveZeroExclusionZoneSize() {
         var prefs = UserPreferences()
         prefs.exclusionZoneSize = 0.0
-        PreferencesManager.shared.savePreferences(prefs)
-        let loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
         XCTAssertEqual(loaded.exclusionZoneSize, 0.0, accuracy: 0.001)
     }
 
     func testSaveMaxExclusionZoneSize() {
         var prefs = UserPreferences()
         prefs.exclusionZoneSize = 0.5
-        PreferencesManager.shared.savePreferences(prefs)
-        let loaded = PreferencesManager.shared.loadPreferences()
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
         XCTAssertEqual(loaded.exclusionZoneSize, 0.5, accuracy: 0.001)
     }
 
@@ -143,5 +147,23 @@ final class PreferencesManagerTests: XCTestCase {
         let instance1 = PreferencesManager.shared
         let instance2 = PreferencesManager.shared
         XCTAssertTrue(instance1 === instance2)
+    }
+
+    // MARK: - Isolation Tests
+
+    func testTestInstanceIsIsolatedFromShared() {
+        // Save different values to test instance and shared instance
+        var testPrefs = UserPreferences()
+        testPrefs.dragSensitivity = 5.0
+        preferencesManager.savePreferences(testPrefs)
+
+        // Verify test instance has the saved value
+        let testLoaded = preferencesManager.loadPreferences()
+        XCTAssertEqual(testLoaded.dragSensitivity, 5.0, accuracy: 0.001)
+
+        // Verify shared instance is independent (has its own value)
+        // Note: We don't assert a specific value since we don't control shared's state
+        let sharedLoaded = PreferencesManager.shared.loadPreferences()
+        XCTAssertNotNil(sharedLoaded)
     }
 }

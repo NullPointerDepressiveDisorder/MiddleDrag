@@ -5,7 +5,7 @@ class PreferencesManager {
 
     static let shared = PreferencesManager()
 
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
 
     // Keys for UserDefaults
     private enum Keys {
@@ -24,7 +24,15 @@ class PreferencesManager {
         static let maxContactSize = "maxContactSize"
     }
 
+    /// Production initializer using UserDefaults.standard
     private init() {
+        self.userDefaults = UserDefaults.standard
+        registerDefaults()
+    }
+
+    /// Test initializer with dependency injection for isolated testing
+    init(userDefaults: UserDefaults) {
+        self.userDefaults = userDefaults
         registerDefaults()
     }
 
