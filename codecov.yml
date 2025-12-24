@@ -27,8 +27,9 @@ parsers:
 
 comment:
   layout: "header, diff, flags, files"
-  behavior: new
+  behavior: default
   require_changes: false
+  after_n_builds: 1
 
 ignore:
   - "**/*Tests.swift"
