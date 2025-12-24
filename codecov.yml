@@ -29,7 +29,6 @@ comment:
   layout: "header, diff, flags, files"
   behavior: default
   require_changes: false
-  after_n_builds: 1
 
 ignore:
   - "**/*Tests.swift"
@@ -37,8 +36,9 @@ ignore:
   - "**/MiddleDragApp.swift"
   - "**/Assets.xcassets/**"
 
+flags:
+  Unit-Tests:
+    after_n_builds: 1
+
 github_checks:
   annotations: true
-
-ai:
-  enabled: true
