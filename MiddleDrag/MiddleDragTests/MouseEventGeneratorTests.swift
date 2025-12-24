@@ -100,4 +100,77 @@ final class MouseEventGeneratorTests: XCTestCase {
         XCTAssertTrue(location.x.isFinite)
         XCTAssertTrue(location.y.isFinite)
     }
+    
+    func testStartDragDoesNotCrash() {
+        let startPoint = CGPoint(x: 100, y: 100)
+        generator.startDrag(at: startPoint)
+        
+        // Wait for async operation
+        let expectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 0.5)
+    }
+
+    func testStartAndEndDragSequence() {
+        let startPoint = CGPoint(x: 100, y: 100)
+        generator.startDrag(at: startPoint)
+        
+        // Wait for start
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+        
+        generator.endDrag()
+        
+        // Wait for end
+        let endExpectation = XCTestExpectation(description: "Drag ended")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            endExpectation.fulfill()
+        }
+        wait(for: [endExpectation], timeout: 0.5)
+    }
+
+    func testPerformClickDoesNotCrash() {
+        XCTAssertNoThrow(generator.performClick())
+        
+        // Wait for async operation
+        let expectation = XCTestExpectation(description: "Click completed")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout:  0.5)
+    }
+
+    func testUpdateDragDuringActiveDrag() {
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        // Wait for start
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+        
+        // Now update should not be ignored
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 10, deltaY:  10))
+        
+        generator.endDrag()
+    }
+
+    func testCancelDragDuringActiveDrag() {
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        // Wait for start
+        let expectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: . now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 0.5)
+        
+        XCTAssertNoThrow(generator.cancelDrag())
+    }
 }
