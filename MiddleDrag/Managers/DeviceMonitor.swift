@@ -52,15 +52,26 @@ class DeviceMonitor: TouchDeviceProviding {
     private var device: MTDeviceRef?
     private var isRunning = false
 
+    /// Tracks whether this instance owns the global callback reference
+    private var ownsGlobalReference = false
+
     // MARK: - Lifecycle
 
     init() {
-        gDeviceMonitor = self
+        // Only take ownership of the global reference if no other instance owns it
+        // This prevents test interference when multiple DeviceMonitor instances are created
+        if gDeviceMonitor == nil {
+            gDeviceMonitor = self
+            ownsGlobalReference = true
+        }
     }
 
     deinit {
         stop()
-        gDeviceMonitor = nil
+        // Only clear the global reference if this instance owns it
+        if ownsGlobalReference && gDeviceMonitor === self {
+            gDeviceMonitor = nil
+        }
     }
 
     // MARK: - Public Interface
@@ -123,11 +134,16 @@ class DeviceMonitor: TouchDeviceProviding {
     }
 
     /// Stop monitoring
+    /// Safe to call even if start() was never called
     func stop() {
-        guard isRunning, let device = device else { return }
+        // Safe to call when not running - just return early
+        guard isRunning else { return }
 
-        MTUnregisterContactFrameCallback(device, deviceContactCallback)
-        MTDeviceStop(device)
+        // Only attempt to unregister if we have a valid device
+        if let device = device {
+            MTUnregisterContactFrameCallback(device, deviceContactCallback)
+            MTDeviceStop(device)
+        }
 
         self.device = nil
         isRunning = false
