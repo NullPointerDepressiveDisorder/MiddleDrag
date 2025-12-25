@@ -22,17 +22,33 @@
 
 /* Begin PBXFileReference section */
 		1A0000004 /* MiddleDrag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiddleDrag.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		ECB8686C2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+		EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
+				Debug.xcconfig,
+				Release.xcconfig,
+				Secrets.xcconfig,
+			);
+			target = 1A0000011 /* MiddleDrag */;
+		};
+		EC79662E2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDragTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Debug.xcconfig,
+				Release.xcconfig,
+				Secrets.xcconfig,
+			);
+			target = MDT00000007 /* MiddleDragTests */;
+		};
+		EC7967092EFE76AA007453A4 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
 				MiddleDragTests/AnalyticsManagerTests.swift,
 				MiddleDragTests/DeviceMonitorTests.swift,
 				MiddleDragTests/GestureModelsTests.swift,
@@ -44,29 +60,25 @@
 				MiddleDragTests/MultitouchManagerTests.swift,
 				MiddleDragTests/PreferencesManagerTests.swift,
 				MiddleDragTests/TouchModelsTests.swift,
-				PROJECT_STRUCTURE.md,
-				README.md,
 			);
 			target = 1A0000011 /* MiddleDrag */;
-		};
-		ECB8686D2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Assets.xcassets,
-				Info.plist,
-				PROJECT_STRUCTURE.md,
-				README.md,
-			);
-			target = MDT00000007 /* MiddleDragTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		EC79661A2EFD8784007453A4 /* Frameworks */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */,
+				EC79662E2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDragTests" target */,
+			);
+			path = Frameworks;
+			sourceTree = "<group>";
+		};
 		ECB868372EFAC6C200DC9C8F /* MiddleDrag */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				ECB8686C2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
-				ECB8686D2EFAC6C300DC9C8F /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */,
+				EC7967092EFE76AA007453A4 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";
@@ -92,8 +104,9 @@
 			isa = PBXGroup;
 			children = (
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
-				ECB8691F2EFACEB900DC9C8F /* Frameworks */,
 				1A0000010 /* Products */,
+				EC79661A2EFD8784007453A4 /* Frameworks */,
+				EC79669C2EFE7534007453A4 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -106,14 +119,13 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		ECB8691F2EFACEB900DC9C8F /* Frameworks */ = {
+		EC79669C2EFE7534007453A4 /* Recovered References */ = {
 			isa = PBXGroup;
 			children = (
 				EC7965532EFD8664007453A4 /* Debug.xcconfig */,
 				EC7965542EFD8678007453A4 /* Release.xcconfig */,
-				EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */,
 			);
-			name = Frameworks;
+			name = "Recovered References";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -131,6 +143,7 @@
 			buildRules = (
 			);
 			fileSystemSynchronizedGroups = (
+				EC79661A2EFD8784007453A4 /* Frameworks */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
@@ -152,6 +165,7 @@
 				MDT00000012 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				EC79661A2EFD8784007453A4 /* Frameworks */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDragTests;
@@ -381,7 +395,8 @@
 		};
 		1A0000019 /* Debug configuration for PBXNativeTarget "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EC7965532EFD8664007453A4 /* Debug.xcconfig */;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Debug.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -423,7 +438,8 @@
 		};
 		1A0000020 /* Release configuration for PBXNativeTarget "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EC7965542EFD8678007453A4 /* Release.xcconfig */;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Release.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
