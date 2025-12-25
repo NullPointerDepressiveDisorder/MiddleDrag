@@ -221,7 +221,7 @@
 				"    export PATH=\"/opt/homebrew/bin:$PATH\"",
 				"fi",
 				"if which sentry-cli >/dev/null; then",
-				"export SENTRY_ORG=karan-mohindroo",
+				"export SENTRY_ORG=nullpointerdepressivedisorder",
 				"export SENTRY_PROJECT=apple-macos",
 				"ERROR=$(sentry-cli debug-files upload \\",
 				"--include-sources \\",
