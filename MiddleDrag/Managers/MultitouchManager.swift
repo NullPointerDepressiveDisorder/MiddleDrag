@@ -7,9 +7,6 @@ class MultitouchManager {
 
     // MARK: - Properties
 
-    /// Shared instance
-    static let shared = MultitouchManager()
-
     /// Current gesture configuration
     var configuration = GestureConfiguration()
 
@@ -32,7 +29,10 @@ class MultitouchManager {
     // Core components
     private let gestureRecognizer = GestureRecognizer()
     private let mouseGenerator = MouseEventGenerator()
-    private var deviceMonitor: DeviceMonitor?
+    private var deviceMonitor: TouchDeviceProviding?
+
+    // Factory for creating device monitors (injectable for testing)
+    private let deviceProviderFactory: () -> TouchDeviceProviding
 
     // Event tap for suppressing system-generated clicks during gestures
     private var eventTap: CFMachPort?
@@ -43,7 +43,14 @@ class MultitouchManager {
 
     // MARK: - Initialization
 
-    init() {
+    /// Shared production instance
+    static let shared = MultitouchManager()
+
+    /// Initialize with optional device provider factory for dependency injection
+    /// - Parameter deviceProviderFactory: Factory that creates TouchDeviceProviding instances.
+    ///                                    Defaults to creating real DeviceMonitor for production.
+    init(deviceProviderFactory: (() -> TouchDeviceProviding)? = nil) {
+        self.deviceProviderFactory = deviceProviderFactory ?? { DeviceMonitor() }
         gestureRecognizer.delegate = self
     }
 
@@ -56,7 +63,7 @@ class MultitouchManager {
         applyConfiguration()
         setupEventTap()
 
-        deviceMonitor = DeviceMonitor()
+        deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
         deviceMonitor?.start()
 
