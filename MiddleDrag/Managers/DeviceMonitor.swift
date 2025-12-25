@@ -42,7 +42,7 @@ private let deviceContactCallback: MTContactCallbackFunction = {
 // MARK: - DeviceMonitor
 
 /// Monitors multitouch devices and reports touch events
-class DeviceMonitor {
+class DeviceMonitor: TouchDeviceProviding {
 
     // MARK: - Properties
 
