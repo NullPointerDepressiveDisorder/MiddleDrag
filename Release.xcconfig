@@ -1,0 +1,7 @@
+//
+//  Release.xcconfig
+//  MiddleDrag
+//
+//
+
+#include? "Secrets.xcconfig"

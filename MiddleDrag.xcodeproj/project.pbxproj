@@ -23,6 +23,8 @@
 /* Begin PBXFileReference section */
 		1A0000004 /* MiddleDrag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiddleDrag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -107,6 +109,8 @@
 		ECB8691F2EFACEB900DC9C8F /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				EC7965532EFD8664007453A4 /* Debug.xcconfig */,
+				EC7965542EFD8678007453A4 /* Release.xcconfig */,
 				EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */,
 			);
 			name = Frameworks;
@@ -377,7 +381,7 @@
 		};
 		1A0000019 /* Debug configuration for PBXNativeTarget "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */;
+			baseConfigurationReference = EC7965532EFD8664007453A4 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -419,7 +423,7 @@
 		};
 		1A0000020 /* Release configuration for PBXNativeTarget "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = EC7963C92EFD70EF007453A4 /* Secrets.xcconfig */;
+			baseConfigurationReference = EC7965542EFD8678007453A4 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
