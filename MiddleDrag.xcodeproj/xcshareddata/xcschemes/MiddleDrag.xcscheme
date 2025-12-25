@@ -64,13 +64,6 @@
             ReferencedContainer = "container:MiddleDrag.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <EnvironmentVariables>
-         <EnvironmentVariable
-            key = "SENTRY_AUTH_TOKEN"
-            value = "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"
-            isEnabled = "YES">
-         </EnvironmentVariable>
-      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
