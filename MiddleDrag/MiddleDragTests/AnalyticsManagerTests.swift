@@ -19,6 +19,32 @@ final class AnalyticsManagerTests: XCTestCase {
         XCTAssertEqual(Log.Category.app.rawValue, "app")
     }
 
+    func testLogCategoryCrash() {
+        XCTAssertEqual(Log.Category.crash.rawValue, "crash")
+    }
+
+    // MARK: - Log Category osLog Property Tests
+
+    func testLogCategoryOsLogGesture() {
+        let osLog = Log.Category.gesture.osLog
+        XCTAssertNotNil(osLog)
+    }
+
+    func testLogCategoryOsLogDevice() {
+        let osLog = Log.Category.device.osLog
+        XCTAssertNotNil(osLog)
+    }
+
+    func testLogCategoryOsLogApp() {
+        let osLog = Log.Category.app.osLog
+        XCTAssertNotNil(osLog)
+    }
+
+    func testLogCategoryOsLogCrash() {
+        let osLog = Log.Category.crash.osLog
+        XCTAssertNotNil(osLog)
+    }
+
     // MARK: - CrashReporter Singleton Tests
 
     func testCrashReporterIsSingleton() {
@@ -92,12 +118,12 @@ final class AnalyticsManagerTests: XCTestCase {
         Log.error("Test error default")
         Log.fatal("Test fatal default")
     }
-    
+
     func testCrashReporterEnableToggle() {
         // Test enabling
         CrashReporter.shared.isEnabled = true
         XCTAssertTrue(CrashReporter.shared.isEnabled)
-        
+
         // Test disabling
         CrashReporter.shared.isEnabled = false
         XCTAssertFalse(CrashReporter.shared.isEnabled)
@@ -107,7 +133,7 @@ final class AnalyticsManagerTests: XCTestCase {
         // Test enabling
         CrashReporter.shared.performanceMonitoringEnabled = true
         XCTAssertTrue(CrashReporter.shared.performanceMonitoringEnabled)
-        
+
         // Test disabling
         CrashReporter.shared.performanceMonitoringEnabled = false
         XCTAssertFalse(CrashReporter.shared.performanceMonitoringEnabled)
@@ -123,7 +149,7 @@ final class AnalyticsManagerTests: XCTestCase {
         CrashReporter.shared.isEnabled = true
         CrashReporter.shared.performanceMonitoringEnabled = false
         XCTAssertTrue(CrashReporter.shared.anyTelemetryEnabled)
-        
+
         // Cleanup
         CrashReporter.shared.isEnabled = false
     }
@@ -132,7 +158,7 @@ final class AnalyticsManagerTests: XCTestCase {
         CrashReporter.shared.isEnabled = false
         CrashReporter.shared.performanceMonitoringEnabled = true
         XCTAssertTrue(CrashReporter.shared.anyTelemetryEnabled)
-        
+
         // Cleanup
         CrashReporter.shared.performanceMonitoringEnabled = false
     }
@@ -141,7 +167,7 @@ final class AnalyticsManagerTests: XCTestCase {
         CrashReporter.shared.isEnabled = true
         CrashReporter.shared.performanceMonitoringEnabled = true
         XCTAssertTrue(CrashReporter.shared.anyTelemetryEnabled)
-        
+
         // Cleanup
         CrashReporter.shared.isEnabled = false
         CrashReporter.shared.performanceMonitoringEnabled = false
@@ -150,14 +176,14 @@ final class AnalyticsManagerTests: XCTestCase {
     func testInitializeIfEnabledWhenDisabled() {
         CrashReporter.shared.isEnabled = false
         CrashReporter.shared.performanceMonitoringEnabled = false
-        
+
         // Should not crash when telemetry is disabled
         XCTAssertNoThrow(CrashReporter.shared.initializeIfEnabled())
     }
 
     func testAddBreadcrumbWhenDisabled() {
         CrashReporter.shared.isEnabled = false
-        
+
         // Should not crash when adding breadcrumb while disabled
         XCTAssertNoThrow(
             CrashReporter.shared.addBreadcrumbIfEnabled(
