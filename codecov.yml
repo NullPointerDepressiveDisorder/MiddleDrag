@@ -31,7 +31,7 @@ comment:
   require_changes: false
 
 ignore:
-  - "**/*Tests.swift/**"
+  - "**/MiddleDragTests/**"
   - "**/AppDelegate.swift"
   - "**/MiddleDragApp.swift"
   - "**/Assets.xcassets/**"
