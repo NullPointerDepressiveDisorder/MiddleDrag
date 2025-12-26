@@ -22,3 +22,4 @@ xcuserdata/
 *.dSYM
 .vscode/settings.json
 Secrets.xcconfig
+TestResults.xcresult/
