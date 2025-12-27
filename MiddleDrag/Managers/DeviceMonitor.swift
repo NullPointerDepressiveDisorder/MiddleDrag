@@ -50,6 +50,7 @@ class DeviceMonitor: TouchDeviceProviding {
     weak var delegate: DeviceMonitorDelegate?
 
     private var device: MTDeviceRef?
+    private var registeredDevices: Set<UnsafeMutableRawPointer> = []
     private var isRunning = false
 
     /// Tracks whether this instance owns the global callback reference
@@ -83,7 +84,7 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor starting...", category: .device)
 
         var deviceCount = 0
-        var registeredDevices: Set<UnsafeMutableRawPointer> = []
+        registeredDevices.removeAll()  // Clear any previous registrations
 
         // Try to get all devices
         if let deviceList = MTDeviceCreateList() {
@@ -139,12 +140,13 @@ class DeviceMonitor: TouchDeviceProviding {
         // Safe to call when not running - just return early
         guard isRunning else { return }
 
-        // Only attempt to unregister if we have a valid device
-        if let device = device {
-            MTUnregisterContactFrameCallback(device, deviceContactCallback)
-            MTDeviceStop(device)
+        // Unregister callbacks from ALL registered devices to prevent leaks
+        for deviceRef in registeredDevices {
+            MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
+            MTDeviceStop(deviceRef)
         }
 
+        registeredDevices.removeAll()
         self.device = nil
         isRunning = false
 
