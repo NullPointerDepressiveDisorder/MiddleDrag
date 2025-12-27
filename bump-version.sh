@@ -45,13 +45,22 @@ fi
 echo "✓ Updated MARKETING_VERSION in Xcode project"
 
 # Check if tag already exists (local or remote)
+TAG_EXISTS=false
 if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-    echo "Error: Tag v$VERSION already exists locally"
-    exit 1
+    TAG_EXISTS=true
+    if [ -z "$CI" ]; then
+        echo "Error: Tag v$VERSION already exists locally"
+        exit 1
+    fi
+    echo "Tag v$VERSION already exists locally (will be updated by workflow)"
 fi
 if git ls-remote --tags origin | grep -q "refs/tags/v$VERSION$"; then
-    echo "Error: Tag v$VERSION already exists on remote"
-    exit 1
+    TAG_EXISTS=true
+    if [ -z "$CI" ]; then
+        echo "Error: Tag v$VERSION already exists on remote"
+        exit 1
+    fi
+    echo "Tag v$VERSION already exists on remote (will be updated by workflow)"
 fi
 
 # Stage and amend previous commit
@@ -73,8 +82,10 @@ git add MiddleDrag.xcodeproj/project.pbxproj
 git commit --amend --no-edit
 echo "✓ Amended previous commit with version change"
 
-# Create tag
-if [ -n "$NOTES" ]; then
+# Create tag (skip in CI if tag already exists - workflow handles it)
+if [ "$TAG_EXISTS" = true ] && [ -n "$CI" ]; then
+    echo "✓ Skipping tag creation (tag exists, workflow will update it)"
+elif [ -n "$NOTES" ]; then
     git tag -a "v$VERSION" --message="$NOTES"
     echo "✓ Created annotated tag v$VERSION"
 else
