@@ -11,11 +11,17 @@ coverage:
       default:
         target: auto
         threshold: 5%
-        informational: true # Don't block PRs until we have established baseline
+        informational: false
+        if_ci_failed: error
+        if_not_found: failure
     patch:
       default:
-        target: 80%
-        informational: true
+        target: auto
+        threshold: 5%
+        if_ci_failed: error
+        informational: false
+        branches:
+          - "master"
 
 parsers:
   gcov:
@@ -28,7 +34,7 @@ parsers:
 comment:
   layout: "header, diff, flags, files"
   behavior: default
-  require_changes: false
+  require_changes: true
 
 ignore:
   - "**/MiddleDragTests/**"
