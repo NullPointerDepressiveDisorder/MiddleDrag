@@ -11,6 +11,7 @@ Finally use your MacBook for CAD work without carrying a mouse.
 [![GitHub release](https://img.shields.io/github/v/release/NullPointerDepressiveDisorder/MiddleDrag)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
 [![Downloads](https://img.shields.io/github/downloads/NullPointerDepressiveDisorder/MiddleDrag/total?color=brightgreen)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_shield)
+[![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
 
 <p align="center">
   <img src="assets/demo.gif" width="600" alt="MiddleDrag demo showing three-finger trackpad navigation in CAD software">
@@ -210,3 +211,4 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large)
+[![](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graphs/sunburst.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
