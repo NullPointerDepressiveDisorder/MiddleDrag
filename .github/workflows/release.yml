@@ -8,7 +8,7 @@ on:
     inputs:
       version:
         description: "Version number (e.g., 1.0.0)"
-        required: true
+        required: false
         type: string
       notes:
         description: "Version notes"
@@ -50,53 +50,56 @@ jobs:
           swift --version
 
       - name: Bump Version
-        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        if: github.event_name == 'workflow_dispatch' && inputs.version != '' || github.event_name == 'push'
         run: |
-          VERSION="${{ inputs.version }}"
-          VERSION="${VERSION#v}"
-
-          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project. pbxproj | head -n 1)
-
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+          else
+            # For tag pushes, extract version from the tag
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+      
+          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag. xcodeproj/project.pbxproj | head -n 1)
+      
           if [ "$VERSION" != "$PROJECT_VERSION" ]; then
             echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping..."
-
-            # For workflow_dispatch, determine the branch
+      
+            # Determine the branch to update
             if [[ "$GITHUB_REF" == refs/heads/* ]]; then
               BRANCH_NAME=${GITHUB_REF#refs/heads/}
             else
-              # Fallback to main branch for workflow_dispatch
+              # For tag pushes, use main branch
               BRANCH_NAME="main"
-              echo "Not on a branch ref, using $BRANCH_NAME"
+              echo "Tag push detected, using $BRANCH_NAME"
             fi
-
+      
             git fetch origin "$BRANCH_NAME"
             git checkout "$BRANCH_NAME"
             git reset --hard "origin/$BRANCH_NAME"
-
+      
             NOTES="${{ inputs.notes }}"
             ./bump-version.sh "$VERSION" "$NOTES"
-
+      
             # Rebase on latest main in case of new commits
             git fetch origin "$BRANCH_NAME"
             git rebase "origin/$BRANCH_NAME"
-
-            # Re-create the tag to point to HEAD after rebase (bump-version.sh creates it before rebase)
-            # This ensures the tag points to a commit that's actually on the branch
+      
+            # Re-create the tag to point to HEAD after rebase
             git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
-
+      
             git push origin "$BRANCH_NAME" --force-with-lease
             git push origin "v$VERSION" --force
-
+      
             # Capture the new commit SHA after amendment
             echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
           else
-            echo "Version matches. Proceeding..."
-            # Still set NEW_SHA for downstream steps that may reference it
+            echo "Version matches.  Proceeding..."
             echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
           fi
 
       - name: Re-checkout amended commit
-        if: github.event_name == 'workflow_dispatch' && inputs.version != ''
+        if: github.event_name == 'workflow_dispatch' && inputs.version != '' || github.event_name = 'push'
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
