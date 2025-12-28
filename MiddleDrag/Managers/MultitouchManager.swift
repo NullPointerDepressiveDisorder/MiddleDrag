@@ -260,25 +260,26 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
         // Check window size filter before performing tap
+        let shouldPerformTap: Bool
         if configuration.minimumWindowSizeFilterEnabled {
-            if !WindowHelper.windowAtCursorMeetsMinimumSize(
+            shouldPerformTap = WindowHelper.windowAtCursorMeetsMinimumSize(
                 minWidth: configuration.minimumWindowWidth,
                 minHeight: configuration.minimumWindowHeight
-            ) {
-                // Window too small - skip tap but still reset state
-                DispatchQueue.main.async { [weak self] in
-                    self?.isInThreeFingerGesture = false
-                    self?.gestureEndTime = CACurrentMediaTime()
-                }
-                return
-            }
+            )
+        } else {
+            shouldPerformTap = true
         }
 
+        // Always reset state regardless of whether tap is performed
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
         }
-        mouseGenerator.performClick()
+
+        // Only perform the click if window meets size requirements
+        if shouldPerformTap {
+            mouseGenerator.performClick()
+        }
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
