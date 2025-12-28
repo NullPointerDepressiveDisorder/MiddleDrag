@@ -259,6 +259,21 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
+        // Check window size filter before performing tap
+        if configuration.minimumWindowSizeFilterEnabled {
+            if !WindowHelper.windowAtCursorMeetsMinimumSize(
+                minWidth: configuration.minimumWindowWidth,
+                minHeight: configuration.minimumWindowHeight
+            ) {
+                // Window too small - skip tap but still reset state
+                DispatchQueue.main.async { [weak self] in
+                    self?.isInThreeFingerGesture = false
+                    self?.gestureEndTime = CACurrentMediaTime()
+                }
+                return
+            }
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
@@ -271,6 +286,18 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = true
         }
         guard configuration.middleDragEnabled else { return }
+
+        // Check window size filter before starting drag
+        if configuration.minimumWindowSizeFilterEnabled {
+            if !WindowHelper.windowAtCursorMeetsMinimumSize(
+                minWidth: configuration.minimumWindowWidth,
+                minHeight: configuration.minimumWindowHeight
+            ) {
+                // Window too small - skip drag
+                return
+            }
+        }
+
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
