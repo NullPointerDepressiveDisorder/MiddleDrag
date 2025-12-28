@@ -141,6 +141,28 @@ final class PreferencesManagerTests: XCTestCase {
         XCTAssertEqual(loaded.exclusionZoneSize, 0.5, accuracy: 0.001)
     }
 
+    func testLoadPreferencesWindowSizeFilterDefaults() {
+        let prefs = preferencesManager.loadPreferences()
+
+        XCTAssertFalse(prefs.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(prefs.minimumWindowWidth, 100.0, accuracy: 0.001)
+        XCTAssertEqual(prefs.minimumWindowHeight, 100.0, accuracy: 0.001)
+    }
+
+    func testSaveAndLoadWindowSizeFilterPreferences() {
+        var prefs = UserPreferences()
+        prefs.minimumWindowSizeFilterEnabled = true
+        prefs.minimumWindowWidth = 200.0
+        prefs.minimumWindowHeight = 150.0
+
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
+
+        XCTAssertTrue(loaded.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(loaded.minimumWindowWidth, 200.0, accuracy: 0.001)
+        XCTAssertEqual(loaded.minimumWindowHeight, 150.0, accuracy: 0.001)
+    }
+
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {

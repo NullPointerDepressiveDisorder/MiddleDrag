@@ -186,4 +186,36 @@ final class GestureModelsTests: XCTestCase {
         XCTAssertEqual(ModifierKeyType.option.rawValue, "option")
         XCTAssertEqual(ModifierKeyType.command.rawValue, "command")
     }
+
+    // MARK: - Minimum Window Size Filter Tests
+
+    func testDefaultGestureConfigurationWindowSizeFilterFields() {
+        let config = GestureConfiguration()
+
+        XCTAssertFalse(config.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(config.minimumWindowWidth, 100)
+        XCTAssertEqual(config.minimumWindowHeight, 100)
+    }
+
+    func testDefaultUserPreferencesWindowSizeFilterFields() {
+        let prefs = UserPreferences()
+
+        XCTAssertFalse(prefs.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(prefs.minimumWindowWidth, 100)
+        XCTAssertEqual(prefs.minimumWindowHeight, 100)
+    }
+
+    func testUserPreferencesToGestureConfigWindowSizeFilterMapping() {
+        var prefs = UserPreferences()
+
+        prefs.minimumWindowSizeFilterEnabled = true
+        prefs.minimumWindowWidth = 200
+        prefs.minimumWindowHeight = 150
+
+        let config = prefs.gestureConfig
+
+        XCTAssertTrue(config.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(config.minimumWindowWidth, 200)
+        XCTAssertEqual(config.minimumWindowHeight, 150)
+    }
 }
