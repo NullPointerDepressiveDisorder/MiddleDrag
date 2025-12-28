@@ -22,6 +22,10 @@ class PreferencesManager {
         static let modifierKeyType = "modifierKeyType"
         static let contactSizeFilterEnabled = "contactSizeFilterEnabled"
         static let maxContactSize = "maxContactSize"
+        // Window size filter keys
+        static let minimumWindowSizeFilterEnabled = "minimumWindowSizeFilterEnabled"
+        static let minimumWindowWidth = "minimumWindowWidth"
+        static let minimumWindowHeight = "minimumWindowHeight"
     }
 
     /// Production initializer using UserDefaults.standard
@@ -52,6 +56,10 @@ class PreferencesManager {
             Keys.modifierKeyType: ModifierKeyType.shift.rawValue,
             Keys.contactSizeFilterEnabled: false,
             Keys.maxContactSize: 1.5,
+            // Window size filter defaults
+            Keys.minimumWindowSizeFilterEnabled: false,
+            Keys.minimumWindowWidth: 100.0,
+            Keys.minimumWindowHeight: 100.0,
         ])
     }
 
@@ -73,7 +81,11 @@ class PreferencesManager {
             requireModifierKey: userDefaults.bool(forKey: Keys.requireModifierKey),
             modifierKeyType: modifierKey,
             contactSizeFilterEnabled: userDefaults.bool(forKey: Keys.contactSizeFilterEnabled),
-            maxContactSize: userDefaults.double(forKey: Keys.maxContactSize)
+            maxContactSize: userDefaults.double(forKey: Keys.maxContactSize),
+            minimumWindowSizeFilterEnabled: userDefaults.bool(
+                forKey: Keys.minimumWindowSizeFilterEnabled),
+            minimumWindowWidth: userDefaults.double(forKey: Keys.minimumWindowWidth),
+            minimumWindowHeight: userDefaults.double(forKey: Keys.minimumWindowHeight)
         )
     }
 
@@ -93,5 +105,10 @@ class PreferencesManager {
         userDefaults.set(
             preferences.contactSizeFilterEnabled, forKey: Keys.contactSizeFilterEnabled)
         userDefaults.set(preferences.maxContactSize, forKey: Keys.maxContactSize)
+        // Window size filter
+        userDefaults.set(
+            preferences.minimumWindowSizeFilterEnabled, forKey: Keys.minimumWindowSizeFilterEnabled)
+        userDefaults.set(preferences.minimumWindowWidth, forKey: Keys.minimumWindowWidth)
+        userDefaults.set(preferences.minimumWindowHeight, forKey: Keys.minimumWindowHeight)
     }
 }
