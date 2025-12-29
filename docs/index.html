@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiddleDrag - Middle-Click for Mac Trackpad | CAD & 3D Software Fix</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Free macOS app that adds middle-click to your trackpad. Three-finger gestures for pan and orbit in FreeCAD, Fusion 360, Blender, SketchUp, OnShape, and more.">
+    <meta name="keywords"
+        content="mac trackpad middle click, freecad mac trackpad, fusion 360 trackpad not working, blender mac trackpad, sketchup mac orbit, onshape trackpad, CAD mac trackpad, middle mouse button mac">
+    <meta name="author" content="NullPointerDepressiveDisorder">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MiddleDrag - Middle-Click for Mac Trackpad">
+    <meta property="og:description"
+        content="Three-finger trackpad gestures for middle-click and middle-drag on macOS. Finally use your MacBook for CAD work.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nullpointerdepressivedisorder.github.io/MiddleDrag/">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            padding: 60px 0 40px;
+            text-align: center;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .tagline {
+            color: #8b949e;
+            font-size: 1.25rem;
+            margin-bottom: 30px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+
+        .btn-secondary {
+            background: #21262d;
+            color: #e6edf3;
+            border: 1px solid #30363d;
+        }
+
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+
+        .install-cmd {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin: 30px 0;
+            font-family: monospace;
+            font-size: 0.95rem;
+            overflow-x: auto;
+        }
+
+        section {
+            padding: 50px 0;
+            border-bottom: 1px solid #30363d;
+        }
+
+        h2 {
+            font-size: 1.75rem;
+            margin-bottom: 20px;
+        }
+
+        .problem {
+            background: #161b22;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 25px;
+        }
+
+        .app-card {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .app-card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+
+        .app-card p {
+            color: #8b949e;
+            font-size: 0.9rem;
+        }
+
+        .app-card .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-bottom: 10px;
+        }
+
+        .status-broken {
+            background: #f8514966;
+            color: #f85149;
+        }
+
+        .status-buggy {
+            background: #d2992266;
+            color: #d29922;
+        }
+
+        .features-list {
+            list-style: none;
+        }
+
+        .features-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #21262d;
+            display: flex;
+            gap: 12px;
+        }
+
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+
+        .check {
+            color: #3fb950;
+            font-size: 1.2rem;
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .compare-table th,
+        .compare-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .compare-table th {
+            color: #8b949e;
+            font-weight: normal;
+        }
+
+        footer {
+            padding: 40px 0;
+            text-align: center;
+            color: #8b949e;
+        }
+
+        footer a {
+            color: #58a6ff;
+            text-decoration: none;
+        }
+
+        .footer-links {
+            margin-top: 10px;
+        }
+
+        .system-requirements {
+            margin-top: 20px;
+            color: #8b949e;
+        }
+
+        .link-highlight {
+            color: #58a6ff;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.75rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <div class="container">
+            <h1>MiddleDrag</h1>
+            <p class="tagline">Three-finger trackpad gestures for middle-click on macOS</p>
+
+            <div class="cta-buttons">
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases" class="btn btn-primary"
+                    aria-label="Download MiddleDrag from GitHub Releases">
+                    ⬇️ Download
+                </a>
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag" class="btn btn-secondary"
+                    aria-label="View the MiddleDrag project on GitHub">
+                    GitHub
+                </a>
+            </div>
+
+            <div class="install-cmd">
+                brew tap nullpointerdepressivedisorder/tap && brew install --cask middledrag
+            </div>
+        </div>
+    </header>
+
+    <section class="problem">
+        <div class="container">
+            <h2>The Problem</h2>
+            <p>Professional 3D software expects a middle mouse button. Mac trackpads don't have one. For years, CAD
+                users have been forced to carry an external mouse or use awkward modifier key combinations.</p>
+
+            <div class="problem-grid">
+                <div class="app-card">
+                    <span class="status status-broken">Broken</span>
+                    <h3>FreeCAD</h3>
+                    <p>Native gestures misfire constantly. Two-finger scroll zooms uncontrollably.</p>
+                </div>
+                <div class="app-card">
+                    <span class="status status-broken">Broken</span>
+                    <h3>OnShape</h3>
+                    <p>Force-click only. No tap gestures. Users report hand strain after extended use.</p>
+                </div>
+                <div class="app-card">
+                    <span class="status status-broken">Broken</span>
+                    <h3>ZBrush</h3>
+                    <p>Zero multi-touch recognition. Official response: "not supported."</p>
+                </div>
+                <div class="app-card">
+                    <span class="status status-broken">Broken</span>
+                    <h3>SketchUp Pro</h3>
+                    <p>Requires Ctrl+Cmd+Shift+drag for orbit. Causes hand cramps.</p>
+                </div>
+                <div class="app-card">
+                    <span class="status status-buggy">Buggy</span>
+                    <h3>Fusion 360</h3>
+                    <p>Trackpad breaks after sleep cycles. Requires app restart.</p>
+                </div>
+                <div class="app-card">
+                    <span class="status status-buggy">Buggy</span>
+                    <h3>Blender</h3>
+                    <p>"Emulate 3 Button Mouse" breaks Alt-click for loop select and node editing.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <h2>The Solution</h2>
+            <p>MiddleDrag adds three-finger gestures to your Mac trackpad:</p>
+
+            <ul class="features-list">
+                <li><span class="check">✓</span> <strong>Three-finger tap</strong> → Middle mouse click</li>
+                <li><span class="check">✓</span> <strong>Three-finger drag</strong> → Middle mouse drag (pan/orbit in 3D
+                    apps)</li>
+                <li><span class="check">✓</span> <strong>Works with Mission Control</strong> → Doesn't disable your
+                    system gestures</li>
+                <li><span class="check">✓</span> <strong>Native macOS app</strong> → Menu bar interface, no terminal
+                    required</li>
+                <li><span class="check">✓</span> <strong>Free and open source</strong> → MIT licensed, no tracking</li>
+            </ul>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <h2>Why MiddleDrag?</h2>
+            <table class="compare-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Feature</th>
+                        <th scope="col">MiddleDrag</th>
+                        <th scope="col">BetterTouchTool</th>
+                        <th scope="col">Middle</th>
+                        <th scope="col">MiddleClick</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row">Price</th>
+                        <td><strong>Free</strong></td>
+                        <td>$10-24</td>
+                        <td>$8</td>
+                        <td>Free</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Open Source</th>
+                        <td><strong>Yes</strong></td>
+                        <td>No</td>
+                        <td>No</td>
+                        <td>Yes</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">GUI Settings</th>
+                        <td><strong>Yes</strong></td>
+                        <td>Yes</td>
+                        <td>Yes</td>
+                        <td>No (terminal)</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Middle-drag</th>
+                        <td><strong>Yes</strong></td>
+                        <td>Complex setup</td>
+                        <td>Limited</td>
+                        <td>No</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Mission Control</th>
+                        <td><strong>Works</strong></td>
+                        <td>Conflicts</td>
+                        <td>Conflicts</td>
+                        <td>Conflicts</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <h2>Installation</h2>
+            <p><strong>Homebrew (recommended):</strong></p>
+            <div class="install-cmd">brew tap nullpointerdepressivedisorder/tap && brew install --cask middledrag</div>
+
+            <p><strong>Manual:</strong> Download from <a
+                    href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases"
+                    class="link-highlight">GitHub Releases</a>, move to Applications, and grant Accessibility
+                permissions when prompted.</p>
+
+            <p class="system-requirements"><em>Requires macOS 15 (Sequoia) or later. Works with built-in trackpad and
+                    Magic Trackpad.</em></p>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>Built for CAD users who've been asking for this since 2007.</p>
+            <p class="footer-links">
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag">GitHub</a> ·
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/issues">Report Issue</a> ·
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/blob/main/LICENSE">MIT License</a>
+            </p>
+        </div>
+    </footer>
+</body>
+
+</html>
