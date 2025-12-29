@@ -133,4 +133,160 @@ final class WindowHelperTests: XCTestCase {
         XCTAssertEqual(info.width, 1920)
         XCTAssertEqual(info.height, 1080)
     }
+
+    // MARK: - Mock Window Data Tests
+
+    /// Helper to create a mock window dictionary
+    private func createMockWindow(
+        x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat,
+        layer: Int = 0, ownerName: String? = nil, windowID: Int = 1, ownerPID: Int? = nil
+    ) -> [CFString: Any] {
+        var window: [CFString: Any] = [
+            kCGWindowLayer: layer,
+            kCGWindowBounds: ["X": x, "Y": y, "Width": width, "Height": height],
+            kCGWindowNumber: windowID,
+        ]
+        if let name = ownerName {
+            window[kCGWindowOwnerName] = name
+        }
+        if let pid = ownerPID {
+            window[kCGWindowOwnerPID] = pid_t(pid)
+        }
+        return window
+    }
+
+    func testGetWindowAt_WithMockData_FindsWindow() {
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp", windowID: 12345)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)  // Inside the window
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "TestApp")
+        XCTAssertEqual(result?.windowID, 12345)
+        XCTAssertEqual(result?.width, 400)
+        XCTAssertEqual(result?.height, 300)
+    }
+
+    func testGetWindowAt_WithMockData_PointOutsideWindow() {
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        let point = CGPoint(x: 50, y: 50)  // Outside the window
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNil(result)
+    }
+
+    func testGetWindowAt_WithMockData_SkipsNonZeroLayerWindows() {
+        let mockWindows = [
+            createMockWindow(
+                x: 0, y: 0, width: 1000, height: 1000, layer: 25, ownerName: "MenuBar"),  // Layer 25 = menu bar
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300, layer: 0, ownerName: "NormalWindow"),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)  // Would match both, but should skip layer 25
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "NormalWindow")
+    }
+
+    func testGetWindowAt_WithMockData_ReturnsFirstMatchingWindow() {
+        // Windows are in front-to-back order, so first match wins
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "FrontWindow"),
+            createMockWindow(x: 100, y: 100, width: 500, height: 400, ownerName: "BackWindow"),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)  // Inside both windows
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "FrontWindow")
+    }
+
+    func testGetWindowAt_WithMockData_EmptyWindowList() {
+        let mockWindows: [[CFString: Any]] = []
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNil(result)
+    }
+
+    func testGetWindowAt_WithMockData_SkipsMissingBounds() {
+        let mockWindows: [[CFString: Any]] = [
+            [kCGWindowLayer: 0, kCGWindowOwnerName: "NoBoundsWindow"],  // Missing bounds
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "ValidWindow"),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "ValidWindow")
+    }
+
+    func testGetWindowAt_WithMockData_SkipsMissingLayer() {
+        let mockWindows: [[CFString: Any]] = [
+            [kCGWindowBounds: ["X": 0, "Y": 0, "Width": 1000, "Height": 1000]],  // Missing layer
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "ValidWindow"),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "ValidWindow")
+    }
+
+    func testGetWindowAt_WithMockData_WindowAtOrigin() {
+        let mockWindows = [
+            createMockWindow(x: 0, y: 0, width: 100, height: 100, ownerName: "OriginWindow")
+        ]
+
+        let point = CGPoint(x: 50, y: 50)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "OriginWindow")
+    }
+
+    func testGetWindowAt_WithMockData_PointOnWindowEdge() {
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestWindow")
+        ]
+
+        // Test point exactly on left edge
+        let leftEdge = CGPoint(x: 100, y: 200)
+        XCTAssertNotNil(WindowHelper.getWindowAt(point: leftEdge, windowList: mockWindows))
+
+        // Test point exactly on top edge
+        let topEdge = CGPoint(x: 200, y: 100)
+        XCTAssertNotNil(WindowHelper.getWindowAt(point: topEdge, windowList: mockWindows))
+
+        // Test point just outside right edge
+        let outsideRight = CGPoint(x: 501, y: 200)
+        XCTAssertNil(WindowHelper.getWindowAt(point: outsideRight, windowList: mockWindows))
+    }
+
+    func testGetWindowAt_WithMockData_WindowWithOptionalNilOwnerPID() {
+        // Window with no ownerPID - bundleIdentifier should be nil
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300, ownerName: "TestWindow", ownerPID: nil)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertNil(result?.bundleIdentifier)  // No PID means no bundle ID lookup
+    }
 }

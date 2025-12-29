@@ -36,12 +36,22 @@ class WindowHelper {
         // Get list of all on-screen windows excluding desktop elements
         let options: CGWindowListOption = [.excludeDesktopElements, .optionOnScreenOnly]
 
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
-            as? [[CFString: Any]]
+        guard
+            let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+                as? [[CFString: Any]]
         else {
             return nil
         }
 
+        return getWindowAt(point: point, windowList: windowList)
+    }
+
+    /// Internal method for testing - allows injecting mock window data
+    /// - Parameters:
+    ///   - point: Screen point to check
+    ///   - windowList: Array of window info dictionaries (from CGWindowListCopyWindowInfo or mock)
+    /// - Returns: WindowInfo for the topmost window at point, or nil if none found
+    static func getWindowAt(point: CGPoint, windowList: [[CFString: Any]]) -> WindowInfo? {
         // Iterate through windows (front to back order)
         for windowInfo in windowList {
             // Only consider regular windows (layer 0)
