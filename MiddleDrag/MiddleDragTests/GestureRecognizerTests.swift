@@ -1154,6 +1154,228 @@ final class GestureRecognizerTests: XCTestCase {
         XCTAssertGreaterThan(abs(delta.x), 0.01, "Sensitivity should scale delta")
         XCTAssertGreaterThan(abs(delta.y), 0.01, "Sensitivity should scale delta")
     }
+
+    // MARK: - Relift During Drag Tests
+
+    func testReliftDuringDrag_DisabledByDefault() {
+        // Verify default behavior: drag ends when dropping to 2 fingers
+        recognizer.configuration.moveThreshold = 0.01
+        recognizer.configuration.allowReliftDuringDrag = false  // Default
+
+        // Start with 3 fingers
+        let touches3 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+
+        // Move to start dragging
+        let touches3b = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        defer { cleanup3b() }
+
+        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+
+        // Drop to 2 fingers - should end after stable frames
+        let touches2 = [
+            createTouch(x: 0.4, y: 0.5),
+            createTouch(x: 0.6, y: 0.5),
+        ]
+        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
+
+        XCTAssertEqual(
+            recognizer.state, .idle, "Drag should end with 2 fingers when relift is disabled")
+        XCTAssertTrue(mockDelegate.didEndDraggingCalled)
+    }
+
+    func testReliftDuringDrag_ContinuesWithTwoFingers() {
+        // With allowReliftDuringDrag enabled, drag continues with 2 fingers
+        recognizer.configuration.moveThreshold = 0.01
+        recognizer.configuration.allowReliftDuringDrag = true
+
+        // Start with 3 fingers
+        let touches3 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+
+        // Move to start dragging
+        let touches3b = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        defer { cleanup3b() }
+
+        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+
+        // Drop to 2 fingers - should NOT end
+        let touches2 = [
+            createTouch(x: 0.35, y: 0.55),
+            createTouch(x: 0.55, y: 0.55),
+        ]
+        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
+
+        XCTAssertEqual(
+            recognizer.state, .dragging,
+            "Drag should continue with 2 fingers when relift is enabled")
+        XCTAssertFalse(mockDelegate.didEndDraggingCalled)
+    }
+
+    func testReliftDuringDrag_RequiresThreeToStart() {
+        // Even with relift enabled, still requires 3 fingers to START
+        recognizer.configuration.allowReliftDuringDrag = true
+
+        // Try to start with 2 fingers
+        let touches2 = [
+            createTouch(x: 0.4, y: 0.5),
+            createTouch(x: 0.6, y: 0.5),
+        ]
+        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.0, modifierFlags: [])
+
+        XCTAssertEqual(recognizer.state, .idle, "Should not start gesture with 2 fingers")
+        XCTAssertFalse(mockDelegate.didStartCalled)
+    }
+
+    func testReliftDuringDrag_EndsWithOneFinger() {
+        // Drag ends when dropping to 1 finger, even with relift enabled
+        recognizer.configuration.moveThreshold = 0.01
+        recognizer.configuration.allowReliftDuringDrag = true
+
+        // Start with 3 fingers and begin dragging
+        let touches3 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+
+        let touches3b = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        defer { cleanup3b() }
+
+        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+
+        // Drop to 1 finger
+        let touches1 = [
+            createTouch(x: 0.5, y: 0.5)
+        ]
+        let (pointer1, count1, cleanup1) = createTouchData(touches: touches1)
+        defer { cleanup1() }
+
+        recognizer.processTouches(pointer1, count: count1, timestamp: 0.2, modifierFlags: [])
+        recognizer.processTouches(pointer1, count: count1, timestamp: 0.3, modifierFlags: [])
+
+        XCTAssertEqual(recognizer.state, .idle, "Drag should end with 1 finger")
+        XCTAssertTrue(mockDelegate.didEndDraggingCalled)
+    }
+
+    func testReliftDuringDrag_EndsWithZeroFingers() {
+        // Drag ends when all fingers lift
+        recognizer.configuration.moveThreshold = 0.01
+        recognizer.configuration.allowReliftDuringDrag = true
+
+        // Start dragging
+        let touches3 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+
+        let touches3b = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        defer { cleanup3b() }
+
+        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+
+        // Lift all fingers
+        let emptyTouches: [MTTouch] = []
+        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        defer { emptyCleanup() }
+
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
+
+        XCTAssertEqual(recognizer.state, .idle, "Drag should end when all fingers lift")
+        XCTAssertTrue(mockDelegate.didEndDraggingCalled)
+    }
+
+    func testReliftDuringDrag_OnlyAppliesToDraggingState() {
+        // Relift only works in dragging state, not possibleTap
+        recognizer.configuration.allowReliftDuringDrag = true
+        recognizer.configuration.tapThreshold = 0.5  // Long enough to stay in possibleTap
+
+        // Start with 3 fingers (enters possibleTap)
+        let touches3 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .possibleTap)
+
+        // Drop to 2 fingers while still in possibleTap - should end
+        let touches2 = [
+            createTouch(x: 0.4, y: 0.5),
+            createTouch(x: 0.6, y: 0.5),
+        ]
+        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+        recognizer.processTouches(pointer2, count: count2, timestamp: 0.08, modifierFlags: [])
+
+        XCTAssertEqual(
+            recognizer.state, .idle,
+            "possibleTap should end with 2 fingers even with relift enabled")
+    }
 }
 
 // MARK: - Mock Delegate

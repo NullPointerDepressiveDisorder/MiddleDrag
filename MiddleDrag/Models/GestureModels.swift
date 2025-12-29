@@ -65,6 +65,9 @@ struct GestureConfiguration {
     var minimumWindowWidth: CGFloat = 100  // Minimum window width in pixels
     var minimumWindowHeight: CGFloat = 100  // Minimum window height in pixels
 
+    // Relift during drag - allow continuing drag with 2 fingers after lifting one
+    var allowReliftDuringDrag: Bool = false
+
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
         guard enableVelocityBoost else { return sensitivity }
@@ -126,6 +129,9 @@ struct UserPreferences: Codable {
     var minimumWindowWidth: Double = 100
     var minimumWindowHeight: Double = 100
 
+    // Relift during drag - allow continuing drag with 2 fingers after lifting one
+    var allowReliftDuringDrag: Bool = false
+
     /// Convert to GestureConfiguration
     var gestureConfig: GestureConfiguration {
         return GestureConfiguration(
@@ -143,7 +149,8 @@ struct UserPreferences: Codable {
             maxContactSize: Float(maxContactSize),
             minimumWindowSizeFilterEnabled: minimumWindowSizeFilterEnabled,
             minimumWindowWidth: CGFloat(minimumWindowWidth),
-            minimumWindowHeight: CGFloat(minimumWindowHeight)
+            minimumWindowHeight: CGFloat(minimumWindowHeight),
+            allowReliftDuringDrag: allowReliftDuringDrag
         )
     }
 }

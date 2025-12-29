@@ -116,13 +116,20 @@ class GestureRecognizer {
             isInCancellationCooldown = false
         }
 
-        // Process exactly 3-finger gestures only
-        // 4+ fingers are cancelled above, 0-2 fingers end the gesture below
-        // Note: requiresExactlyThreeFingers no longer has an effect since we always
-        // require exactly 3 to preserve Mission Control - could be deprecated
-        let isValidThreeFingerGesture = !isInCancellationCooldown && fingerCount == 3
+        // Process gesture based on finger count
+        // - 4+ fingers: cancelled above
+        // - 3 fingers: always valid for starting/continuing gesture
+        // - 2 fingers: valid for continuing drag if allowReliftDuringDrag is enabled
+        // - 0-1 fingers: ends the gesture
+        let canReliftDuringDrag =
+            configuration.allowReliftDuringDrag
+            && state == .dragging
+            && fingerCount >= 2
+        let isValidGesture =
+            !isInCancellationCooldown
+            && (fingerCount == 3 || canReliftDuringDrag)
 
-        if isValidThreeFingerGesture {
+        if isValidGesture {
             handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
         } else if state != .idle {
             // Gesture state changed - finger count dropped below 3
