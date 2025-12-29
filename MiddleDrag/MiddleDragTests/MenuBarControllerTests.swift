@@ -440,6 +440,42 @@ final class MenuBarControllerTests: XCTestCase {
         XCTAssertNoThrow(controller.perform(Selector(("setContactSizeThreshold:")), with: menuItem))
     }
 
+    func testToggleMinimumWindowSizeFilterViaSelector() {
+        // Invoke the private @objc method via selector - should not throw
+        XCTAssertNoThrow(controller.perform(Selector(("toggleMinimumWindowSizeFilter"))))
+    }
+
+    func testSetMinimumWindowSizeWithMenuItem() {
+        let menuItem = NSMenuItem(title: "Test", action: nil, keyEquivalent: "")
+        menuItem.representedObject = Double(200)
+
+        // Invoke via selector - should not crash
+        XCTAssertNoThrow(controller.perform(Selector(("setMinimumWindowSize:")), with: menuItem))
+    }
+
+    func testBuildMenuWithMinimumWindowSizeFilterEnabled() {
+        var prefs = UserPreferences()
+        prefs.minimumWindowSizeFilterEnabled = true
+        prefs.minimumWindowWidth = 100
+        prefs.minimumWindowHeight = 100
+
+        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        XCTAssertNotNil(ctrl)
+        ctrl.buildMenu()  // Should create window size submenu items
+    }
+
+    func testBuildMenuWithAllPalmRejectionOptionsEnabled() {
+        var prefs = UserPreferences()
+        prefs.exclusionZoneEnabled = true
+        prefs.requireModifierKey = true
+        prefs.contactSizeFilterEnabled = true
+        prefs.minimumWindowSizeFilterEnabled = true
+
+        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        XCTAssertNotNil(ctrl)
+        ctrl.buildMenu()  // Should create all submenu items
+    }
+
     // MARK: - Multiple Toggle Cycles
 
     func testMultipleToggleCycles() {
