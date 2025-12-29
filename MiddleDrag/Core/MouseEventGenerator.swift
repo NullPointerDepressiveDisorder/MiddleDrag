@@ -39,6 +39,10 @@ class MouseEventGenerator {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
 
+            // Reset smoothing state for clean EMA initialization
+            self.previousDeltaX = 0
+            self.previousDeltaY = 0
+
             self.isMiddleMouseDown = true
             let quartzPos = self.currentMouseLocationQuartz
             self.sendMiddleMouseDown(at: quartzPos)
