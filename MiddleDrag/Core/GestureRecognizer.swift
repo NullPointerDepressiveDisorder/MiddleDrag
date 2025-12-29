@@ -116,17 +116,24 @@ class GestureRecognizer {
             isInCancellationCooldown = false
         }
 
-        // Process exactly 3-finger gestures only
-        // 4+ fingers are cancelled above, 0-2 fingers end the gesture below
-        // Note: requiresExactlyThreeFingers no longer has an effect since we always
-        // require exactly 3 to preserve Mission Control - could be deprecated
-        let isValidThreeFingerGesture = !isInCancellationCooldown && fingerCount == 3
+        // Process gesture based on finger count
+        // - 4+ fingers: cancelled above
+        // - 3 fingers: always valid for starting/continuing gesture
+        // - 2 fingers: valid for continuing drag if allowReliftDuringDrag is enabled
+        // - 0-1 fingers: ends the gesture
+        let canReliftDuringDrag =
+            configuration.allowReliftDuringDrag
+            && state == .dragging
+            && fingerCount >= 2
+        let isValidGesture =
+            !isInCancellationCooldown
+            && (fingerCount == 3 || canReliftDuringDrag)
 
-        if isValidThreeFingerGesture {
-            handleThreeFingerGesture(fingers: validFingers, timestamp: timestamp)
+        if isValidGesture {
+            handleValidGesture(fingers: validFingers, timestamp: timestamp)
         } else if state != .idle {
-            // Gesture state changed - finger count dropped below 3
-            // (4+ fingers case is handled by cancellation above before we get here)
+            // Gesture no longer valid for current finger count
+            // (needs 3 to start, or 2+ if allowReliftDuringDrag is on during drag)
             // Use stable frame count to prevent false ends during brief transitions
             stableFrameCount += 1
             if stableFrameCount >= 2 {
@@ -151,8 +158,8 @@ class GestureRecognizer {
 
     // MARK: - Private Methods
 
-    private func handleThreeFingerGesture(fingers: [MTPoint], timestamp: Double) {
-        stableFrameCount = 0  // Reset since we have 3 fingers
+    private func handleValidGesture(fingers: [MTPoint], timestamp: Double) {
+        stableFrameCount = 0  // Reset since we have valid fingers
 
         let centroid = calculateCentroid(fingers: fingers)
 

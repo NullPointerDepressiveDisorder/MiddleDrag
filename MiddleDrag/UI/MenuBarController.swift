@@ -208,6 +208,16 @@ class MenuBarController: NSObject {
 
         submenu.addItem(NSMenuItem.separator())
 
+        // Relift during drag - Linux-style text selection
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Allow Relift During Drag",
+                isOn: preferences.allowReliftDuringDrag,
+                action: #selector(toggleAllowReliftDuringDrag)
+            ))
+
+        submenu.addItem(NSMenuItem.separator())
+
         // Telemetry section header
         let telemetryHeader = NSMenuItem(
             title: "Help Improve MiddleDrag:", action: nil, keyEquivalent: "")
@@ -499,6 +509,17 @@ class MenuBarController: NSObject {
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.minimumWindowWidth = CGFloat(value)
         config.minimumWindowHeight = CGFloat(value)
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc private func toggleAllowReliftDuringDrag() {
+        preferences.allowReliftDuringDrag.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.allowReliftDuringDrag = preferences.allowReliftDuringDrag
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()

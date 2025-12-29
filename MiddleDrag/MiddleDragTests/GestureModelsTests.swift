@@ -218,4 +218,25 @@ final class GestureModelsTests: XCTestCase {
         XCTAssertEqual(config.minimumWindowWidth, 200)
         XCTAssertEqual(config.minimumWindowHeight, 150)
     }
+
+    // MARK: - Allow Relift During Drag Tests
+
+    func testDefaultGestureConfigurationReliftField() {
+        let config = GestureConfiguration()
+        XCTAssertFalse(config.allowReliftDuringDrag)
+    }
+
+    func testDefaultUserPreferencesReliftField() {
+        let prefs = UserPreferences()
+        XCTAssertFalse(prefs.allowReliftDuringDrag)
+    }
+
+    func testUserPreferencesToGestureConfigReliftMapping() {
+        var prefs = UserPreferences()
+        prefs.allowReliftDuringDrag = true
+
+        let config = prefs.gestureConfig
+
+        XCTAssertTrue(config.allowReliftDuringDrag)
+    }
 }

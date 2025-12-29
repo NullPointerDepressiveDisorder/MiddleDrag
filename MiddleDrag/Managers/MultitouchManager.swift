@@ -334,7 +334,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
         guard delta.x != 0 || delta.y != 0 else { return }
 
-        let scaleFactor: CGFloat = 800.0 * CGFloat(configuration.sensitivity)
+        let scaleFactor: CGFloat = 1600.0 * CGFloat(configuration.sensitivity)
         let scaledDeltaX = delta.x * scaleFactor
         let scaledDeltaY = -delta.y * scaleFactor  // Invert Y for natural movement
 
