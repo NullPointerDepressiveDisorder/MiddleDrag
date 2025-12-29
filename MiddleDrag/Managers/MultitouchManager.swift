@@ -260,12 +260,16 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
         // Check window size filter before performing tap
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
         let shouldPerformTap: Bool
         if configuration.minimumWindowSizeFilterEnabled {
-            shouldPerformTap = WindowHelper.windowAtCursorMeetsMinimumSize(
-                minWidth: configuration.minimumWindowWidth,
-                minHeight: configuration.minimumWindowHeight
-            )
+            shouldPerformTap = DispatchQueue.main.sync {
+                WindowHelper.windowAtCursorMeetsMinimumSize(
+                    minWidth: configuration.minimumWindowWidth,
+                    minHeight: configuration.minimumWindowHeight
+                )
+            }
         } else {
             shouldPerformTap = true
         }
@@ -286,11 +290,16 @@ extension MultitouchManager: GestureRecognizerDelegate {
         guard configuration.middleDragEnabled else { return }
 
         // Check window size filter before starting drag
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
         if configuration.minimumWindowSizeFilterEnabled {
-            if !WindowHelper.windowAtCursorMeetsMinimumSize(
-                minWidth: configuration.minimumWindowWidth,
-                minHeight: configuration.minimumWindowHeight
-            ) {
+            let meetsMinimumSize = DispatchQueue.main.sync {
+                WindowHelper.windowAtCursorMeetsMinimumSize(
+                    minWidth: configuration.minimumWindowWidth,
+                    minHeight: configuration.minimumWindowHeight
+                )
+            }
+            if !meetsMinimumSize {
                 // Window too small - skip drag
                 return
             }
