@@ -283,9 +283,6 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
-        DispatchQueue.main.async { [weak self] in
-            self?.isActivelyDragging = true
-        }
         guard configuration.middleDragEnabled else { return }
 
         // Check window size filter before starting drag
@@ -297,6 +294,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
                 // Window too small - skip drag
                 return
             }
+        }
+
+        // Set state ONLY after all checks pass and drag will actually start
+        DispatchQueue.main.async { [weak self] in
+            self?.isActivelyDragging = true
         }
 
         let mouseLocation = MouseEventGenerator.currentMouseLocation
