@@ -139,7 +139,7 @@ final class WindowHelperTests: XCTestCase {
     /// Helper to create a mock window dictionary
     private func createMockWindow(
         x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat,
-        layer: Int = 0, ownerName: String? = nil, windowID: Int = 1, ownerPID: Int? = nil
+        layer: Int = 0, ownerName: String? = nil, windowID: CGWindowID = 1, ownerPID: Int? = nil
     ) -> [CFString: Any] {
         var window: [CFString: Any] = [
             kCGWindowLayer: layer,

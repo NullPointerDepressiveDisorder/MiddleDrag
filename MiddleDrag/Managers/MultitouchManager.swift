@@ -264,11 +264,17 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // which must be called from the main thread
         let shouldPerformTap: Bool
         if configuration.minimumWindowSizeFilterEnabled {
-            shouldPerformTap = DispatchQueue.main.sync {
+            let checkWindowSize = {
                 WindowHelper.windowAtCursorMeetsMinimumSize(
-                    minWidth: configuration.minimumWindowWidth,
-                    minHeight: configuration.minimumWindowHeight
+                    minWidth: self.configuration.minimumWindowWidth,
+                    minHeight: self.configuration.minimumWindowHeight
                 )
+            }
+            // Avoid deadlock: call directly if already on main thread, otherwise sync
+            if Thread.isMainThread {
+                shouldPerformTap = checkWindowSize()
+            } else {
+                shouldPerformTap = DispatchQueue.main.sync { checkWindowSize() }
             }
         } else {
             shouldPerformTap = true
@@ -293,11 +299,18 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
         // which must be called from the main thread
         if configuration.minimumWindowSizeFilterEnabled {
-            let meetsMinimumSize = DispatchQueue.main.sync {
+            let checkWindowSize = {
                 WindowHelper.windowAtCursorMeetsMinimumSize(
-                    minWidth: configuration.minimumWindowWidth,
-                    minHeight: configuration.minimumWindowHeight
+                    minWidth: self.configuration.minimumWindowWidth,
+                    minHeight: self.configuration.minimumWindowHeight
                 )
+            }
+            // Avoid deadlock: call directly if already on main thread, otherwise sync
+            let meetsMinimumSize: Bool
+            if Thread.isMainThread {
+                meetsMinimumSize = checkWindowSize()
+            } else {
+                meetsMinimumSize = DispatchQueue.main.sync { checkWindowSize() }
             }
             if !meetsMinimumSize {
                 // Window too small - skip drag
