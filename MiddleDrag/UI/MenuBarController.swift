@@ -176,6 +176,38 @@ class MenuBarController: NSObject {
 
         submenu.addItem(NSMenuItem.separator())
 
+        // Minimum Window Size section (separate from palm rejection as it's window-based)
+        let windowSizeItem = createAdvancedMenuItem(
+            title: "Ignore Small Windows",
+            isOn: preferences.minimumWindowSizeFilterEnabled,
+            action: #selector(toggleMinimumWindowSizeFilter)
+        )
+        submenu.addItem(windowSizeItem)
+
+        // Window size threshold options (only shown when enabled)
+        if preferences.minimumWindowSizeFilterEnabled {
+            let sizes: [(String, Double)] = [
+                ("Very Small (50px)", 50),
+                ("Small (100px)", 100),
+                ("Medium (200px)", 200),
+                ("Large (300px)", 300),
+            ]
+
+            for (title, value) in sizes {
+                let sizeItem = NSMenuItem(
+                    title: "    \(title)", action: #selector(setMinimumWindowSize(_:)),
+                    keyEquivalent: "")
+                sizeItem.target = self
+                sizeItem.representedObject = value
+                if abs(preferences.minimumWindowWidth - value) < 0.01 {
+                    sizeItem.state = .on
+                }
+                submenu.addItem(sizeItem)
+            }
+        }
+
+        submenu.addItem(NSMenuItem.separator())
+
         // Telemetry section header
         let telemetryHeader = NSMenuItem(
             title: "Help Improve MiddleDrag:", action: nil, keyEquivalent: "")
@@ -438,6 +470,35 @@ class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.maxContactSize = Float(value)
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc private func toggleMinimumWindowSizeFilter() {
+        preferences.minimumWindowSizeFilterEnabled.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = preferences.minimumWindowSizeFilterEnabled
+        config.minimumWindowWidth = CGFloat(preferences.minimumWindowWidth)
+        config.minimumWindowHeight = CGFloat(preferences.minimumWindowHeight)
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc private func setMinimumWindowSize(_ sender: NSMenuItem) {
+        guard let value = sender.representedObject as? Double else { return }
+
+        // Set both width and height to the same value (square threshold)
+        preferences.minimumWindowWidth = value
+        preferences.minimumWindowHeight = value
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.minimumWindowWidth = CGFloat(value)
+        config.minimumWindowHeight = CGFloat(value)
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()

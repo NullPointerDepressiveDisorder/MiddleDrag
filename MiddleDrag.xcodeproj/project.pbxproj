@@ -62,6 +62,7 @@
 				MiddleDragTests/MultitouchManagerTests.swift,
 				MiddleDragTests/PreferencesManagerTests.swift,
 				MiddleDragTests/TouchModelsTests.swift,
+				MiddleDragTests/WindowHelperTests.swift,
 			);
 			target = 1A0000011 /* MiddleDrag */;
 		};

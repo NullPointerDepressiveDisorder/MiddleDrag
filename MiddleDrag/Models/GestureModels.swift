@@ -60,6 +60,11 @@ struct GestureConfiguration {
     var contactSizeFilterEnabled: Bool = false
     var maxContactSize: Float = 1.5  // Maximum zTotal value to include (larger = palm)
 
+    // Window size filter - ignore small windows (menus, popups)
+    var minimumWindowSizeFilterEnabled: Bool = false
+    var minimumWindowWidth: CGFloat = 100  // Minimum window width in pixels
+    var minimumWindowHeight: CGFloat = 100  // Minimum window height in pixels
+
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
         guard enableVelocityBoost else { return sensitivity }
@@ -116,6 +121,11 @@ struct UserPreferences: Codable {
     var contactSizeFilterEnabled: Bool = false
     var maxContactSize: Double = 1.5  // Maximum contact size to include
 
+    // Window size filter - ignore small windows
+    var minimumWindowSizeFilterEnabled: Bool = false
+    var minimumWindowWidth: Double = 100
+    var minimumWindowHeight: Double = 100
+
     /// Convert to GestureConfiguration
     var gestureConfig: GestureConfiguration {
         return GestureConfiguration(
@@ -130,7 +140,10 @@ struct UserPreferences: Codable {
             requireModifierKey: requireModifierKey,
             modifierKeyType: modifierKeyType,
             contactSizeFilterEnabled: contactSizeFilterEnabled,
-            maxContactSize: Float(maxContactSize)
+            maxContactSize: Float(maxContactSize),
+            minimumWindowSizeFilterEnabled: minimumWindowSizeFilterEnabled,
+            minimumWindowWidth: CGFloat(minimumWindowWidth),
+            minimumWindowHeight: CGFloat(minimumWindowHeight)
         )
     }
 }

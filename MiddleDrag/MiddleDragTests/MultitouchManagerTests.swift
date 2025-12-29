@@ -274,6 +274,11 @@ final class MultitouchManagerTests: XCTestCase {
         let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
         let recognizer = GestureRecognizer()
 
+        // Enable middle drag so the state will be set
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
         manager.start()
         XCTAssertFalse(manager.isActivelyDragging)
 
@@ -453,13 +458,13 @@ final class MultitouchManagerTests: XCTestCase {
 
         manager.start()
 
-        // Begin dragging should still update isActivelyDragging state
-        // even when middleDragEnabled is false
+        // Begin dragging should NOT update isActivelyDragging state
+        // when middleDragEnabled is false (the drag is never actually started)
         manager.gestureRecognizerDidBeginDragging(recognizer)
 
-        let expectation = XCTestExpectation(description: "State updated")
+        let expectation = XCTestExpectation(description: "State should remain false")
         DispatchQueue.main.async {
-            XCTAssertTrue(manager.isActivelyDragging)
+            XCTAssertFalse(manager.isActivelyDragging)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -781,6 +786,123 @@ final class MultitouchManagerTests: XCTestCase {
         // Stop while dragging should clean up
         XCTAssertNoThrow(manager.stop())
         XCTAssertFalse(manager.isMonitoring)
+    }
+
+    // MARK: - Window Size Filter Tests
+
+    func testGestureRecognizerDidBeginDraggingWithWindowSizeFilterEnabled() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter with minimum requirements
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 50
+        config.minimumWindowHeight = 50
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Begin dragging - will check window size filter
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        // Wait for async processing
+        let expectation = XCTestExpectation(description: "Processing complete")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testGestureRecognizerDidTapWithWindowSizeFilterEnabled() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter
+        var config = GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 50
+        config.minimumWindowHeight = 50
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Wait for start state
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Tap - will check window size filter
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // State should be reset regardless of filter result
+        let tapExpectation = XCTestExpectation(description: "Tap complete")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            tapExpectation.fulfill()
+        }
+        wait(for: [tapExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testGestureRecognizerDidTapWithWindowSizeFilterDisabled() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+        let recognizer = GestureRecognizer()
+
+        // Ensure window size filter is disabled
+        var config = GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = false
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Wait for start state
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Tap without filter
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Should complete without crash
+        let tapExpectation = XCTestExpectation(description: "Tap complete")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            tapExpectation.fulfill()
+        }
+        wait(for: [tapExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testMinimumWindowSizeConfiguration() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+
+        var config = GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 200
+        config.minimumWindowHeight = 150
+
+        manager.updateConfiguration(config)
+
+        XCTAssertTrue(manager.configuration.minimumWindowSizeFilterEnabled)
+        XCTAssertEqual(manager.configuration.minimumWindowWidth, 200)
+        XCTAssertEqual(manager.configuration.minimumWindowHeight, 150)
     }
 
     // MARK: - Cleanup

@@ -259,18 +259,70 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
+        // Check window size filter before performing tap
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
+        let shouldPerformTap: Bool
+        if configuration.minimumWindowSizeFilterEnabled {
+            let checkWindowSize = {
+                WindowHelper.windowAtCursorMeetsMinimumSize(
+                    minWidth: self.configuration.minimumWindowWidth,
+                    minHeight: self.configuration.minimumWindowHeight
+                )
+            }
+            // Avoid deadlock: call directly if already on main thread, otherwise sync
+            if Thread.isMainThread {
+                shouldPerformTap = checkWindowSize()
+            } else {
+                shouldPerformTap = DispatchQueue.main.sync { checkWindowSize() }
+            }
+        } else {
+            shouldPerformTap = true
+        }
+
+        // Always reset state regardless of whether tap is performed
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
         }
-        mouseGenerator.performClick()
+
+        // Only perform the click if window meets size requirements
+        if shouldPerformTap {
+            mouseGenerator.performClick()
+        }
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
+        guard configuration.middleDragEnabled else { return }
+
+        // Check window size filter before starting drag
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
+        if configuration.minimumWindowSizeFilterEnabled {
+            let checkWindowSize = {
+                WindowHelper.windowAtCursorMeetsMinimumSize(
+                    minWidth: self.configuration.minimumWindowWidth,
+                    minHeight: self.configuration.minimumWindowHeight
+                )
+            }
+            // Avoid deadlock: call directly if already on main thread, otherwise sync
+            let meetsMinimumSize: Bool
+            if Thread.isMainThread {
+                meetsMinimumSize = checkWindowSize()
+            } else {
+                meetsMinimumSize = DispatchQueue.main.sync { checkWindowSize() }
+            }
+            if !meetsMinimumSize {
+                // Window too small - skip drag
+                return
+            }
+        }
+
+        // Set state ONLY after all checks pass and drag will actually start
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = true
         }
-        guard configuration.middleDragEnabled else { return }
+
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
