@@ -274,6 +274,11 @@ final class MultitouchManagerTests: XCTestCase {
         let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
         let recognizer = GestureRecognizer()
 
+        // Enable middle drag so the state will be set
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
         manager.start()
         XCTAssertFalse(manager.isActivelyDragging)
 
@@ -453,13 +458,13 @@ final class MultitouchManagerTests: XCTestCase {
 
         manager.start()
 
-        // Begin dragging should still update isActivelyDragging state
-        // even when middleDragEnabled is false
+        // Begin dragging should NOT update isActivelyDragging state
+        // when middleDragEnabled is false (the drag is never actually started)
         manager.gestureRecognizerDidBeginDragging(recognizer)
 
-        let expectation = XCTestExpectation(description: "State updated")
+        let expectation = XCTestExpectation(description: "State should remain false")
         DispatchQueue.main.async {
-            XCTAssertTrue(manager.isActivelyDragging)
+            XCTAssertFalse(manager.isActivelyDragging)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
