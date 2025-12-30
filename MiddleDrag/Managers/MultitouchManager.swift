@@ -113,6 +113,7 @@ class MultitouchManager {
 
     /// Restart monitoring (used after sleep/wake)
     func restart() {
+        guard isMonitoring else { return }
         Log.info("Restarting multitouch monitoring", category: .device)
 
         // Store current state
@@ -137,6 +138,10 @@ class MultitouchManager {
     private func internalStop() {
         mouseGenerator.cancelDrag()
         gestureRecognizer.reset()
+
+        // Reset gesture state flags
+        isActivelyDragging = false
+        isInThreeFingerGesture = false
 
         deviceMonitor?.stop()
         deviceMonitor = nil

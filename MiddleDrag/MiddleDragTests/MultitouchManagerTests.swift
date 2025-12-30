@@ -921,8 +921,9 @@ final class MultitouchManagerTests: XCTestCase {
         // After restart, monitoring should still be active
         XCTAssertTrue(manager.isMonitoring)
         XCTAssertTrue(manager.isEnabled)
-        // Note: stopCount includes the stop during restart
+        // Verify device monitor was stopped and started again
         XCTAssertEqual(mockDevice.stopCallCount, 1)
+        XCTAssertEqual(mockDevice.startCallCount, 2)  // Initial start + restart
 
         manager.stop()
     }
@@ -972,6 +973,8 @@ final class MultitouchManagerTests: XCTestCase {
         manager.restart()
 
         XCTAssertTrue(manager.isMonitoring)
+        XCTAssertFalse(manager.isActivelyDragging)  // Verify gesture state was cleaned up
+        XCTAssertFalse(manager.isInThreeFingerGesture)
 
         manager.stop()
     }
