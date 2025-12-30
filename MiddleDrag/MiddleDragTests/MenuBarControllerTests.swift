@@ -14,7 +14,8 @@ final class MenuBarControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         mockDevice = MockDeviceMonitor()
-        manager = MultitouchManager(deviceProviderFactory: { self.mockDevice })
+        manager = MultitouchManager(
+            deviceProviderFactory: { self.mockDevice }, eventTapSetup: { true })
         preferences = UserPreferences()
         controller = MenuBarController(multitouchManager: manager, preferences: preferences)
     }
@@ -214,7 +215,8 @@ final class MenuBarControllerTests: XCTestCase {
     func testControllerWithNilManagerState() {
         // Test with manager that hasn't been started
         let freshMock = MockDeviceMonitor()
-        let freshManager = MultitouchManager(deviceProviderFactory: { freshMock })
+        let freshManager = MultitouchManager(
+            deviceProviderFactory: { freshMock }, eventTapSetup: { true })
         let ctrl = MenuBarController(
             multitouchManager: freshManager, preferences: UserPreferences())
 
