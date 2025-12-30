@@ -1,0 +1,24 @@
+# FOSSA Configuration
+# https://github.com/fossas/fossa-cli/blob/master/docs/references/files/fossa-yml.md
+
+version: 3
+
+# Exclude build artifacts and dependency source checkouts
+paths:
+  exclude:
+    - build/SourcePackages/checkouts/
+    - .build/
+    - DerivedData/
+    - TestResults.xcresult/
+    - Pods/
+    - Carthage/
+
+# Analyze the Swift Package Manager dependencies
+project:
+  name: MiddleDrag
+
+targets:
+  only:
+    # Analyze SPM dependencies from the Package.resolved file
+    - type: swift
+      path: MiddleDrag.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
