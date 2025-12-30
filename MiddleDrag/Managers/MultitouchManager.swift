@@ -65,7 +65,12 @@ class MultitouchManager {
         guard !isMonitoring else { return }
 
         applyConfiguration()
-        setupEventTap()
+        let eventTapSuccess = setupEventTap()
+
+        if !eventTapSuccess {
+            Log.error("Failed to start: could not create event tap", category: .device)
+            return
+        }
 
         deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
@@ -124,7 +129,14 @@ class MultitouchManager {
 
         // Restart
         applyConfiguration()
-        setupEventTap()
+        let eventTapSuccess = setupEventTap()
+
+        if !eventTapSuccess {
+            Log.error("Failed to restart: could not create event tap", category: .device)
+            isMonitoring = false
+            isEnabled = false
+            return
+        }
 
         deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
@@ -169,7 +181,8 @@ class MultitouchManager {
 
     // MARK: - Event Tap
 
-    private func setupEventTap() {
+    @discardableResult
+    private func setupEventTap() -> Bool {
         // Build event mask for mouse events to intercept
         // We ONLY intercept mouse events - NOT gesture events
         // Intercepting gesture events (even just registering for them) causes
@@ -208,7 +221,7 @@ class MultitouchManager {
             )
         else {
             Log.warning("Could not create event tap", category: .device)
-            return
+            return false
         }
 
         eventTap = tap
@@ -220,6 +233,7 @@ class MultitouchManager {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        return true
     }
 
     private func teardownEventTap() {
