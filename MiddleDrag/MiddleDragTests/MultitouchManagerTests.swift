@@ -905,6 +905,77 @@ final class MultitouchManagerTests: XCTestCase {
         XCTAssertEqual(manager.configuration.minimumWindowHeight, 150)
     }
 
+    // MARK: - Sleep/Wake Restart Tests
+
+    func testRestartReconnectsDeviceMonitor() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+
+        manager.start()
+        XCTAssertEqual(mockDevice.startCallCount, 1)
+        XCTAssertTrue(manager.isMonitoring)
+        XCTAssertTrue(manager.isEnabled)
+
+        manager.restart()
+
+        // After restart, monitoring should still be active
+        XCTAssertTrue(manager.isMonitoring)
+        XCTAssertTrue(manager.isEnabled)
+        // Note: stopCount includes the stop during restart
+        XCTAssertEqual(mockDevice.stopCallCount, 1)
+
+        manager.stop()
+    }
+
+    func testRestartPreservesEnabledState() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+
+        manager.start()
+        XCTAssertTrue(manager.isEnabled)
+
+        // Disable monitoring
+        manager.toggleEnabled()
+        XCTAssertFalse(manager.isEnabled)
+
+        // Restart should preserve the disabled state
+        manager.restart()
+        XCTAssertFalse(manager.isEnabled)
+        XCTAssertTrue(manager.isMonitoring)
+
+        manager.stop()
+    }
+
+    func testRestartCleansUpActiveGesture() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(deviceProviderFactory: { mockDevice })
+        let recognizer = GestureRecognizer()
+
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Start a drag
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let setupExpectation = XCTestExpectation(description: "Setup")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 1.0)
+
+        // Restart should clean up the gesture state
+        manager.restart()
+
+        XCTAssertTrue(manager.isMonitoring)
+
+        manager.stop()
+    }
+
     // MARK: - Cleanup
 
     override func tearDown() {

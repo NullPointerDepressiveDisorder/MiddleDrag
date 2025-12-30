@@ -38,6 +38,10 @@ class MultitouchManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
+    // Sleep/wake observers for reinitializing after system wake
+    private var sleepObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
+
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
 
@@ -67,6 +71,24 @@ class MultitouchManager {
         deviceMonitor?.delegate = self
         deviceMonitor?.start()
 
+        // Observe sleep/wake to reinitialize device connections
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Log.info("System going to sleep", category: .device)
+        }
+
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Log.info("System woke from sleep, restarting monitoring", category: .device)
+            self?.restart()
+        }
+
         isMonitoring = true
         isEnabled = true
     }
@@ -75,6 +97,44 @@ class MultitouchManager {
     func stop() {
         guard isMonitoring else { return }
 
+        // Remove sleep/wake observers
+        if let observer = sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            sleepObserver = nil
+        }
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
+
+        internalStop()
+        isEnabled = false
+    }
+
+    /// Restart monitoring (used after sleep/wake)
+    func restart() {
+        Log.info("Restarting multitouch monitoring", category: .device)
+
+        // Store current state
+        let wasEnabled = isEnabled
+
+        // Stop without removing sleep/wake observers
+        internalStop()
+
+        // Restart
+        applyConfiguration()
+        setupEventTap()
+
+        deviceMonitor = deviceProviderFactory()
+        deviceMonitor?.delegate = self
+        deviceMonitor?.start()
+
+        isMonitoring = true
+        isEnabled = wasEnabled
+    }
+
+    /// Internal stop without removing sleep/wake observers
+    private func internalStop() {
         mouseGenerator.cancelDrag()
         gestureRecognizer.reset()
 
@@ -84,7 +144,6 @@ class MultitouchManager {
         teardownEventTap()
 
         isMonitoring = false
-        isEnabled = false
     }
 
     /// Toggle enabled state
