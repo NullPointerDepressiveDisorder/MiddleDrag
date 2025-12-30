@@ -34,9 +34,17 @@ class MultitouchManager {
     // Factory for creating device monitors (injectable for testing)
     private let deviceProviderFactory: () -> TouchDeviceProviding
 
+    // Factory for setting up event tap (injectable for testing)
+    // Returns true if setup succeeded, false otherwise
+    private var eventTapSetupFactory: (() -> Bool)!
+
     // Event tap for suppressing system-generated clicks during gestures
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+
+    // Sleep/wake observers for reinitializing after system wake
+    private var sleepObserver: NSObjectProtocol?
+    private var wakeObserver: NSObjectProtocol?
 
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
@@ -46,12 +54,29 @@ class MultitouchManager {
     /// Shared production instance
     static let shared = MultitouchManager()
 
-    /// Initialize with optional device provider factory for dependency injection
-    /// - Parameter deviceProviderFactory: Factory that creates TouchDeviceProviding instances.
-    ///                                    Defaults to creating real DeviceMonitor for production.
-    init(deviceProviderFactory: (() -> TouchDeviceProviding)? = nil) {
+    /// Initialize with optional factories for dependency injection
+    /// - Parameters:
+    ///   - deviceProviderFactory: Factory that creates TouchDeviceProviding instances.
+    ///                            Defaults to creating real DeviceMonitor for production.
+    ///   - eventTapSetup: Factory that sets up the event tap. Returns true on success.
+    ///                    Defaults to real setupEventTap() for production.
+    init(
+        deviceProviderFactory: (() -> TouchDeviceProviding)? = nil,
+        eventTapSetup: (() -> Bool)? = nil
+    ) {
         self.deviceProviderFactory = deviceProviderFactory ?? { DeviceMonitor() }
         gestureRecognizer.delegate = self
+
+        // Set up event tap factory after self is available
+        if let customSetup = eventTapSetup {
+            // Use provided mock for testing
+            self.eventTapSetupFactory = customSetup
+        } else {
+            // Use real setupEventTap for production - capture self weakly
+            self.eventTapSetupFactory = { [weak self] in
+                self?.setupEventTap() ?? false
+            }
+        }
     }
 
     // MARK: - Public Interface
@@ -61,11 +86,34 @@ class MultitouchManager {
         guard !isMonitoring else { return }
 
         applyConfiguration()
-        setupEventTap()
+        let eventTapSuccess = eventTapSetupFactory()
+
+        if !eventTapSuccess {
+            Log.error("Failed to start: could not create event tap", category: .device)
+            return
+        }
 
         deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
         deviceMonitor?.start()
+
+        // Observe sleep/wake to reinitialize device connections
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Log.info("System going to sleep", category: .device)
+        }
+
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Log.info("System woke from sleep, restarting monitoring", category: .device)
+            self?.restart()
+        }
 
         isMonitoring = true
         isEnabled = true
@@ -75,8 +123,63 @@ class MultitouchManager {
     func stop() {
         guard isMonitoring else { return }
 
+        // Remove sleep/wake observers
+        if let observer = sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            sleepObserver = nil
+        }
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
+
+        internalStop()
+        isEnabled = false
+    }
+
+    /// Restart monitoring (used after sleep/wake)
+    func restart() {
+        // Allow restart if either:
+        // 1. wakeObserver exists (normal production case after successful start)
+        // 2. isMonitoring is true (for test scenarios where event tap setup may fail)
+        // Using wakeObserver allows retry after failed restart (when isMonitoring=false)
+        // because internalStop() sets isMonitoring=false before setupEventTap() runs
+        guard wakeObserver != nil || isMonitoring else { return }
+        Log.info("Restarting multitouch monitoring", category: .device)
+
+        // Store current state
+        let wasEnabled = isEnabled
+
+        // Stop without removing sleep/wake observers
+        internalStop()
+
+        // Restart
+        applyConfiguration()
+        let eventTapSuccess = eventTapSetupFactory()
+
+        if !eventTapSuccess {
+            Log.error("Failed to restart: could not create event tap", category: .device)
+            isMonitoring = false
+            isEnabled = false
+            return
+        }
+
+        deviceMonitor = deviceProviderFactory()
+        deviceMonitor?.delegate = self
+        deviceMonitor?.start()
+
+        isMonitoring = true
+        isEnabled = wasEnabled
+    }
+
+    /// Internal stop without removing sleep/wake observers
+    private func internalStop() {
         mouseGenerator.cancelDrag()
         gestureRecognizer.reset()
+
+        // Reset gesture state flags
+        isActivelyDragging = false
+        isInThreeFingerGesture = false
 
         deviceMonitor?.stop()
         deviceMonitor = nil
@@ -84,7 +187,6 @@ class MultitouchManager {
         teardownEventTap()
 
         isMonitoring = false
-        isEnabled = false
     }
 
     /// Toggle enabled state
@@ -105,7 +207,8 @@ class MultitouchManager {
 
     // MARK: - Event Tap
 
-    private func setupEventTap() {
+    @discardableResult
+    private func setupEventTap() -> Bool {
         // Build event mask for mouse events to intercept
         // We ONLY intercept mouse events - NOT gesture events
         // Intercepting gesture events (even just registering for them) causes
@@ -144,7 +247,7 @@ class MultitouchManager {
             )
         else {
             Log.warning("Could not create event tap", category: .device)
-            return
+            return false
         }
 
         eventTap = tap
@@ -156,6 +259,7 @@ class MultitouchManager {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        return true
     }
 
     private func teardownEventTap() {
