@@ -48,6 +48,11 @@ jobs:
               run: |
                   sentry-cli debug-files upload --include-sources dSYM/
 
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
             - name: Create Sentry Release
               env:
                   SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

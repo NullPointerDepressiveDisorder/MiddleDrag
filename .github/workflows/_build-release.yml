@@ -88,3 +88,4 @@ jobs:
                   name: ${{ steps.artifact.outputs.name }}-dSYM
                   path: build/Build/Products/Release/MiddleDrag.app.dSYM
                   retention-days: 1
+                  if-no-files-found: warn
