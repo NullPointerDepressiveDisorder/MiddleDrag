@@ -87,12 +87,15 @@ jobs:
       - name: FOSSA Scan
         uses: fossas/fossa-action@main
         with:
-          project: MiddleDrag
           api-key: ${{ secrets.FOSSA_API_KEY }}
+
+      - name: Wait for FOSSA Analysis Processing
+        run: |
+          echo "⏳ Waiting 60s for FOSSA to process the analysis..."
+          sleep 60
 
       - name: FOSSA Test
         uses: fossas/fossa-action@main
-        id: fossa-test
         with:
           api-key: ${{ secrets.FOSSA_API_KEY }}
           run-tests: true
