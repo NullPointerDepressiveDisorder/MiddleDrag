@@ -1,0 +1,91 @@
+# Reusable workflow for publishing releases
+name: Publish Release
+
+on:
+    workflow_call:
+        inputs:
+            version:
+                description: Version number to publish
+                required: true
+                type: string
+            artifact-name:
+                description: Name of the build artifact
+                required: true
+                type: string
+            commit-sha:
+                description: Commit SHA for the release
+                required: true
+                type: string
+
+jobs:
+    publish:
+        name: Publish GitHub Release
+        runs-on: macos-15
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ inputs.commit-sha }}
+                  fetch-depth: 0
+
+            - name: Download Build Artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: ${{ inputs.artifact-name }}
+                  path: .
+
+            - name: Generate SHA256
+              id: sha
+              run: |
+                  SHA=$(shasum -a 256 ${{ inputs.artifact-name }}.zip | awk '{print $1}')
+                  echo "SHA256=$SHA" >> $GITHUB_OUTPUT
+                  echo "SHA256: $SHA"
+
+            - name: Extract Tag Message
+              id: tag_message
+              run: |
+                  VERSION="v${{ inputs.version }}"
+                  # Get tag annotation message (excluding the header lines)
+                  TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION" | sed '/^-----BEGIN PGP SIGNATURE-----$/,$d')
+                  # Trim whitespace
+                  TAG_MSG=$(echo "$TAG_MSG" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+                  # Use a delimiter for multiline output
+                  echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
+                  echo "$TAG_MSG" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+                  # Set flag based on whether tag message is empty
+                  if [ -z "$TAG_MSG" ]; then
+                    echo "GENERATE_NOTES=true" >> $GITHUB_OUTPUT
+                    echo "HAS_MESSAGE=false" >> $GITHUB_OUTPUT
+                  else
+                    echo "GENERATE_NOTES=false" >> $GITHUB_OUTPUT
+                    echo "HAS_MESSAGE=true" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Create Release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: v${{ inputs.version }}
+                  name: v${{ inputs.version }}
+                  target_commitish: ${{ inputs.commit-sha }}
+                  generate_release_notes: ${{ steps.tag_message.outputs.GENERATE_NOTES }}
+                  append_body: true
+                  body: |
+                      ${{ steps.tag_message.outputs.HAS_MESSAGE == 'true' && steps.tag_message.outputs.MESSAGE || '' }}
+                      ---
+                      **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
+                  files: ${{ inputs.artifact-name }}.zip
+
+            - name: Trigger Homebrew Update
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  curl -f -X POST \
+                    -H "Accept: application/vnd.github.v3+json" \
+                    -H "Authorization: Bearer $GH_TOKEN" \
+                    https://api.github.com/repos/${{ github.repository }}/dispatches \
+                    -d "{\"event_type\":\"homebrew_release\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
+                  echo "✓ Triggered Homebrew update workflow"

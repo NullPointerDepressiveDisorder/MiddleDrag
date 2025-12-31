@@ -1,0 +1,87 @@
+# Reusable workflow for building release artifacts
+name: Build Release
+
+on:
+    workflow_call:
+        inputs:
+            version:
+                description: Version number to build
+                required: true
+                type: string
+            commit-sha:
+                description: Commit SHA to build from
+                required: true
+                type: string
+        outputs:
+            artifact-name:
+                description: Name of the uploaded artifact
+                value: ${{ jobs.build.outputs.artifact-name }}
+
+jobs:
+    build:
+        name: Build Release Artifact
+        runs-on: macos-15
+        outputs:
+            artifact-name: ${{ steps.artifact.outputs.name }}
+
+        steps:
+            - name: Generate App Token
+              id: app-token
+              uses: actions/create-github-app-token@v1
+              with:
+                  app-id: ${{ vars.RELEASER_APP_ID }}
+                  private-key: ${{ secrets.RELEASER_APP_KEY }}
+
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  token: ${{ steps.app-token.outputs.token }}
+                  ref: ${{ inputs.commit-sha }}
+                  fetch-depth: 0
+
+            - name: Verify Xcode version
+              run: |
+                  xcodebuild -version
+                  swift --version
+
+            - name: Cache Swift Package Manager dependencies
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      build/SourcePackages
+                      build/.build
+                  key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
+                  restore-keys: |
+                      spm-${{ runner.os }}-
+
+            - name: Build Release
+              uses: ./.github/actions/xcodebuild
+              with:
+                  configuration: Release
+                  derived-data-path: build
+                  universal-binary: "true"
+
+            - name: Create App Zip
+              id: artifact
+              run: |
+                  VERSION="${{ inputs.version }}"
+                  ARTIFACT_NAME="MiddleDrag-${VERSION}"
+
+                  cd build/Build/Products/Release
+                  zip -r "${GITHUB_WORKSPACE}/${ARTIFACT_NAME}.zip" MiddleDrag.app
+
+                  echo "name=${ARTIFACT_NAME}" >> $GITHUB_OUTPUT
+
+            - name: Upload Build Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ steps.artifact.outputs.name }}
+                  path: ${{ steps.artifact.outputs.name }}.zip
+                  retention-days: 1
+
+            - name: Upload dSYM Artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ steps.artifact.outputs.name }}-dSYM
+                  path: build/Build/Products/Release/MiddleDrag.app.dSYM
+                  retention-days: 1

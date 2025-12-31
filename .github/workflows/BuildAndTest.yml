@@ -5,7 +5,7 @@ permissions:
 on:
   push:
     branches:
-      - 'main'
+      - "main"
   pull_request:
 
 jobs:
@@ -28,28 +28,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build
-        run: |
-          xcodebuild -scheme MiddleDrag \
-            -project MiddleDrag.xcodeproj \
-            -configuration Debug \
-            -destination "platform=macOS" \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+        uses: ./.github/actions/xcodebuild
+        with:
+          configuration: Debug
 
       - name: Run Tests with Coverage
-        run: |
-          xcodebuild test \
-            -scheme MiddleDrag \
-            -project MiddleDrag.xcodeproj \
-            -destination "platform=macOS" \
-            -enableCodeCoverage YES \
-            -resultBundlePath TestResults.xcresult \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-          || echo "Tests completed (some may have failed)"
+        uses: ./.github/actions/xcodebuild
+        with:
+          configuration: Debug
+          run-tests: "true"
+          enable-coverage: "true"
+          result-bundle-path: TestResults.xcresult
 
       - name: Install and cache xcresultparser
         uses: gerlero/brew-install@main

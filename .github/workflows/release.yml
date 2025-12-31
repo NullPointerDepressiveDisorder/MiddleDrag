@@ -19,252 +19,41 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    name: Get Version
+    uses: ./.github/workflows/_get-version.yml
+    with:
+      version: ${{ inputs.version }}
+      notes: ${{ inputs.notes }}
+    secrets: inherit
+
   build:
-    name: Build and Release
-    runs-on: macos-15
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
+    name: Build
+    needs: version
+    uses: ./.github/workflows/_build-release.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      commit-sha: ${{ needs.version.outputs.new-sha }}
+    secrets: inherit
 
-    steps:
-      - name: Generate App Token
-        id: app-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ vars.RELEASER_APP_ID }}
-          private-key: ${{ secrets.RELEASER_APP_KEY }}
+  sentry:
+    name: Sentry
+    needs: [version, build]
+    uses: ./.github/workflows/_sentry-upload.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+    secrets:
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+      SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
 
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          fetch-depth: 0
-
-      - name: Setup Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Verify Xcode version
-        run: |
-          xcodebuild -version
-          swift --version
-
-      - name: Bump Version
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
-            VERSION="${VERSION#v}"
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            # For tag pushes, extract version from the tag
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          else
-            # workflow_dispatch without version input - use latest tag
-            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [ -z "$VERSION" ]; then
-              echo "Error: No version input provided and no existing tags found."
-              exit 1
-            fi
-            VERSION="${VERSION#v}"
-            echo "Using version from latest tag: $VERSION"
-          fi
-
-          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
-
-          if [ "$VERSION" != "$PROJECT_VERSION" ]; then
-            echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping..."
-
-            # Determine the branch to update
-            if [[ "$GITHUB_REF" == refs/heads/* ]]; then
-              BRANCH_NAME=${GITHUB_REF#refs/heads/}
-            else
-              # For tag pushes, use main branch
-              BRANCH_NAME="main"
-              echo "Tag push detected, using $BRANCH_NAME"
-            fi
-
-            git fetch origin "$BRANCH_NAME"
-            git checkout "$BRANCH_NAME"
-            git reset --hard "origin/$BRANCH_NAME"
-
-            NOTES="${{ inputs.notes }}"
-            ./bump-version.sh "$VERSION" "$NOTES"
-
-            # Rebase on latest main in case of new commits
-            git fetch origin "$BRANCH_NAME"
-            git rebase "origin/$BRANCH_NAME"
-
-            # Re-create the tag to point to HEAD after rebase
-            git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
-
-            git push origin "$BRANCH_NAME" --force-with-lease
-            git push origin "v$VERSION" --force
-
-            # Capture the new commit SHA after amendment
-            echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
-          else
-            echo "Version matches.  Proceeding..."
-            echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
-          fi
-
-      - name: Re-checkout amended commit
-        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
-        uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          ref: ${{ env.NEW_SHA }}
-          fetch-depth: 0
-
-      - name: Get version
-        id: version
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
-            VERSION="${VERSION#v}"
-          elif [ "${{ github.event_name }}" == "push" ]; then
-            VERSION="${GITHUB_REF#refs/tags/v}"
-          else
-            # Use latest git tag (consistent with Bump Version step)
-            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-            if [ -z "$VERSION" ]; then
-              echo "Error: No version found. No tags exist."
-              exit 1
-            fi
-            echo "Using version from latest tag: $VERSION"
-            VERSION="${VERSION#v}"
-          fi
-
-          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
-          if [ "$VERSION" != "$PROJECT_VERSION" ]; then
-            echo "Error: Version mismatch! Workflow: $VERSION, Xcode: $PROJECT_VERSION"
-            exit 1
-          fi
-
-          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          echo "Using version: ${VERSION}"
-
-      - name: Cache Swift Package Manager dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            build/SourcePackages
-            build/.build
-          key: spm-${{ runner.os }}-${{ hashFiles('**/Package.resolved') }}
-          restore-keys: |
-            spm-${{ runner.os }}-
-
-      - name: Build Release
-        run: |
-          xcodebuild -scheme MiddleDrag \
-            -project MiddleDrag.xcodeproj \
-            -configuration Release \
-            -derivedDataPath build \
-            -destination "platform=macOS" \
-            ARCHS="arm64 x86_64" \
-            ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_IDENTITY="-" \
-            CODE_SIGNING_REQUIRED=NO \
-            OTHER_LDFLAGS="-F/System/Library/PrivateFrameworks -framework MultitouchSupport -framework CoreFoundation -framework CoreGraphics" \
-            FRAMEWORK_SEARCH_PATHS="/System/Library/PrivateFrameworks" \
-            build
-
-      - name: Setup Sentry CLI
-        uses: mathieu-bour/setup-sentry-cli@v2
-        with:
-          version: latest
-
-      - name: Create App Zip & Upload dSYM to Sentry
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        run: |
-          # Run in parallel
-          wait_all() {
-            local failed=0
-            for pid in "$@"; do
-              wait "$pid" || failed=1
-            done
-            return $failed
-          }
-
-          VERSION="${{ steps.version.outputs.VERSION }}"
-
-          (cd build/Build/Products/Release && zip -r "$GITHUB_WORKSPACE/MiddleDrag-${VERSION}.zip" MiddleDrag.app) &
-          ZIP_PID=$!
-          sentry-cli debug-files upload --include-sources build/Build/Products/Release/ &
-          SENTRY_PID=$!
-
-          wait_all "$ZIP_PID" "$SENTRY_PID" || { echo "❌ A background job failed"; exit 1; }
-
-      - name: Create Sentry release
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        run: |
-          VERSION="v${{ steps.version.outputs.VERSION }}"
-          sentry-cli releases new "$VERSION"
-          sentry-cli releases set-commits "$VERSION" --auto
-          sentry-cli releases finalize "$VERSION"
-          sentry-cli releases deploys "$VERSION" new -e production
-
-      - name: Generate SHA256
-        id: sha
-        run: |
-          SHA=$(shasum -a 256 MiddleDrag-${{ steps.version.outputs.VERSION }}.zip | awk '{print $1}')
-          echo "SHA256=$SHA" >> $GITHUB_OUTPUT
-          echo "SHA256: $SHA"
-
-      - name: Extract Tag Message
-        id: tag_message
-        run: |
-          VERSION="v${{ steps.version.outputs.VERSION }}"
-          # Get tag annotation message (excluding the header lines)
-          TAG_MSG=$(git tag -l --format='%(contents)' "$VERSION" | sed '/^-----BEGIN PGP SIGNATURE-----$/,$d')
-          # Trim whitespace
-          TAG_MSG=$(echo "$TAG_MSG" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-          # Use a delimiter for multiline output
-          echo "MESSAGE<<EOF" >> $GITHUB_OUTPUT
-          echo "$TAG_MSG" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          # Set flag based on whether tag message is empty
-          if [ -z "$TAG_MSG" ]; then
-            echo "GENERATE_NOTES=true" >> $GITHUB_OUTPUT
-            echo "HAS_MESSAGE=false" >> $GITHUB_OUTPUT
-          else
-            echo "GENERATE_NOTES=false" >> $GITHUB_OUTPUT
-            echo "HAS_MESSAGE=true" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create Release
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.VERSION }}
-          name: v${{ steps.version.outputs.VERSION }}
-          target_commitish: ${{ env.NEW_SHA || github.sha }}
-          generate_release_notes: ${{ steps.tag_message.outputs.GENERATE_NOTES }}
-          append_body: true
-          body: |
-            ${{ steps.tag_message.outputs.HAS_MESSAGE == 'true' && steps.tag_message.outputs.MESSAGE || '' }}
-            ---
-            **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
-          files: MiddleDrag-${{ steps.version.outputs.VERSION }}.zip
-
-      - name: Trigger Homebrew Update
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        env:
-          VERSION: ${{ steps.version.outputs.VERSION }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          curl -f -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d "{\"event_type\":\"homebrew_release\",\"client_payload\":{\"version\":\"$VERSION\"}}"
-          echo "✓ Triggered Homebrew update workflow"
+  publish:
+    name: Publish
+    needs: [version, build, sentry]
+    uses: ./.github/workflows/_publish-release.yml
+    with:
+      version: ${{ needs.version.outputs.version }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      commit-sha: ${{ needs.version.outputs.new-sha }}
+    secrets: inherit

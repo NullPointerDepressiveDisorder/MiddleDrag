@@ -1,0 +1,94 @@
+name: Xcodebuild
+description: Build macOS app with xcodebuild
+
+inputs:
+  scheme:
+    description: Xcode scheme to build
+    required: false
+    default: MiddleDrag
+  project:
+    description: Xcode project file
+    required: false
+    default: MiddleDrag.xcodeproj
+  configuration:
+    description: Build configuration (Debug or Release)
+    required: false
+    default: Debug
+  destination:
+    description: Build destination
+    required: false
+    default: platform=macOS
+  enable-coverage:
+    description: Enable code coverage
+    required: false
+    default: "false"
+  result-bundle-path:
+    description: Path for test result bundle (only used with enable-coverage)
+    required: false
+    default: ""
+  derived-data-path:
+    description: Derived data path for build output
+    required: false
+    default: ""
+  universal-binary:
+    description: Build universal binary (arm64 + x86_64)
+    required: false
+    default: "false"
+  run-tests:
+    description: Run tests instead of just building
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Build or Test
+      shell: bash
+      run: |
+        XCODE_CMD="xcodebuild"
+
+        # Determine if running tests or building
+        if [ "${{ inputs.run-tests }}" == "true" ]; then
+          XCODE_CMD="$XCODE_CMD test"
+        else
+          XCODE_CMD="$XCODE_CMD build"
+        fi
+
+        # Base arguments
+        XCODE_CMD="$XCODE_CMD -scheme ${{ inputs.scheme }}"
+        XCODE_CMD="$XCODE_CMD -project ${{ inputs.project }}"
+        XCODE_CMD="$XCODE_CMD -configuration ${{ inputs.configuration }}"
+        XCODE_CMD="$XCODE_CMD -destination \"${{ inputs.destination }}\""
+
+        # Code signing (disabled for CI)
+        XCODE_CMD="$XCODE_CMD CODE_SIGN_IDENTITY=\"\""
+        XCODE_CMD="$XCODE_CMD CODE_SIGNING_REQUIRED=NO"
+        XCODE_CMD="$XCODE_CMD CODE_SIGNING_ALLOWED=NO"
+
+        # Optional: Coverage
+        if [ "${{ inputs.enable-coverage }}" == "true" ]; then
+          XCODE_CMD="$XCODE_CMD -enableCodeCoverage YES"
+          if [ -n "${{ inputs.result-bundle-path }}" ]; then
+            XCODE_CMD="$XCODE_CMD -resultBundlePath ${{ inputs.result-bundle-path }}"
+          fi
+        fi
+
+        # Optional: Derived data path
+        if [ -n "${{ inputs.derived-data-path }}" ]; then
+          XCODE_CMD="$XCODE_CMD -derivedDataPath ${{ inputs.derived-data-path }}"
+        fi
+
+        # Optional: Universal binary
+        if [ "${{ inputs.universal-binary }}" == "true" ]; then
+          XCODE_CMD="$XCODE_CMD ARCHS=\"arm64 x86_64\""
+          XCODE_CMD="$XCODE_CMD ONLY_ACTIVE_ARCH=NO"
+        fi
+
+        # Release-specific: Private frameworks for MultitouchSupport
+        if [ "${{ inputs.configuration }}" == "Release" ]; then
+          XCODE_CMD="$XCODE_CMD OTHER_LDFLAGS=\"-F/System/Library/PrivateFrameworks -framework MultitouchSupport -framework CoreFoundation -framework CoreGraphics\""
+          XCODE_CMD="$XCODE_CMD FRAMEWORK_SEARCH_PATHS=\"/System/Library/PrivateFrameworks\""
+        fi
+
+        echo "Running: $XCODE_CMD"
+        eval $XCODE_CMD
