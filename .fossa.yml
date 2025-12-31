@@ -3,10 +3,13 @@
 
 version: 3
 
-project:
-  name: MiddleDrag
+# Omit project name to use auto-detected GitHub URL (matches quick import)
 
-# Let FOSSA auto-discover Package.resolved
+targets:
+  only:
+    - type: swift
+      path: MiddleDrag.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
+
 # Exclude directories that shouldn't be scanned
 paths:
   exclude:
