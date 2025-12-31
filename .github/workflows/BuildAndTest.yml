@@ -81,12 +81,23 @@ jobs:
     runs-on: ubuntu-latest
     name: FOSSA Scan
     steps:
-      - uses: actions/checkout@v4
-      - id: fossa
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: FOSSA Scan
         uses: fossas/fossa-action@main
         with:
           project: MiddleDrag
           api-key: ${{ secrets.FOSSA_API_KEY }}
+
+      - name: FOSSA Test
+        uses: fossas/fossa-action@main
+        id: fossa-test
+        with:
+          api-key: ${{ secrets.FOSSA_API_KEY }}
           run-tests: true
-          generate-report: markdown
-      - run: echo '${{ steps.fossa.outputs.report }}' >> $GITHUB_STEP_SUMMARY
+
+      - name: Add FOSSA Report to Summary
+        run: |
+          echo "## FOSSA License Compliance" >> $GITHUB_STEP_SUMMARY
+          echo "✅ FOSSA scan completed successfully" >> $GITHUB_STEP_SUMMARY
