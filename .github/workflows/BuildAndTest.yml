@@ -75,3 +75,18 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  fossa-scan:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    name: FOSSA Scan
+    steps:
+      - uses: actions/checkout@v4
+      - id: fossa
+        uses: fossas/fossa-action@main
+        with:
+          project: MiddleDrag
+          api-key: ${{ secrets.FOSSA_API_KEY }}
+          run-tests: true
+          generate-report: markdown
+      - run: echo '${{ steps.fossa.outputs.report }}' >> $GITHUB_STEP_SUMMARY
