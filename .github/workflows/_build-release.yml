@@ -17,6 +17,9 @@ on:
                 description: Name of the uploaded artifact
                 value: ${{ jobs.build.outputs.artifact-name }}
 
+permissions:
+    contents: read
+
 jobs:
     build:
         name: Build Release Artifact

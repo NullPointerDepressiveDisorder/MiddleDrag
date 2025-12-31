@@ -20,6 +20,9 @@ on:
             SENTRY_PROJECT:
                 required: true
 
+permissions:
+    contents: read
+
 jobs:
     upload:
         name: Upload to Sentry
