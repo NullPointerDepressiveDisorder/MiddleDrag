@@ -1,0 +1,118 @@
+# Reusable workflow for version detection and bumping
+name: Get Version
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version number (e.g., 1.0.0) - optional
+        required: false
+        type: string
+      notes:
+        description: Version notes - optional
+        required: false
+        type: string
+    outputs:
+      version:
+        description: The resolved version number
+        value: ${{ jobs.resolve.outputs.version }}
+      new-sha:
+        description: The commit SHA after any version bump
+        value: ${{ jobs.resolve.outputs.new-sha }}
+
+permissions:
+  contents: write
+
+jobs:
+  resolve:
+    name: Resolve Version
+    runs-on: macos-15
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+      new-sha: ${{ steps.bump.outputs.NEW_SHA }}
+
+    steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.RELEASER_APP_ID }}
+          private-key: ${{ secrets.RELEASER_APP_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine Version
+        id: determine
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+          elif [ "${{ github.event_name }}" == "push" ]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            # workflow_dispatch without version input - use latest tag
+            VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+            if [ -z "$VERSION" ]; then
+              echo "Error: No version input provided and no existing tags found."
+              exit 1
+            fi
+            VERSION="${VERSION#v}"
+            echo "Using version from latest tag: $VERSION"
+          fi
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Bump Version if Needed
+        id: bump
+        run: |
+          VERSION="${{ steps.determine.outputs.VERSION }}"
+          PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
+
+          if [ "$VERSION" != "$PROJECT_VERSION" ]; then
+            echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping..."
+
+            # Determine the branch to update
+            if [[ "$GITHUB_REF" == refs/heads/* ]]; then
+              BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            else
+              BRANCH_NAME="main"
+              echo "Tag push detected, using $BRANCH_NAME"
+            fi
+
+            git fetch origin "$BRANCH_NAME"
+            git checkout "$BRANCH_NAME"
+            git reset --hard "origin/$BRANCH_NAME"
+
+            NOTES="${{ inputs.notes }}"
+            ./bump-version.sh "$VERSION" "$NOTES"
+
+            # Rebase on latest main in case of new commits
+            git fetch origin "$BRANCH_NAME"
+            git rebase "origin/$BRANCH_NAME"
+
+            # Re-create the tag to point to HEAD after rebase
+            git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
+
+            git push origin "$BRANCH_NAME" --force-with-lease
+            git push origin "v$VERSION" --force
+
+            echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          else
+            echo "Version matches. Proceeding..."
+            echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Output Final Version
+        id: version
+        run: |
+          VERSION="${{ steps.determine.outputs.VERSION }}"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
