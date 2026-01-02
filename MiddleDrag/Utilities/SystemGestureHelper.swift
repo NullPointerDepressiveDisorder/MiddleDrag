@@ -1,13 +1,60 @@
 import Foundation
 
+// MARK: - Protocols for Dependency Injection
+
+/// Protocol for reading trackpad settings, enabling testability
+protocol TrackpadSettingsProvider {
+    func getSetting(forKey key: String, domain: String) -> Int?
+}
+
+/// Protocol for running shell processes, enabling testability
+protocol ProcessRunner {
+    func run(executable: String, arguments: [String]) -> Bool
+}
+
+// MARK: - Default Implementations
+
+/// Default implementation using UserDefaults
+class DefaultTrackpadSettingsProvider: TrackpadSettingsProvider {
+    func getSetting(forKey key: String, domain: String) -> Int? {
+        let defaults = UserDefaults(suiteName: domain)
+        return defaults?.object(forKey: key) as? Int
+    }
+}
+
+/// Default implementation using Process
+class DefaultProcessRunner: ProcessRunner {
+    func run(executable: String, arguments: [String]) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0
+        } catch {
+            return false
+        }
+    }
+}
+
 /// Helper for detecting and configuring macOS system gesture settings
 /// to prevent conflicts with MiddleDrag's three-finger gestures.
 class SystemGestureHelper {
 
+    // MARK: - Dependency Injection
+
+    /// Injectable settings provider for testing
+    static var settingsProvider: TrackpadSettingsProvider = DefaultTrackpadSettingsProvider()
+
+    /// Injectable process runner for testing
+    static var processRunner: ProcessRunner = DefaultProcessRunner()
+
     // MARK: - Constants
 
     /// Trackpad settings domain
-    private static let trackpadDomain = "com.apple.AppleMultitouchTrackpad"
+    static let trackpadDomain = "com.apple.AppleMultitouchTrackpad"
 
     /// Trackpad gesture setting keys
     enum TrackpadKey: String, CaseIterable {
@@ -38,13 +85,7 @@ class SystemGestureHelper {
     /// - Parameter key: The trackpad setting key to read
     /// - Returns: The integer value, or nil if not found
     static func getTrackpadSetting(_ key: TrackpadKey) -> Int? {
-        let defaults = UserDefaults(suiteName: trackpadDomain)
-        let value = defaults?.object(forKey: key.rawValue)
-
-        if let intValue = value as? Int {
-            return intValue
-        }
-        return nil
+        return settingsProvider.getSetting(forKey: key.rawValue, domain: trackpadDomain)
     }
 
     /// Returns a dictionary of all current trackpad gesture settings
@@ -98,32 +139,15 @@ class SystemGestureHelper {
     ///   - value: The integer value to set
     /// - Returns: true if the command succeeded
     private static func writeTrackpadSetting(_ key: TrackpadKey, value: Int) -> Bool {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        process.arguments = ["write", trackpadDomain, key.rawValue, "-int", String(value)]
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            Log.error("Failed to write trackpad setting: \(error)", category: .app)
-            return false
-        }
+        return processRunner.run(
+            executable: "/usr/bin/defaults",
+            arguments: ["write", trackpadDomain, key.rawValue, "-int", String(value)]
+        )
     }
 
     /// Restart the Dock process to apply trackpad setting changes
     static func restartDock() {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/killall")
-        process.arguments = ["Dock"]
-
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            Log.error("Failed to restart Dock: \(error)", category: .app)
-        }
+        _ = processRunner.run(executable: "/usr/bin/killall", arguments: ["Dock"])
     }
 
     // MARK: - Description
