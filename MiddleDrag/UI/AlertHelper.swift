@@ -1,9 +1,36 @@
 import Cocoa
 
+// MARK: - Protocols for Dependency Injection
+
+/// Protocol for presenting alerts and opening URLs, enabling testability
+protocol AlertPresenter {
+    func runModal(_ alert: NSAlert) -> NSApplication.ModalResponse
+    func openURL(_ url: URL)
+}
+
+/// Default implementation using NSAlert and NSWorkspace
+class DefaultAlertPresenter: AlertPresenter {
+    func runModal(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        return alert.runModal()
+    }
+
+    func openURL(_ url: URL) {
+        NSWorkspace.shared.open(url)
+    }
+}
+
 /// Helper for displaying alerts and dialogs
 class AlertHelper {
 
-    static func showAbout() {
+    // MARK: - Dependency Injection
+
+    /// Injectable presenter for testing
+    static var presenter: AlertPresenter = DefaultAlertPresenter()
+
+    // MARK: - Alert Configuration (Testable)
+
+    /// Creates and returns a configured About alert without presenting it
+    static func createAboutAlert() -> NSAlert {
         let version =
             Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
 
@@ -34,16 +61,11 @@ class AlertHelper {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
         alert.addButton(withTitle: "Open GitHub")
-
-        if alert.runModal() == .alertSecondButtonReturn {
-            if let url = URL(string: "https://github.com/NullPointerDepressiveDisorder/MiddleDrag")
-            {
-                NSWorkspace.shared.open(url)
-            }
-        }
+        return alert
     }
 
-    static func showQuickSetup() {
+    /// Creates and returns a configured Quick Setup alert without presenting it
+    static func createQuickSetupAlert() -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "MiddleDrag Quick Setup"
         alert.informativeText = """
@@ -62,14 +84,11 @@ class AlertHelper {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Got it!")
         alert.addButton(withTitle: "Open Trackpad Settings")
-
-        if alert.runModal() == .alertSecondButtonReturn {
-            openTrackpadSettings()
-        }
+        return alert
     }
 
-    /// Show dialog for configuring system gestures when they're already optimal
-    static func showGestureConfigurationAlreadyOptimal() {
+    /// Creates and returns a configured Already Optimal alert without presenting it
+    static func createGestureConfigurationAlreadyOptimalAlert() -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "System Gestures Already Configured"
         alert.informativeText = """
@@ -79,12 +98,11 @@ class AlertHelper {
             """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
-        alert.runModal()
+        return alert
     }
 
-    /// Show dialog explaining gesture conflict and offering to apply changes
-    /// - Returns: true if user wants to apply the recommended changes
-    static func showGestureConfigurationPrompt() -> Bool {
+    /// Creates and returns a configured Gesture Configuration Prompt alert without presenting it
+    static func createGestureConfigurationPromptAlert() -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Configure System Gestures"
         alert.informativeText = """
@@ -103,19 +121,11 @@ class AlertHelper {
         alert.addButton(withTitle: "Apply Changes")
         alert.addButton(withTitle: "Open Trackpad Settings")
         alert.addButton(withTitle: "Cancel")
-
-        let response = alert.runModal()
-
-        if response == .alertSecondButtonReturn {
-            openTrackpadSettings()
-            return false
-        }
-
-        return response == .alertFirstButtonReturn
+        return alert
     }
 
-    /// Show success feedback after applying changes
-    static func showGestureConfigurationSuccess() {
+    /// Creates and returns a configured Success alert without presenting it
+    static func createGestureConfigurationSuccessAlert() -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Settings Applied"
         alert.informativeText = """
@@ -129,11 +139,11 @@ class AlertHelper {
             """
         alert.alertStyle = .informational
         alert.addButton(withTitle: "OK")
-        alert.runModal()
+        return alert
     }
 
-    /// Show failure feedback if changes couldn't be applied
-    static func showGestureConfigurationFailure() {
+    /// Creates and returns a configured Failure alert without presenting it
+    static func createGestureConfigurationFailureAlert() -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Failed to Apply Settings"
         alert.informativeText = """
@@ -147,15 +157,74 @@ class AlertHelper {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open Trackpad Settings")
         alert.addButton(withTitle: "Cancel")
+        return alert
+    }
 
-        if alert.runModal() == .alertFirstButtonReturn {
+    // MARK: - URL Constants
+
+    /// GitHub project URL
+    static let gitHubURL = URL(
+        string: "https://github.com/NullPointerDepressiveDisorder/MiddleDrag")
+
+    /// Trackpad settings URL
+    static let trackpadSettingsURL = URL(
+        string: "x-apple.systempreferences:com.apple.preference.trackpad")
+
+    // MARK: - Public Methods (Present Alerts)
+
+    static func showAbout() {
+        let alert = createAboutAlert()
+        if presenter.runModal(alert) == .alertSecondButtonReturn {
+            if let url = gitHubURL {
+                presenter.openURL(url)
+            }
+        }
+    }
+
+    static func showQuickSetup() {
+        let alert = createQuickSetupAlert()
+        if presenter.runModal(alert) == .alertSecondButtonReturn {
+            openTrackpadSettings()
+        }
+    }
+
+    /// Show dialog for configuring system gestures when they're already optimal
+    static func showGestureConfigurationAlreadyOptimal() {
+        let alert = createGestureConfigurationAlreadyOptimalAlert()
+        _ = presenter.runModal(alert)
+    }
+
+    /// Show dialog explaining gesture conflict and offering to apply changes
+    /// - Returns: true if user wants to apply the recommended changes
+    static func showGestureConfigurationPrompt() -> Bool {
+        let alert = createGestureConfigurationPromptAlert()
+        let response = presenter.runModal(alert)
+
+        if response == .alertSecondButtonReturn {
+            openTrackpadSettings()
+            return false
+        }
+
+        return response == .alertFirstButtonReturn
+    }
+
+    /// Show success feedback after applying changes
+    static func showGestureConfigurationSuccess() {
+        let alert = createGestureConfigurationSuccessAlert()
+        _ = presenter.runModal(alert)
+    }
+
+    /// Show failure feedback if changes couldn't be applied
+    static func showGestureConfigurationFailure() {
+        let alert = createGestureConfigurationFailureAlert()
+        if presenter.runModal(alert) == .alertFirstButtonReturn {
             openTrackpadSettings()
         }
     }
 
     private static func openTrackpadSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.trackpad") {
-            NSWorkspace.shared.open(url)
+        if let url = trackpadSettingsURL {
+            presenter.openURL(url)
         }
     }
 }
