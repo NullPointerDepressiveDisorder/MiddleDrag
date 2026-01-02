@@ -161,13 +161,14 @@ class MenuBarController: NSObject {
         let item = NSMenuItem(title: "Advanced", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
 
-        // Add advanced options
-        submenu.addItem(
-            createAdvancedMenuItem(
-                title: "Block System Gestures",
-                isOn: preferences.blockSystemGestures,
-                action: #selector(toggleSystemGestureBlocking)
-            ))
+        // Add system gesture configuration option
+        let gestureItem = NSMenuItem(
+            title: "Configure System Gestures...",
+            action: #selector(configureSystemGestures),
+            keyEquivalent: ""
+        )
+        gestureItem.target = self
+        submenu.addItem(gestureItem)
 
         submenu.addItem(NSMenuItem.separator())
 
@@ -391,20 +392,21 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleSystemGestureBlocking() {
-        preferences.blockSystemGestures.toggle()
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.blockSystemGestures = preferences.blockSystemGestures
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()  // Rebuild to update checkmark
-
-        if preferences.blockSystemGestures {
-            showSystemGestureWarning()
+    @objc private func configureSystemGestures() {
+        // Check if settings are already optimal
+        if !SystemGestureHelper.hasConflictingSettings() {
+            AlertHelper.showGestureConfigurationAlreadyOptimal()
+            return
         }
 
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+        // Show prompt and apply if user confirms
+        if AlertHelper.showGestureConfigurationPrompt() {
+            if SystemGestureHelper.applyRecommendedSettings() {
+                AlertHelper.showGestureConfigurationSuccess()
+            } else {
+                AlertHelper.showGestureConfigurationFailure()
+            }
+        }
     }
 
     // MARK: - Palm Rejection Actions
@@ -558,10 +560,6 @@ class MenuBarController: NSObject {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
-    }
-
-    private func showSystemGestureWarning() {
-        AlertHelper.showSystemGestureWarning()
     }
 }
 

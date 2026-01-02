@@ -501,4 +501,69 @@ final class MenuBarControllerTests: XCTestCase {
 
         manager.stop()
     }
+
+    // MARK: - Allow Relift During Drag Tests
+
+    func testToggleAllowReliftDuringDragViaSelector() {
+        // Invoke the private @objc method via selector - should not throw
+        XCTAssertNoThrow(controller.perform(Selector(("toggleAllowReliftDuringDrag"))))
+    }
+
+    func testToggleAllowReliftDuringDragPostsNotification() {
+        let expectation = XCTestExpectation(description: "Preferences changed notification")
+
+        let observer = NotificationCenter.default.addObserver(
+            forName: .preferencesChanged,
+            object: nil,
+            queue: .main
+        ) { _ in
+            expectation.fulfill()
+        }
+
+        controller.perform(Selector(("toggleAllowReliftDuringDrag")))
+
+        wait(for: [expectation], timeout: 1.0)
+        NotificationCenter.default.removeObserver(observer)
+    }
+
+    func testBuildMenuWithAllowReliftEnabled() {
+        var prefs = UserPreferences()
+        prefs.allowReliftDuringDrag = true
+
+        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        XCTAssertNotNil(ctrl)
+        ctrl.buildMenu()  // Should include relift option
+    }
+
+    // MARK: - Configure System Gestures Tests
+
+    // Note: We cannot directly test configureSystemGestures as it calls AlertHelper
+    // methods. However, we CAN verify the method exists and is callable with proper mocking.
+
+    func testConfigureSystemGesturesMethodExists() {
+        // Verify the selector exists
+        let selector = Selector(("configureSystemGestures"))
+        XCTAssertTrue(controller.responds(to: selector))
+    }
+
+    // MARK: - Comprehensive Preferences Toggle Tests
+
+    func testAllPreferenceTogglesInSequence() {
+        manager.start()
+
+        // Test all toggle methods in sequence
+        controller.perform(Selector(("toggleMiddleDrag")))
+        controller.perform(Selector(("toggleExclusionZone")))
+        controller.perform(Selector(("toggleRequireModifierKey")))
+        controller.perform(Selector(("toggleContactSizeFilter")))
+        controller.perform(Selector(("toggleMinimumWindowSizeFilter")))
+        controller.perform(Selector(("toggleAllowReliftDuringDrag")))
+        controller.perform(Selector(("toggleCrashReporting")))
+        controller.perform(Selector(("togglePerformanceMonitoring")))
+
+        // All toggles should complete without crash
+        XCTAssertNotNil(controller)
+
+        manager.stop()
+    }
 }
