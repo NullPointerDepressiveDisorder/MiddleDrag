@@ -152,7 +152,29 @@ class SystemGestureHelper {
 
     // MARK: - Description
 
-    /// Returns a human-readable description of current settings
+    /// Returns a human-readable description of only conflicting (3-finger) settings
+    /// Use this when displaying which settings conflict with MiddleDrag
+    static func describeConflictingSettings() -> String {
+        let threeVert = getTrackpadSetting(.threeFingerVertSwipe) ?? 0
+        let threeHoriz = getTrackpadSetting(.threeFingerHorizSwipe) ?? 0
+
+        var lines: [String] = []
+
+        if threeVert != 0 {
+            lines.append("• 3-finger vertical swipe (Mission Control): Enabled")
+        }
+        if threeHoriz != 0 {
+            lines.append("• 3-finger horizontal swipe (Spaces): Enabled")
+        }
+
+        if lines.isEmpty {
+            return "No conflicting gestures detected"
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    /// Returns a human-readable description of all current gesture settings
     static func describeCurrentSettings() -> String {
         let threeVert = getTrackpadSetting(.threeFingerVertSwipe) ?? 0
         let threeHoriz = getTrackpadSetting(.threeFingerHorizSwipe) ?? 0

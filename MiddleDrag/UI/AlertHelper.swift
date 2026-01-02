@@ -54,7 +54,7 @@ class AlertHelper {
             💡 Tips:
             • No need to disable system gestures
             • Adjust sensitivity for your workflow
-            • Enable gesture blocking only if needed
+            • Use "Configure System Gestures..." for advanced control
 
             Created for engineers, designers, and makers.
             """
@@ -77,7 +77,7 @@ class AlertHelper {
 
             Optional optimizations:
             • If you experience conflicts, you can disable system three-finger gestures
-            • Enable "Block System Gestures" in Advanced menu for exclusive control
+            • Use "Configure System Gestures..." in the Advanced menu for optimal control
 
             That's it! MiddleDrag uses Apple's multitouch framework to detect gestures before the system processes them.
             """
@@ -109,7 +109,7 @@ class AlertHelper {
             MiddleDrag uses 3-finger gestures which can conflict with macOS system gestures.
 
             Current conflicting settings:
-            \(SystemGestureHelper.describeCurrentSettings())
+            \(SystemGestureHelper.describeConflictingSettings())
 
             Would you like to automatically:
             • Disable 3-finger system gestures

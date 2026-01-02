@@ -495,4 +495,84 @@ final class SystemGestureHelperTests: XCTestCase {
         let runner = DefaultProcessRunner()
         XCTAssertNotNil(runner)
     }
+
+    // MARK: - describeConflictingSettings Tests
+
+    func testDescribeConflictingSettingsWhenNoConflicts() {
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerHorizSwipe.rawValue)
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        XCTAssertEqual(description, "No conflicting gestures detected")
+    }
+
+    func testDescribeConflictingSettingsWhenNoneSet() {
+        mockSettingsProvider.clearSettings()
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        XCTAssertEqual(description, "No conflicting gestures detected")
+    }
+
+    func testDescribeConflictingSettingsOnlyShowsThreeFingerGestures() {
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.threeFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.threeFingerHorizSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.fourFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.fourFingerHorizSwipe.rawValue)
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        // Should only show 3-finger gestures, not 4-finger
+        XCTAssertTrue(description.contains("3-finger vertical swipe"))
+        XCTAssertTrue(description.contains("3-finger horizontal swipe"))
+        XCTAssertFalse(description.contains("4-finger"))
+    }
+
+    func testDescribeConflictingSettingsWhenOnlyVertEnabled() {
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.threeFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerHorizSwipe.rawValue)
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        XCTAssertTrue(description.contains("3-finger vertical swipe (Mission Control): Enabled"))
+        XCTAssertFalse(description.contains("3-finger horizontal swipe"))
+    }
+
+    func testDescribeConflictingSettingsWhenOnlyHorizEnabled() {
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.threeFingerHorizSwipe.rawValue)
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        XCTAssertTrue(description.contains("3-finger horizontal swipe (Spaces): Enabled"))
+        XCTAssertFalse(description.contains("3-finger vertical swipe"))
+    }
+
+    func testDescribeConflictingSettingsIgnoresFourFingerGestures() {
+        // Only 4-finger enabled, no 3-finger
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            0, forKey: SystemGestureHelper.TrackpadKey.threeFingerHorizSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.fourFingerVertSwipe.rawValue)
+        mockSettingsProvider.setSetting(
+            2, forKey: SystemGestureHelper.TrackpadKey.fourFingerHorizSwipe.rawValue)
+
+        let description = SystemGestureHelper.describeConflictingSettings()
+
+        // Should say no conflicts since 4-finger gestures don't conflict
+        XCTAssertEqual(description, "No conflicting gestures detected")
+    }
 }
