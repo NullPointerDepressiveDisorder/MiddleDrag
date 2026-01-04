@@ -312,9 +312,6 @@ protocol GestureRecognizerDelegate: AnyObject {
     /// Called when a tap gesture is recognized (quick tap)
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer)
 
-    /// Called when a force click is recognized (pressure threshold exceeded)
-    func gestureRecognizerDidForceClick(_ recognizer: GestureRecognizer)
-
     /// Called when dragging begins
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer)
 
