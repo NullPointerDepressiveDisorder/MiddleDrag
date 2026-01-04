@@ -49,6 +49,9 @@ class MouseEventGenerator {
         }
     }
 
+    /// Magic number to identify our own events (0x4D44 = 'MD')
+    private let magicUserData: Int64 = 0x4D44
+
     /// Update drag position with delta movement
     /// - Parameters:
     ///   - deltaX: Horizontal movement delta
@@ -121,6 +124,7 @@ class MouseEventGenerator {
 
             downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             downEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+            downEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
             downEvent.flags = []
 
             // Create mouse up event
@@ -135,6 +139,7 @@ class MouseEventGenerator {
 
             upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+            upEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
             upEvent.flags = []
 
             // Post events with small delay between them
@@ -188,6 +193,7 @@ class MouseEventGenerator {
         else { return }
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+        event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
         event.post(tap: .cghidEventTap)
     }
@@ -203,6 +209,7 @@ class MouseEventGenerator {
         else { return }
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+        event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
         event.post(tap: .cghidEventTap)
     }
@@ -225,6 +232,7 @@ class MouseEventGenerator {
         else { return }
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
+        event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
         event.post(tap: .cghidEventTap)
     }

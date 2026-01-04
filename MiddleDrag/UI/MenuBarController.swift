@@ -14,6 +14,7 @@ class MenuBarController: NSObject {
         case enabled = 1
         case launchAtLogin = 2
         case middleDrag = 3
+        case tapToClick = 4
     }
 
     // MARK: - Initialization
@@ -65,6 +66,7 @@ class MenuBarController: NSObject {
 
         // Enable/Disable
         menu.addItem(createEnabledItem())
+        menu.addItem(createTapToClickItem())
         menu.addItem(createMiddleDragItem())
         menu.addItem(NSMenuItem.separator())
 
@@ -110,6 +112,17 @@ class MenuBarController: NSObject {
         item.isEnabled = isMainEnabled
         item.state = (isMainEnabled && preferences.middleDragEnabled) ? .on : .off
         item.tag = MenuItemTag.middleDrag.rawValue
+        return item
+    }
+
+    private func createTapToClickItem() -> NSMenuItem {
+        let item = NSMenuItem(
+            title: "Tap to Click", action: #selector(toggleTapToClick), keyEquivalent: "")
+        item.target = self
+        let isMainEnabled = multitouchManager?.isEnabled ?? false
+        item.isEnabled = isMainEnabled
+        item.state = (isMainEnabled && preferences.tapToClickEnabled) ? .on : .off
+        item.tag = MenuItemTag.tapToClick.rawValue
         return item
     }
 
@@ -368,6 +381,20 @@ class MenuBarController: NSObject {
 
         if let item = statusItem.menu?.item(withTag: MenuItemTag.middleDrag.rawValue) {
             item.state = preferences.middleDragEnabled ? .on : .off
+        }
+
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc private func toggleTapToClick() {
+        preferences.tapToClickEnabled.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.tapToClickEnabled = preferences.tapToClickEnabled
+        multitouchManager?.updateConfiguration(config)
+
+        if let item = statusItem.menu?.item(withTag: MenuItemTag.tapToClick.rawValue) {
+            item.state = preferences.tapToClickEnabled ? .on : .off
         }
 
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)

@@ -190,7 +190,9 @@ class GestureRecognizer {
             let movement = startPos.distance(to: centroid)
             let elapsed = timestamp - gestureStartTime
 
-            if movement > configuration.moveThreshold || elapsed > configuration.tapThreshold {
+            // Only transition to drag if there is actual movement
+            // Resting fingers (no movement) should NOT trigger a drag
+            if movement > configuration.moveThreshold {
                 state = .dragging
                 lastCentroid = centroid
                 delegate?.gestureRecognizerDidBeginDragging(self)
@@ -233,8 +235,14 @@ class GestureRecognizer {
 
         switch state {
         case .possibleTap:
-            if elapsed < configuration.tapThreshold {
+            // Only trigger tap if:
+            // 1. Duration is less than tap threshold (quick tap)
+            // 2. Duration doesn't exceed max hold duration (safety check for edge cases)
+            if elapsed < configuration.tapThreshold && elapsed <= configuration.maxTapHoldDuration {
                 delegate?.gestureRecognizerDidTap(self)
+            } else {
+                // Gesture ended without a tap - notify delegate to reset state
+                delegate?.gestureRecognizerDidCancel(self)
             }
         case .dragging:
             delegate?.gestureRecognizerDidEndDragging(self)
@@ -301,8 +309,11 @@ protocol GestureRecognizerDelegate: AnyObject {
     /// Called when a gesture starts (3 fingers detected)
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint)
 
-    /// Called when a tap gesture is recognized
+    /// Called when a tap gesture is recognized (quick tap)
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer)
+
+    /// Called when a force click is recognized (pressure threshold exceeded)
+    func gestureRecognizerDidForceClick(_ recognizer: GestureRecognizer)
 
     /// Called when dragging begins
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer)
