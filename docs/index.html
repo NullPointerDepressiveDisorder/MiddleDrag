@@ -24,42 +24,8 @@
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="assets/logo.png">
 
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        dark: {
-                            DEFAULT: '#0d1117',
-                            bg: '#010409',
-                            card: '#161b22',
-                            border: '#30363d',
-                            text: '#c9d1d9',
-                            muted: '#8b949e',
-                        },
-                        brand: {
-                            green: '#238636',
-                            greenHover: '#2ea043',
-                            purple: 'rgb(84 79 232)',
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-                        mono: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace'],
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        body {
-            background-color: #0d1117;
-            color: #c9d1d9;
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
+    <!-- Custom CSS (Tailwind Build) -->
+    <link href="style.css" rel="stylesheet">
 </head>
 
 <body class="antialiased min-h-screen flex flex-col">
