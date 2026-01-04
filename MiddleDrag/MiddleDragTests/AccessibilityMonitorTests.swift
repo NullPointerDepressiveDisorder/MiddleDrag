@@ -110,4 +110,11 @@ class AccessibilityMonitorTests: XCTestCase {
         mockPermissionChecker.isTrusted = false
         XCTAssertFalse(monitor.isGranted)
     }
+    func testDefaultInit() {
+        // Ensure that default initialization works (covers default argument paths)
+        // This instantiates the real System classes, so we can't test behavior,
+        // but we verify no crash on init.
+        let monitor = AccessibilityMonitor()
+        XCTAssertNotNil(monitor)
+    }
 }
