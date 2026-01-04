@@ -553,6 +553,65 @@ final class GestureRecognizerTests: XCTestCase {
         XCTAssertFalse(mockDelegate.didTapCalled, "Tap should not be detected when held too long")
     }
 
+    func testTapNotDetectedWhenHeldBeyondMaxDuration() {
+        // Configure tap threshold high, but max hold duration low
+        recognizer.configuration.tapThreshold = 1.0  // 1 second
+        recognizer.configuration.maxTapHoldDuration = 0.3  // 300ms max hold
+
+        let touches = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        // Start gesture
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        // Lift fingers after max hold duration exceeded but within tap threshold
+        let emptyTouches: [MTTouch] = []
+        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        defer { emptyCleanup() }
+
+        // 0.5 seconds is within tap threshold (1.0s) but exceeds max hold (0.3s)
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.5, modifierFlags: [])
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.6, modifierFlags: [])
+
+        XCTAssertFalse(
+            mockDelegate.didTapCalled,
+            "Tap should not be detected when held beyond max hold duration")
+    }
+
+    func testTapDetectedWhenWithinMaxDuration() {
+        // Configure both tap threshold and max hold duration
+        recognizer.configuration.tapThreshold = 0.5  // 500ms
+        recognizer.configuration.maxTapHoldDuration = 0.5  // 500ms max hold
+
+        let touches = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        defer { cleanup() }
+
+        // Start gesture
+        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+
+        // Lift fingers within both thresholds
+        let emptyTouches: [MTTouch] = []
+        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        defer { emptyCleanup() }
+
+        // 0.1 seconds is within both tap threshold and max hold
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
+        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.15, modifierFlags: [])
+
+        XCTAssertTrue(
+            mockDelegate.didTapCalled, "Tap should be detected when within max hold duration")
+    }
+
     func testTapNotDetectedWhenMovingTooMuch() {
         recognizer.configuration.tapThreshold = 0.5
         recognizer.configuration.moveThreshold = 0.01  // Very low threshold
@@ -628,7 +687,9 @@ final class GestureRecognizerTests: XCTestCase {
             mockDelegate.didBeginDraggingCalled, "Drag should begin after movement threshold")
     }
 
-    func testDragBeginsAfterTimeThreshold() {
+    func testDragDoesNotBeginAfterTimeThresholdWithoutMovement() {
+        // With the new behavior, resting fingers should NOT trigger a drag
+        // Drag only starts when there is actual movement
         recognizer.configuration.tapThreshold = 0.2
         recognizer.configuration.moveThreshold = 1.0  // Very high to prevent movement-based trigger
 
@@ -642,10 +703,12 @@ final class GestureRecognizerTests: XCTestCase {
 
         recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
-        // Same position but after time threshold
+        // Same position but after time threshold - should NOT start drag
         recognizer.processTouches(pointer, count: count, timestamp: 0.3, modifierFlags: [])
 
-        XCTAssertTrue(mockDelegate.didBeginDraggingCalled, "Drag should begin after time threshold")
+        XCTAssertFalse(
+            mockDelegate.didBeginDraggingCalled,
+            "Drag should NOT begin just from time elapsed without movement")
     }
 
     func testDragUpdatesWithMovement() {

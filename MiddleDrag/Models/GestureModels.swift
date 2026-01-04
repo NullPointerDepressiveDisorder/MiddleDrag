@@ -29,6 +29,7 @@ struct GestureConfiguration {
 
     // Timing thresholds
     var tapThreshold: Double = 0.15  // 150ms for tap detection
+    var maxTapHoldDuration: Double = 0.5  // 500ms max hold for tap (safety check)
     var moveThreshold: Float = 0.015  // Movement threshold for tap vs drag
 
     // Finger requirements
@@ -40,6 +41,7 @@ struct GestureConfiguration {
 
     // Feature toggles
     var middleDragEnabled: Bool = true  // Allow disabling drag while keeping tap
+    var tapToClickEnabled: Bool = true  // Allow disabling tap while keeping drag
 
     // Velocity scaling
     var enableVelocityBoost: Bool = true
@@ -104,6 +106,7 @@ struct UserPreferences: Codable {
     var launchAtLogin: Bool = false
     var dragSensitivity: Double = 1.0
     var tapThreshold: Double = 0.15
+    var maxTapHoldDuration: Double = 0.5  // 500ms max hold for tap
     var smoothingFactor: Double = 0.3
     @available(
         *, deprecated, message: "Always requires exactly 3 fingers now to support Mission Control"
@@ -111,6 +114,7 @@ struct UserPreferences: Codable {
     var requiresExactlyThreeFingers: Bool = true
     var blockSystemGestures: Bool = false
     var middleDragEnabled: Bool = true  // Allow disabling drag while keeping tap
+    var tapToClickEnabled: Bool = true  // Allow disabling tap while keeping drag
 
     // Palm rejection - Exclusion zone
     var exclusionZoneEnabled: Bool = false
@@ -138,9 +142,11 @@ struct UserPreferences: Codable {
             sensitivity: Float(dragSensitivity),
             smoothingFactor: Float(smoothingFactor),
             tapThreshold: tapThreshold,
+            maxTapHoldDuration: maxTapHoldDuration,
             requiresExactlyThreeFingers: true,  // Always true now
             blockSystemGestures: blockSystemGestures,
             middleDragEnabled: middleDragEnabled,
+            tapToClickEnabled: tapToClickEnabled,
             exclusionZoneEnabled: exclusionZoneEnabled,
             exclusionZoneSize: Float(exclusionZoneSize),
             requireModifierKey: requireModifierKey,

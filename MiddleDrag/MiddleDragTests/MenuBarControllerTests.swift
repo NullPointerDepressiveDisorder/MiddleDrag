@@ -299,6 +299,18 @@ final class MenuBarControllerTests: XCTestCase {
         manager.stop()
     }
 
+    func testToggleTapToClickViaSelector() {
+        // Initial state of manager
+        let initialManagerState = manager.configuration.tapToClickEnabled
+
+        // Invoke private @objc method
+        XCTAssertNoThrow(controller.perform(Selector(("toggleTapToClick"))))
+
+        // Should have updated the manager's configuration
+        XCTAssertNotEqual(manager.configuration.tapToClickEnabled, initialManagerState)
+        XCTAssertEqual(manager.configuration.tapToClickEnabled, !initialManagerState)
+    }
+
     func testToggleMiddleDragViaSelector() {
         manager.start()
 

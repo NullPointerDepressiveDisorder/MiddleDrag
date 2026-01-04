@@ -49,6 +49,22 @@ class MultitouchManager {
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
 
+    // Thread-safe finger count tracking
+    private let fingerCountLock = NSLock()
+    private var _currentFingerCount: Int = 0
+    internal var currentFingerCount: Int {
+        get {
+            fingerCountLock.lock()
+            defer { fingerCountLock.unlock() }
+            return _currentFingerCount
+        }
+        set {
+            fingerCountLock.lock()
+            defer { fingerCountLock.unlock() }
+            _currentFingerCount = newValue
+        }
+    }
+
     // MARK: - Initialization
 
     /// Shared production instance
@@ -180,6 +196,7 @@ class MultitouchManager {
         // Reset gesture state flags
         isActivelyDragging = false
         isInThreeFingerGesture = false
+        currentFingerCount = 0  // Reset finger count on stop
 
         deviceMonitor?.stop()
         deviceMonitor = nil
@@ -196,6 +213,7 @@ class MultitouchManager {
         if !isEnabled {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
+            currentFingerCount = 0  // Reset finger count when disabled
         }
     }
 
@@ -281,6 +299,15 @@ class MultitouchManager {
         type: CGEventType,
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
+        return processEvent(event, type: type)
+    }
+
+    /// Internal method for processing events to allow unit testing
+    internal func processEvent(
+        _ event: CGEvent,
+        type: CGEventType
+    ) -> Unmanaged<CGEvent>? {
+
         // Re-enable tap if it was disabled
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap {
@@ -297,14 +324,40 @@ class MultitouchManager {
 
         // Allow our own middle mouse events through
         let isMiddleButton = buttonNumber == 2
-        let isOurEvent = sourceStateID == 1  // Our private event source
+        let isLeftButton = buttonNumber == 0
+
+        // Identification of our own events using Magic Number (0x4D44 = 'MD')
+        // We tagging events in MouseEventGenerator with this value
+        let userData = event.getIntegerValueField(.eventSourceUserData)
+        let isOurEvent = userData == 0x4D44
+
+        // Check if we're in a 3-finger gesture using:
+        // 1. Thread-safe finger count (most reliable for force clicks)
+        // 2. Async-updated flag (for tap/drag state)
+        // 3. Direct gesture recognizer state (fallback)
+        let fingerCountSafe = currentFingerCount
+        let gestureActive =
+            isInThreeFingerGesture || gestureRecognizer.state != .idle || fingerCountSafe >= 3
 
         if isMiddleButton && isOurEvent {
             return Unmanaged.passUnretained(event)
         }
 
+        // During 3-finger gesture: convert left clicks to middle clicks (force click support)
+        if gestureActive && isLeftButton && !isOurEvent {
+            // Check event type - we want to handle both down and up
+            if type == .leftMouseDown || type == .leftMouseUp {
+                // Perform middle click instead
+                if type == .leftMouseDown {
+                    mouseGenerator.performClick()
+                }
+                // Suppress the original left click
+                return nil
+            }
+        }
+
         // Suppress left/right events during gesture or shortly after
-        let shouldSuppress = isInThreeFingerGesture || timeSinceGestureEnd < 0.15
+        let shouldSuppress = gestureActive || timeSinceGestureEnd < 0.15
 
         if shouldSuppress && !isMiddleButton {
             return nil  // Suppress the event
@@ -332,6 +385,9 @@ extension MultitouchManager: DeviceMonitorDelegate {
         timestamp: Double
     ) {
         guard isEnabled else { return }
+
+        // Update safe finger count immediately
+        currentFingerCount = Int(count)
 
         // Capture modifier flags before dispatching to gesture queue
         // Note: This callback runs on a framework-managed background thread, not main thread
@@ -363,6 +419,16 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
+        // Check if tap to click is enabled
+        guard configuration.tapToClickEnabled else {
+            // Reset state even if tap is disabled
+            DispatchQueue.main.async { [weak self] in
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+            }
+            return
+        }
+
         // Check window size filter before performing tap
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
         // which must be called from the main thread
