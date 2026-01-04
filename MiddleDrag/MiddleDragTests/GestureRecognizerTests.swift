@@ -1447,7 +1447,6 @@ final class GestureRecognizerTests: XCTestCase {
 class MockGestureRecognizerDelegate: GestureRecognizerDelegate {
     var didStartCalled = false
     var didTapCalled = false
-    var didForceClickCalled = false
     var didBeginDraggingCalled = false
     var didUpdateDraggingCalled = false
     var didEndDraggingCalled = false
@@ -1460,7 +1459,6 @@ class MockGestureRecognizerDelegate: GestureRecognizerDelegate {
     func reset() {
         didStartCalled = false
         didTapCalled = false
-        didForceClickCalled = false
         didBeginDraggingCalled = false
         didUpdateDraggingCalled = false
         didEndDraggingCalled = false
@@ -1477,10 +1475,6 @@ class MockGestureRecognizerDelegate: GestureRecognizerDelegate {
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
         didTapCalled = true
-    }
-
-    func gestureRecognizerDidForceClick(_ recognizer: GestureRecognizer) {
-        didForceClickCalled = true
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {

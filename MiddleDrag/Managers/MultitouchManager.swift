@@ -453,18 +453,6 @@ extension MultitouchManager: GestureRecognizerDelegate {
         }
     }
 
-    func gestureRecognizerDidForceClick(_ recognizer: GestureRecognizer) {
-        // Force click always triggers (physical trackpad press), ignoring tapToClickEnabled
-        // Reset state
-        DispatchQueue.main.async { [weak self] in
-            self?.isInThreeFingerGesture = false
-            self?.gestureEndTime = CACurrentMediaTime()
-        }
-
-        // Perform the click
-        mouseGenerator.performClick()
-    }
-
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
         guard configuration.middleDragEnabled else { return }
 

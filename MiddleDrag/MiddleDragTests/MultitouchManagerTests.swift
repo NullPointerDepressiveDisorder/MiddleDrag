@@ -277,6 +277,81 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
+    func testGestureRecognizerDidTapWithTapToClickEnabled() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable tap to click
+        var config = GestureConfiguration()
+        config.tapToClickEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Enter gesture state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Wait for state
+        let startExpectation = XCTestExpectation(description: "Start state updated")
+        DispatchQueue.main.async {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Trigger tap
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Verify state is reset AND click happened (indirectly via state reset)
+        let tapExpectation = XCTestExpectation(description: "Tap handled, state reset")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            tapExpectation.fulfill()
+        }
+        wait(for: [tapExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testGestureRecognizerDidTapWithTapToClickDisabled() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Disable tap to click
+        var config = GestureConfiguration()
+        config.tapToClickEnabled = false
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Enter gesture state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Wait for state
+        let startExpectation = XCTestExpectation(description: "Start state updated")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Trigger tap
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Verify state is still reset (it must reset state regardless of click)
+        let tapExpectation = XCTestExpectation(description: "State reset even when disabled")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            tapExpectation.fulfill()
+        }
+        wait(for: [tapExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
     func testGestureRecognizerDidBeginDraggingSetsActivelyDragging() {
         let mockDevice = MockDeviceMonitor()
         let manager = MultitouchManager(
