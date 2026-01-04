@@ -14,7 +14,7 @@ Finally use your MacBook for CAD work without carrying a mouse.
 [![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="MiddleDrag Demo">
+  <img src="docs/assets/demo.gif" alt="MiddleDrag Demo" width="600">
 </p>
 
 ## The Problem

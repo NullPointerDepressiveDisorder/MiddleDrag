@@ -19,6 +19,7 @@
         content="Unlock the hidden power of your trackpad. Three-finger tap to middle-click, three-finger drag to pan/orbit.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://nullpointerdepressivedisorder.github.io/MiddleDrag/">
+    <meta property="og:image" content="https://nullpointerdepressivedisorder.github.io/MiddleDrag/assets/logo.png">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="assets/logo.png">
@@ -83,6 +84,33 @@
                             class="text-dark-text hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">GitHub</a>
                     </div>
                 </div>
+                <!-- Mobile menu button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+                        class="bg-dark-card inline-flex items-center justify-center p-2 rounded-md text-dark-muted hover:text-white hover:bg-dark-border focus:outline-none"
+                        aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu, show/hide based on menu state. -->
+        <div class="hidden md:hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-dark-border bg-dark-bg">
+                <a href="#features"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Features</a>
+                <a href="#comparison"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Compare</a>
+                <a href="#install"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Install</a>
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">GitHub</a>
             </div>
         </div>
     </nav>
@@ -113,12 +141,11 @@
                 <!-- Brew Command -->
                 <div class="mt-8 flex justify-center">
                     <div
-                        class="bg-dark-bg border border-dark-border rounded-lg p-3 font-mono text-sm text-dark-muted flex items-center gap-3">
+                        class="bg-dark-bg border border-dark-border rounded-lg p-3 font-mono text-sm text-dark-muted flex items-center gap-3 relative group">
                         <span class="select-all">brew tap nullpointerdepressivedisorder/tap && brew install --cask
                             middledrag</span>
-                        <button
-                            onclick="navigator.clipboard.writeText('brew tap nullpointerdepressivedisorder/tap && brew install --cask middledrag')"
-                            class="hover:text-white transition-colors" aria-label="Copy to clipboard">
+                        <button onclick="copyBrewCommand(this)" class="hover:text-white transition-colors p-1 rounded"
+                            aria-label="Copy to clipboard" title="Copy to clipboard">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                                 stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -129,10 +156,29 @@
                 </div>
             </div>
 
-            <!-- Demo Image -->
+            <script>
+                function copyBrewCommand(btn) {
+                    const text = 'brew tap nullpointerdepressivedisorder/tap && brew install --cask middledrag';
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Success feedback
+                        const originalContent = btn.innerHTML;
+                        btn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        `;
+                        setTimeout(() => {
+                            btn.innerHTML = originalContent;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        alert('Failed to copy to clipboard. Please select and copy manually.');
+                    });
+                }
+            </script>
             <div class="mt-20 relative max-w-4xl mx-auto">
                 <div class="rounded-xl overflow-hidden shadow-2xl border border-dark-border bg-dark-card">
-                    <img src="assets/demo.gif" alt="MiddleDrag Demonstration" class="w-full h-auto">
+                    <img src="assets/demo.gif" alt="MiddleDrag Demonstration" class="w-full h-auto" loading="lazy">
                 </div>
                 <!-- Decorative blurred glow behind image -->
                 <div class="absolute -inset-4 bg-brand-purple/20 blur-3xl -z-10 rounded-full opacity-50"></div>
@@ -295,7 +341,7 @@
             class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-dark-muted text-sm">
                 &copy;
-                <script>document.write(new Date().getFullYear())</script> MiddleDrag. Open Source under MIT License.
+                &copy; 2026 MiddleDrag. Open Source under MIT License.
             </div>
             <div class="flex gap-6">
                 <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag"
