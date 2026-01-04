@@ -8,7 +8,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let multitouchManager = MultitouchManager.shared
     private var menuBarController: MenuBarController?
     private var preferences: UserPreferences!
-    private var accessibilityTimer: Timer?
+
+    private var accessibilityMonitor: AccessibilityMonitor?
 
     // MARK: - Application Lifecycle
 
@@ -54,8 +55,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Multitouch manager started", category: .app)
         } else {
             Log.warning("Accessibility permission not granted", category: .app)
-            // Start polling to restart when permission is granted
-            startAccessibilityPolling()
+
+            // Initialize monitor and start polling to restart when permission is granted
+            accessibilityMonitor = AccessibilityMonitor()
+            accessibilityMonitor?.startPolling()
         }
 
         // Set up menu bar UI (always initialize, even without permission)
@@ -94,8 +97,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         Log.info("MiddleDrag terminating", category: .app)
 
-        accessibilityTimer?.invalidate()
-        accessibilityTimer = nil
+        accessibilityMonitor?.stopPolling()
+        accessibilityMonitor = nil
 
         multitouchManager.stop()
 
@@ -124,36 +127,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .launchAtLoginChanged,
             object: nil
         )
-    }
-
-    private func startAccessibilityPolling() {
-        // Poll every second to check if permission has been granted
-        accessibilityTimer?.invalidate()
-        accessibilityTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) {
-            [weak self] _ in
-            if AXIsProcessTrusted() {
-                Log.info("Accessibility permission detected. Restarting app...", category: .app)
-                self?.accessibilityTimer?.invalidate()
-                self?.accessibilityTimer = nil
-                self?.relaunchApp()
-            }
-        }
-    }
-
-    private func relaunchApp() {
-        let url = Bundle.main.bundleURL
-        let config = NSWorkspace.OpenConfiguration()
-        config.createsNewApplicationInstance = true
-
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { _, error in
-            if let error = error {
-                Log.error("Failed to restart app: \(error.localizedDescription)", category: .app)
-            } else {
-                DispatchQueue.main.async {
-                    NSApp.terminate(nil)
-                }
-            }
-        }
     }
 
     // MARK: - Notification Handlers
