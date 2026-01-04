@@ -84,8 +84,8 @@ jobs:
 
       - name: Wait for FOSSA Analysis Processing
         run: |
-          echo "⏳ Waiting 10s for FOSSA to process the analysis..."
-          sleep 10
+          echo "⏳ Waiting 30s for FOSSA to process the analysis..."
+          sleep 30
         if: ${{ !cancelled() }}
 
       - name: FOSSA Test
