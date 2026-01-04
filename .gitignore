@@ -23,3 +23,4 @@ xcuserdata/
 .vscode/settings.json
 Secrets.xcconfig
 TestResults.xcresult/
+default.profraw

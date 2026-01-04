@@ -15,6 +15,7 @@ class PreferencesManager {
         static let smoothingFactor = "smoothingFactor"
         static let blockSystemGestures = "blockSystemGestures"
         static let middleDragEnabled = "middleDragEnabled"
+        static let tapToClickEnabled = "tapToClickEnabled"
         // Palm rejection keys
         static let exclusionZoneEnabled = "exclusionZoneEnabled"
         static let exclusionZoneSize = "exclusionZoneSize"
@@ -49,6 +50,7 @@ class PreferencesManager {
             Keys.smoothingFactor: 0.3,
             Keys.blockSystemGestures: false,
             Keys.middleDragEnabled: true,
+            Keys.tapToClickEnabled: true,
             // Palm rejection defaults
             Keys.exclusionZoneEnabled: false,
             Keys.exclusionZoneSize: 0.15,
@@ -69,24 +71,29 @@ class PreferencesManager {
             userDefaults.string(forKey: Keys.modifierKeyType) ?? ModifierKeyType.shift.rawValue
         let modifierKey = ModifierKeyType(rawValue: modifierKeyRaw) ?? .shift
 
-        return UserPreferences(
-            launchAtLogin: userDefaults.bool(forKey: Keys.launchAtLogin),
-            dragSensitivity: userDefaults.double(forKey: Keys.dragSensitivity),
-            tapThreshold: userDefaults.double(forKey: Keys.tapThreshold),
-            smoothingFactor: userDefaults.double(forKey: Keys.smoothingFactor),
-            blockSystemGestures: userDefaults.bool(forKey: Keys.blockSystemGestures),
-            middleDragEnabled: userDefaults.bool(forKey: Keys.middleDragEnabled),
-            exclusionZoneEnabled: userDefaults.bool(forKey: Keys.exclusionZoneEnabled),
-            exclusionZoneSize: userDefaults.double(forKey: Keys.exclusionZoneSize),
-            requireModifierKey: userDefaults.bool(forKey: Keys.requireModifierKey),
-            modifierKeyType: modifierKey,
-            contactSizeFilterEnabled: userDefaults.bool(forKey: Keys.contactSizeFilterEnabled),
-            maxContactSize: userDefaults.double(forKey: Keys.maxContactSize),
-            minimumWindowSizeFilterEnabled: userDefaults.bool(
-                forKey: Keys.minimumWindowSizeFilterEnabled),
-            minimumWindowWidth: userDefaults.double(forKey: Keys.minimumWindowWidth),
-            minimumWindowHeight: userDefaults.double(forKey: Keys.minimumWindowHeight)
-        )
+        // Create with defaults, then override with saved values
+        // This handles new keys that don't exist in older UserDefaults
+        var prefs = UserPreferences()
+
+        prefs.launchAtLogin = userDefaults.bool(forKey: Keys.launchAtLogin)
+        prefs.dragSensitivity = userDefaults.double(forKey: Keys.dragSensitivity)
+        prefs.tapThreshold = userDefaults.double(forKey: Keys.tapThreshold)
+        prefs.smoothingFactor = userDefaults.double(forKey: Keys.smoothingFactor)
+        prefs.blockSystemGestures = userDefaults.bool(forKey: Keys.blockSystemGestures)
+        prefs.middleDragEnabled = userDefaults.bool(forKey: Keys.middleDragEnabled)
+        prefs.tapToClickEnabled = userDefaults.bool(forKey: Keys.tapToClickEnabled)
+        prefs.exclusionZoneEnabled = userDefaults.bool(forKey: Keys.exclusionZoneEnabled)
+        prefs.exclusionZoneSize = userDefaults.double(forKey: Keys.exclusionZoneSize)
+        prefs.requireModifierKey = userDefaults.bool(forKey: Keys.requireModifierKey)
+        prefs.modifierKeyType = modifierKey
+        prefs.contactSizeFilterEnabled = userDefaults.bool(forKey: Keys.contactSizeFilterEnabled)
+        prefs.maxContactSize = userDefaults.double(forKey: Keys.maxContactSize)
+        prefs.minimumWindowSizeFilterEnabled = userDefaults.bool(
+            forKey: Keys.minimumWindowSizeFilterEnabled)
+        prefs.minimumWindowWidth = userDefaults.double(forKey: Keys.minimumWindowWidth)
+        prefs.minimumWindowHeight = userDefaults.double(forKey: Keys.minimumWindowHeight)
+
+        return prefs
     }
 
     /// Save preferences to UserDefaults
@@ -97,6 +104,7 @@ class PreferencesManager {
         userDefaults.set(preferences.smoothingFactor, forKey: Keys.smoothingFactor)
         userDefaults.set(preferences.blockSystemGestures, forKey: Keys.blockSystemGestures)
         userDefaults.set(preferences.middleDragEnabled, forKey: Keys.middleDragEnabled)
+        userDefaults.set(preferences.tapToClickEnabled, forKey: Keys.tapToClickEnabled)
         // Palm rejection
         userDefaults.set(preferences.exclusionZoneEnabled, forKey: Keys.exclusionZoneEnabled)
         userDefaults.set(preferences.exclusionZoneSize, forKey: Keys.exclusionZoneSize)
