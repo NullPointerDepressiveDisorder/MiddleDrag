@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+    --color-dark: #0d1117;
+    --color-dark-bg: #010409;
+    --color-dark-card: #161b22;
+    --color-dark-border: #30363d;
+    --color-dark-text: #c9d1d9;
+    --color-dark-muted: #8b949e;
+
+    --color-brand-green: #238636;
+    --color-brand-greenHover: #2ea043;
+    --color-brand-purple: rgb(84 79 232);
+    --color-brand-blue: #58a6ff;
+
+    --font-sans: 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif';
+    --font-mono: 'ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace';
+}
+
+@utility select-all {
+    user-select: all;
+    -webkit-user-select: all;
+    -moz-user-select: all;
+    -ms-user-select: all;
+    cursor: text;
+}
