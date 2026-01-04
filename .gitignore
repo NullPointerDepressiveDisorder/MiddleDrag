@@ -24,3 +24,6 @@ xcuserdata/
 Secrets.xcconfig
 TestResults.xcresult/
 default.profraw
+
+# Webpage
+docs/style.css
