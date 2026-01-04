@@ -14,7 +14,7 @@ Finally use your MacBook for CAD work without carrying a mouse.
 [![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
 
 <p align="center">
-  <img src="assets/demo.gif" width="600" alt="MiddleDrag demo showing three-finger trackpad navigation in CAD software">
+  <img src="docs/assets/demo.gif" alt="MiddleDrag Demo">
 </p>
 
 ## The Problem
@@ -75,6 +75,7 @@ MiddleDrag isn't notarized with Apple (standard for open source apps). On first 
 Close the alert, then go to **System Settings → Privacy & Security → Click "Open Anyway"**
 
 Or run in Terminal: **(Recommended)**
+
 ```bash
 xattr -cr /Applications/MiddleDrag.app
 ```
@@ -120,6 +121,7 @@ MiddleClick requires terminal commands for all configuration — no GUI. MiddleD
 MiddleDrag uses Apple's private MultitouchSupport framework to intercept raw touch data *before* the system gesture recognizer processes it. This allows three-finger gestures to generate middle-mouse events while leaving Mission Control and other system gestures intact.
 
 Technical flow:
+
 1. MultitouchSupport framework provides raw touch coordinates
 2. GestureRecognizer detects three-finger tap/drag patterns
 3. Accessibility API generates synthetic middle-mouse events
@@ -211,7 +213,6 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 <p align="center">
   <i>Built for the CAD users who've been asking for this since 2017.</i>
 </p>
-
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large&issueType=license)
 [![](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graphs/sunburst.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
