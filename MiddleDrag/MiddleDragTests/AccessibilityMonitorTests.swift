@@ -117,4 +117,8 @@ class AccessibilityMonitorTests: XCTestCase {
         let monitor = AccessibilityMonitor()
         XCTAssertNotNil(monitor)
     }
+    func testTriggerRelaunch() {
+        monitor.triggerRelaunch()
+        XCTAssertTrue(mockAppController.relaunchCalled)
+    }
 }
