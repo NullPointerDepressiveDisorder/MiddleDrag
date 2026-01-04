@@ -49,6 +49,7 @@
 		EC7967092EFE76AA007453A4 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				MiddleDragTests/AccessibilityMonitorTests.swift,
 				MiddleDragTests/AlertHelperTests.swift,
 				MiddleDragTests/AnalyticsManagerTests.swift,
 				MiddleDragTests/DeviceMonitorTests.swift,

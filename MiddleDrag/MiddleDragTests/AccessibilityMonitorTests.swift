@@ -36,7 +36,7 @@ class AccessibilityMonitorTests: XCTestCase {
     }
 
     override func tearDown() {
-        monitor.stopPolling()
+        monitor.stopMonitoring()
         monitor = nil
         mockPermissionChecker = nil
         mockAppController = nil
