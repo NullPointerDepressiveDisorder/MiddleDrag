@@ -43,39 +43,54 @@ class AccessibilityMonitorTests: XCTestCase {
         super.tearDown()
     }
 
-    func testStartPollingCheckPermission() {
+    func testGrantCallback() {
         // Given permission is initially false
         mockPermissionChecker.isTrusted = false
+        monitor.startMonitoring(interval: 0.1)
 
-        // When polling starts
-        monitor.startPolling(interval: 0.1)
-
-        // Then relaunch should not be called immediately
-        XCTAssertFalse(mockAppController.relaunchCalled)
+        // Setup expectation
+        let grantExpectation = XCTestExpectation(description: "Grant callback called")
+        monitor.onGrant = {
+            grantExpectation.fulfill()
+        }
 
         // When permission becomes true
         mockPermissionChecker.isTrusted = true
 
         // Wait for timer to fire
-        let expectation = XCTestExpectation(description: "Wait for poll")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-
-        // Then relaunch should be called
-        XCTAssertTrue(mockAppController.relaunchCalled)
+        wait(for: [grantExpectation], timeout: 1.0)
     }
 
-    func testStopPollingStopsChecks() {
-        // Given polling is started
-        monitor.startPolling(interval: 0.1)
-
-        // When polling is stopped
-        monitor.stopPolling()
-
-        // And permission becomes true
+    func testRevocationCallback() {
+        // Given permission is initially true
         mockPermissionChecker.isTrusted = true
+        monitor.startMonitoring(interval: 0.1)
+
+        // Setup expectation
+        let revocationExpectation = XCTestExpectation(description: "Revocation callback called")
+        monitor.onRevocation = {
+            revocationExpectation.fulfill()
+        }
+
+        // When permission becomes false
+        mockPermissionChecker.isTrusted = false
+
+        // Wait for timer to fire
+        wait(for: [revocationExpectation], timeout: 1.0)
+    }
+
+    func testStopMonitoringStopsChecks() {
+        // Given monitoring is started
+        monitor.startMonitoring(interval: 0.1)
+
+        // When monitoring is stopped
+        monitor.stopMonitoring()
+
+        var called = false
+        monitor.onGrant = { called = true }
+
+        // And permission changes
+        mockPermissionChecker.isTrusted = !mockPermissionChecker.isTrusted
 
         // Wait for timer to have potentially fired
         let expectation = XCTestExpectation(description: "Wait for poll")
@@ -84,8 +99,8 @@ class AccessibilityMonitorTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 1.0)
 
-        // Then relaunch should NOT be called
-        XCTAssertFalse(mockAppController.relaunchCalled)
+        // Then callback should NOT be called
+        XCTAssertFalse(called)
     }
 
     func testIsGrantedDelegatesToChecker() {

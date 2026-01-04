@@ -55,11 +55,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             Log.info("Multitouch manager started", category: .app)
         } else {
             Log.warning("Accessibility permission not granted", category: .app)
-
-            // Initialize monitor and start polling to restart when permission is granted
-            accessibilityMonitor = AccessibilityMonitor()
-            accessibilityMonitor?.startPolling()
         }
+
+        // Initialize monitor for continuous checking (granted <-> revoked)
+        accessibilityMonitor = AccessibilityMonitor()
+
+        accessibilityMonitor?.onRevocation = { [weak self] in
+            Log.warning("Permission revoked - stopping multitouch manager", category: .app)
+            self?.multitouchManager.stop()
+        }
+
+        accessibilityMonitor?.onGrant = { [weak self] in
+            // Using re-launch strategy for clean state
+            self?.accessibilityMonitor?.triggerRelaunch()
+        }
+
+        accessibilityMonitor?.startMonitoring()
 
         // Set up menu bar UI (always initialize, even without permission)
         // This way the menu bar icon appears and users can interact with the app
@@ -97,7 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         Log.info("MiddleDrag terminating", category: .app)
 
-        accessibilityMonitor?.stopPolling()
+        accessibilityMonitor?.stopMonitoring()
         accessibilityMonitor = nil
 
         multitouchManager.stop()
