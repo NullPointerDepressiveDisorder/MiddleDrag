@@ -52,7 +52,7 @@ class MultitouchManager {
     // Thread-safe finger count tracking
     private let fingerCountLock = NSLock()
     private var _currentFingerCount: Int = 0
-    private var currentFingerCount: Int {
+    internal var currentFingerCount: Int {
         get {
             fingerCountLock.lock()
             defer { fingerCountLock.unlock() }
@@ -299,6 +299,15 @@ class MultitouchManager {
         type: CGEventType,
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
+        return processEvent(event, type: type)
+    }
+
+    /// Internal method for processing events to allow unit testing
+    internal func processEvent(
+        _ event: CGEvent,
+        type: CGEventType
+    ) -> Unmanaged<CGEvent>? {
+
         // Re-enable tap if it was disabled
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap = eventTap {
