@@ -46,6 +46,10 @@ class AccessibilityMonitorTests: XCTestCase {
     func testGrantCallback() {
         // Given permission is initially false
         mockPermissionChecker.isTrusted = false
+        // Re-init to capture "false" state
+        monitor = AccessibilityMonitor(
+            initialState: false, permissionChecker: mockPermissionChecker,
+            appController: mockAppController)
         monitor.startMonitoring(interval: 0.1)
 
         // Setup expectation
@@ -64,6 +68,10 @@ class AccessibilityMonitorTests: XCTestCase {
     func testRevocationCallback() {
         // Given permission is initially true
         mockPermissionChecker.isTrusted = true
+        // Re-init to capture "true" state
+        monitor = AccessibilityMonitor(
+            initialState: true, permissionChecker: mockPermissionChecker,
+            appController: mockAppController)
         monitor.startMonitoring(interval: 0.1)
 
         // Setup expectation
@@ -110,6 +118,29 @@ class AccessibilityMonitorTests: XCTestCase {
         mockPermissionChecker.isTrusted = false
         XCTAssertFalse(monitor.isGranted)
     }
+
+    func testRaceConditionDetection() {
+        // Scenario: App thinks permission is true (was true at launch), but system now says false (revoked quickly)
+        mockPermissionChecker.isTrusted = false
+
+        // Initialize with state = true (what app saw)
+        monitor = AccessibilityMonitor(
+            initialState: true,
+            permissionChecker: mockPermissionChecker,
+            appController: mockAppController
+        )
+
+        let revocationExpectation = XCTestExpectation(
+            description: "Revocation detected immediately due to state mismatch")
+        monitor.onRevocation = {
+            revocationExpectation.fulfill()
+        }
+
+        monitor.startMonitoring(interval: 0.1)
+
+        wait(for: [revocationExpectation], timeout: 1.0)
+    }
+
     func testDefaultInit() {
         // Ensure that default initialization works (covers default argument paths)
         // This instantiates the real System classes, so we can't test behavior,
@@ -117,6 +148,7 @@ class AccessibilityMonitorTests: XCTestCase {
         let monitor = AccessibilityMonitor()
         XCTAssertNotNil(monitor)
     }
+
     func testTriggerRelaunch() {
         monitor.triggerRelaunch()
         XCTAssertTrue(mockAppController.relaunchCalled)

@@ -58,7 +58,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         // Initialize monitor for continuous checking (granted <-> revoked)
-        accessibilityMonitor = AccessibilityMonitor()
+        // Pass the state we observed so the monitor can detect if it changes immediately (race condition handling)
+        accessibilityMonitor = AccessibilityMonitor(initialState: hasAccessibilityPermission)
 
         accessibilityMonitor?.onRevocation = { [weak self] in
             Log.warning("Permission revoked - stopping multitouch manager", category: .app)

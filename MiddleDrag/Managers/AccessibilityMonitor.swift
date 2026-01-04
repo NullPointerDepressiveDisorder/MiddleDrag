@@ -22,6 +22,7 @@ class AccessibilityMonitor {
     // MARK: - Initialization
 
     init(
+        initialState: Bool? = nil,
         permissionChecker: AccessibilityPermissionChecking = SystemAccessibilityPermissionChecker(),
         appController: AppLifecycleControlling = SystemAppLifecycleController(),
         notificationCenter: NotificationCenter = .default
@@ -29,7 +30,7 @@ class AccessibilityMonitor {
         self.permissionChecker = permissionChecker
         self.appController = appController
         self.notificationCenter = notificationCenter
-        self.lastKnownState = permissionChecker.isTrusted
+        self.lastKnownState = initialState ?? permissionChecker.isTrusted
     }
 
     deinit {
@@ -49,8 +50,9 @@ class AccessibilityMonitor {
 
         Log.info("Starting accessibility permission monitoring", category: .app)
 
-        // Update initial state
-        lastKnownState = isGranted
+        // Note: We do NOT reset lastKnownState here because we want to detect changes
+        // from the state provided at initialization (which represents the app's assumption).
+        // If the state changed between init and now, the first timer check will catch it.
 
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
             self?.checkPermission()
