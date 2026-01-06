@@ -41,7 +41,7 @@ jobs:
       - name: Generate SHA256
         id: sha
         run: |
-          SHA=$(shasum -a 256 ${{ inputs.artifact-name }}.zip | awk '{print $1}')
+          SHA=$(shasum -a 256 ${{ inputs.artifact-name }}.pkg | awk '{print $1}')
           echo "SHA256=$SHA" >> $GITHUB_OUTPUT
           echo "SHA256: $SHA"
 
@@ -80,7 +80,7 @@ jobs:
             ${{ steps.tag_message.outputs.HAS_MESSAGE == 'true' && steps.tag_message.outputs.MESSAGE || '' }}
             ---
             **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
-          files: ${{ inputs.artifact-name }}.zip
+          files: ${{ inputs.artifact-name }}.pkg
 
       - name: Trigger Homebrew Update
         env:

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to update (e.g., 2.0.1) - leave empty to use latest release'
+        description: "Version to update (e.g., 2.0.1) - leave empty to use latest release"
         required: false
         type: string
 
@@ -43,20 +43,24 @@ jobs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          
+
           # Download and get SHA
-          curl -L -o MiddleDrag.zip "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.zip"
-          SHA=$(shasum -a 256 MiddleDrag.zip | awk '{print $1}')
-          
+          curl -L -o MiddleDrag.pkg "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag.pkg"
+          SHA=$(shasum -a 256 MiddleDrag.pkg | awk '{print $1}')
+
           # Clone tap repo and update
           git clone --depth 1 --filter=blob:none --sparse \
             https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/nullpointerdepressivedisorder/homebrew-tap.git
           cd homebrew-tap
           git sparse-checkout set Casks
-          
+
           sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/middledrag.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/middledrag.rb
-          
+          sed -i '' "s/\.zip/\.pkg/" Casks/middledrag.rb
+          sed -i '' "s/MiddleDrag-#{version}\.zip/MiddleDrag.pkg/" Casks/middledrag.rb
+          sed -i '' 's/app "MiddleDrag.app"/pkg "MiddleDrag.pkg"\
+            uninstall pkgutil: "com.karanmohindroo.middledrag"/' Casks/middledrag.rb
+
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
           git add Casks/middledrag.rb

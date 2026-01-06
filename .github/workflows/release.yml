@@ -58,10 +58,10 @@ jobs:
 
   publish:
     name: Publish
-    needs: [version, build, sentry]
+    needs: [version, package-and-certify, sentry]
     uses: ./.github/workflows/_publish-release.yml
     with:
       version: ${{ needs.version.outputs.version }}
-      artifact-name: ${{ needs.build.outputs.artifact-name }}
+      artifact-name: ${{ needs.package-and-certify.outputs.package-name }}
       commit-sha: ${{ needs.version.outputs.new-sha }}
     secrets: inherit
