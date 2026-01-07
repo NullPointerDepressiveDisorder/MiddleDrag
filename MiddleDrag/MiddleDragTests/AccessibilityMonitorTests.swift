@@ -154,3 +154,60 @@ class AccessibilityMonitorTests: XCTestCase {
         XCTAssertTrue(mockAppController.relaunchCalled)
     }
 }
+
+class MockAppLifecycleProcessRunner: AppLifecycleProcessRunner {
+    var executableURL: URL?
+    var arguments: [String]?
+    var runCalled = false
+
+    func run() throws {
+        runCalled = true
+    }
+}
+
+class TestableSystemAppLifecycleController: SystemAppLifecycleController {
+    var terminateCalled = false
+    var terminateExpectation: XCTestExpectation?
+
+    override func terminate() {
+        terminateCalled = true
+        terminateExpectation?.fulfill()
+    }
+}
+
+class SystemAppLifecycleControllerTests: XCTestCase {
+    func testRelaunchConfiguresProcessCorrectly() {
+        let controller = TestableSystemAppLifecycleController()
+        let mockProcess = MockAppLifecycleProcessRunner()
+
+        // Inject mock factory
+        controller.processFactory = { mockProcess }
+
+        controller.relaunch()
+
+        XCTAssertTrue(mockProcess.runCalled)
+        XCTAssertEqual(mockProcess.executableURL?.path, "/bin/sh")
+        XCTAssertNotNil(mockProcess.arguments)
+        if let args = mockProcess.arguments {
+            XCTAssertEqual(args.count, 3)
+            XCTAssertEqual(args[0], "-c")
+            XCTAssertTrue(args[1].contains("sleep 0.5 && open -n \"$0\""))
+            // Verify bundle path is passed as $0 (last arg)
+            XCTAssertEqual(args[2], Bundle.main.bundlePath)
+        }
+    }
+
+    func testRelaunchTerminatesAfterDelay() {
+        let controller = TestableSystemAppLifecycleController()
+        let mockProcess = MockAppLifecycleProcessRunner()
+        controller.processFactory = { mockProcess }
+
+        let expectation = XCTestExpectation(description: "Wait for termination")
+        controller.terminateExpectation = expectation
+
+        controller.relaunch()
+
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertTrue(controller.terminateCalled)
+    }
+}
