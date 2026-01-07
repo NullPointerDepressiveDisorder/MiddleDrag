@@ -15,9 +15,9 @@ fi
 # Remove 'v' prefix if provided
 VERSION="${VERSION#v}"
 
-# Validate semver format
-if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "Error: Version must be in semver format (e.g., 1.2.3)"
+# Validate semver format (allowing optional 4th component for marketing versions)
+if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
+    echo "Error: Version must be in format X.Y.Z or X.Y.Z.W (e.g., 1.2.3 or 1.2.3.4)"
     exit 1
 fi
 
@@ -33,7 +33,7 @@ if [ ! -f "MiddleDrag.xcodeproj/project.pbxproj" ]; then
     echo "Error: MiddleDrag.xcodeproj/project.pbxproj not found. Are you in the project root?"
     exit 1
 fi
-sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+/MARKETING_VERSION = $VERSION/g" \
+sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?/MARKETING_VERSION = $VERSION/g" \
     MiddleDrag.xcodeproj/project.pbxproj
 
 # Verify exactly 2 instances were updated
