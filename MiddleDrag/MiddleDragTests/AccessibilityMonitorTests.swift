@@ -177,7 +177,7 @@ class TestableSystemAppLifecycleController: SystemAppLifecycleController {
 
 class SystemAppLifecycleControllerTests: XCTestCase {
     func testRelaunchConfiguresProcessCorrectly() {
-        let controller = SystemAppLifecycleController()
+        let controller = TestableSystemAppLifecycleController()
         let mockProcess = MockAppLifecycleProcessRunner()
 
         // Inject mock factory
