@@ -56,7 +56,7 @@ jobs:
         id: package
         run: |
           pkgbuild --root MiddleDrag.app \
-          --identifier com.karanmohindroo.middledrag \
+          --identifier app.middledrag.MiddleDrag \
           --version ${{ inputs.version }} \
           --install-location /Applications \
           --sign "Developer ID Installer: Karan Mohindroo (PA6CS4W4H9)" \

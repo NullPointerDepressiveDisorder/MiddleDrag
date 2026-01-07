@@ -59,7 +59,7 @@ jobs:
           sed -i '' "s/\.zip/\.pkg/" Casks/middledrag.rb
           sed -i '' "s/MiddleDrag-#{version}\.zip/MiddleDrag.pkg/" Casks/middledrag.rb
           sed -i '' 's/app "MiddleDrag.app"/pkg "MiddleDrag.pkg"\
-            uninstall pkgutil: "com.karanmohindroo.middledrag"/' Casks/middledrag.rb
+            uninstall pkgutil: "app.middledrag.MiddleDrag"/' Casks/middledrag.rb
 
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
