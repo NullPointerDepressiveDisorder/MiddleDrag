@@ -43,9 +43,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         multitouchManager.updateConfiguration(preferences.gestureConfig)
 
         // Check Accessibility permission
-        let options =
-            [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-        let hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
+        // First check WITHOUT prompting to avoid showing dialog on every relaunch
+        var hasAccessibilityPermission = AXIsProcessTrusted()
+        
+        // Only show the system prompt if we don't already have permission
+        if !hasAccessibilityPermission {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
+        }
 
         if hasAccessibilityPermission {
             Log.info("Accessibility permission granted", category: .app)
