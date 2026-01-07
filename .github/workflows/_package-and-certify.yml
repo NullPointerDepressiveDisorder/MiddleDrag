@@ -1,0 +1,84 @@
+name: Package and Certify
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Version of the .app to package and certify
+        required: true
+        type: string
+    outputs:
+      package-name:
+        description: Name of the uploaded artifact
+        value: ${{ jobs.package-and-certify.outputs.package-name }}
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-certify:
+    runs-on: macos-15
+    outputs:
+      package-name: ${{ steps.package.outputs.pkg-name }}
+
+    steps:
+      - name: download-app
+        uses: actions/download-artifact@v4
+        with:
+          name: MiddleDrag-${{ inputs.version }}
+          path: .
+
+      - name: Install certificates
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
+          INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "${{ env.CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
+          echo "${{ env.INSTALLER_CERTIFICATE_BASE64 }}" | base64 --decode > installer.p12
+
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+
+          security import certificate.p12 -k build.keychain -P "${{ env.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import installer.p12 -k build.keychain -P "${{ env.INSTALLER_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: Sign app
+        run: |
+          codesign --deep --force --options runtime \
+          --sign "Developer ID Application: Karan Mohindroo (${{ vars.TEAM_ID }})" \
+          MiddleDrag.app
+
+      - name: Package app
+        id: package
+        run: |
+          mkdir -p payload/Applications
+          mv MiddleDrag.app payload/Applications/
+          pkgbuild --root payload \
+          --identifier app.middledrag.MiddleDrag \
+          --version ${{ inputs.version }} \
+          --install-location / \
+          --sign "Developer ID Installer: Karan Mohindroo (${{ vars.TEAM_ID }})" \
+          MiddleDrag.pkg
+
+          echo "pkg-name=MiddleDrag" >> $GITHUB_OUTPUT
+
+      - name: Notarize app
+        run: |
+          xcrun notarytool submit MiddleDrag.pkg \
+          --apple-id ${{ secrets.APPLE_ID }} \
+          --team-id ${{ vars.TEAM_ID }} \
+          --password ${{ secrets.APP_SPECIFIC_PASSWORD }} \
+          --wait
+
+          xcrun stapler staple MiddleDrag.pkg
+
+      - name: Upload Notarized app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.pkg-name }}
+          path: ${{ steps.package.outputs.pkg-name }}.pkg
+          retention-days: 1

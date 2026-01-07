@@ -41,7 +41,7 @@ jobs:
       - name: Generate SHA256
         id: sha
         run: |
-          SHA=$(shasum -a 256 ${{ inputs.artifact-name }}.zip | awk '{print $1}')
+          SHA=$(shasum -a 256 ${{ inputs.artifact-name }}.pkg | awk '{print $1}')
           echo "SHA256=$SHA" >> $GITHUB_OUTPUT
           echo "SHA256: $SHA"
 
@@ -80,7 +80,7 @@ jobs:
             ${{ steps.tag_message.outputs.HAS_MESSAGE == 'true' && steps.tag_message.outputs.MESSAGE || '' }}
             ---
             **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
-          files: ${{ inputs.artifact-name }}.zip
+          files: ${{ inputs.artifact-name }}.pkg
 
       - name: Trigger Homebrew Update
         env:
@@ -92,3 +92,25 @@ jobs:
             https://api.github.com/repos/${{ github.repository }}/dispatches \
             -d "{\"event_type\":\"homebrew_release\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
           echo "✓ Triggered Homebrew update workflow"
+
+      - name: Trigger MacPorts Update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -f -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d "{\"event_type\":\"macports_release\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
+          echo "✓ Triggered MacPorts update workflow"
+
+      - name: Trigger Nixpkgs Update
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl -f -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d "{\"event_type\":\"nixpkgs_release\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
+          echo "✓ Triggered Nixpkgs update workflow"

@@ -1,0 +1,92 @@
+# .github/workflows/update-nixpkgs.yml
+name: Update Nixpkgs
+permissions:
+  contents: read
+
+on:
+  repository_dispatch:
+    types: [nixpkgs_release]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update (e.g., 2.0.1) - leave empty to use latest release"
+        required: false
+        type: string
+
+jobs:
+  update-nixpkgs:
+    runs-on: macos-latest
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+
+      - name: Determine version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+          elif [ -n "${{ github.event.release.tag_name }}" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
+            VERSION="${VERSION#v}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
+
+      - name: Calculate Nix hash
+        id: hash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag.pkg"
+          
+          # nix-prefetch-url returns the Nix store path and hash
+          HASH=$(nix-prefetch-url --type sha256 "$URL" 2>/dev/null)
+          # Convert to SRI format (sha256-base64)
+          SRI_HASH=$(nix hash convert --hash-algo sha256 --to sri "$HASH")
+          
+          echo "hash=${SRI_HASH}" >> $GITHUB_OUTPUT
+          echo "SHA256 (SRI): ${SRI_HASH}"
+
+      - name: Update Nixpkgs fork
+        env:
+          NIXPKGS_TOKEN: ${{ secrets.NIXPKGS_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          HASH="${{ steps.hash.outputs.hash }}"
+
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://x-access-token:${NIXPKGS_TOKEN}@github.com/nullpointerdepressivedisorder/nixpkgs.git
+          cd nixpkgs
+          git sparse-checkout set pkgs/by-name/mi/middledrag
+
+          PACKAGE_FILE="pkgs/by-name/mi/middledrag/package.nix"
+
+          if [ ! -f "$PACKAGE_FILE" ]; then
+            echo "Error: package.nix not found at $PACKAGE_FILE"
+            exit 1
+          fi
+
+          # Update version
+          sed -i '' "s/version = \".*\"/version = \"${VERSION}\"/" "$PACKAGE_FILE"
+          
+          # Update hash (SRI format: sha256-XXXX=)
+          sed -i '' "s|hash = \"sha256-.*\"|hash = \"${HASH}\"|" "$PACKAGE_FILE"
+
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add "$PACKAGE_FILE"
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "middledrag: ${VERSION}"
+            git push
+            echo "✓ Updated nixpkgs fork to ${VERSION}"
+            echo ""
+            echo "Next: Open a PR from your fork to NixOS/nixpkgs"
+          fi
