@@ -45,7 +45,7 @@ class SystemAppLifecycleController: AppLifecycleControlling {
         // $0 will be the bundlePath passed as the first argument after the command string
         task.arguments = [
             "-c",
-            "sleep 0.5 && open \"$0\"",
+            "sleep 0.5 && open -n \"$0\"",
             bundlePath,
         ]
 

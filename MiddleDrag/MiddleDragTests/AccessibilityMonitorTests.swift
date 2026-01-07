@@ -191,7 +191,7 @@ class SystemAppLifecycleControllerTests: XCTestCase {
         if let args = mockProcess.arguments {
             XCTAssertEqual(args.count, 3)
             XCTAssertEqual(args[0], "-c")
-            XCTAssertTrue(args[1].contains("sleep 0.5 && open \"$0\""))
+            XCTAssertTrue(args[1].contains("sleep 0.5 && open -n \"$0\""))
             // Verify bundle path is passed as $0 (last arg)
             XCTAssertEqual(args[2], Bundle.main.bundlePath)
         }
