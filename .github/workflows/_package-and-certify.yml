@@ -49,26 +49,22 @@ jobs:
       - name: Sign app
         run: |
           codesign --deep --force --options runtime \
-          --sign "Developer ID Application: Karan Mohindroo (PA6CS4W4H9)" \
+          --sign "Developer ID Application: Karan Mohindroo (${{ vars.TEAM_ID }})" \
           MiddleDrag.app
 
       - name: Package app
         id: package
         run: |
-          pkgbuild --root MiddleDrag.app \
+          mkdir -p payload/Applications
+          mv MiddleDrag.app payload/Applications/
+          pkgbuild --root payload \
           --identifier app.middledrag.MiddleDrag \
           --version ${{ inputs.version }} \
-          --install-location /Applications \
-          --sign "Developer ID Installer: Karan Mohindroo (PA6CS4W4H9)" \
+          --install-location / \
+          --sign "Developer ID Installer: Karan Mohindroo (${{ vars.TEAM_ID }})" \
           MiddleDrag.pkg
 
           echo "pkg-name=MiddleDrag" >> $GITHUB_OUTPUT
-
-      - name: Sign installer
-        run: |
-          codesign --deep --force --options runtime \
-          --sign "Developer ID Installer: Karan Mohindroo (PA6CS4W4H9)" \
-          MiddleDrag.pkg
 
       - name: Notarize app
         run: |

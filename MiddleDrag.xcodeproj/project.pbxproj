@@ -409,7 +409,7 @@
 				CODE_SIGN_ENTITLEMENTS = MiddleDrag/MiddleDrag.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = PA6CS4W4H9;
@@ -454,7 +454,7 @@
 				CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = MiddleDrag/MiddleDrag.entitlements;
 				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = PA6CS4W4H9;
@@ -492,7 +492,7 @@
 		MDT00000013 /* Debug configuration for PBXNativeTarget "MiddleDragTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -514,7 +514,7 @@
 		MDT00000014 /* Release configuration for PBXNativeTarget "MiddleDragTests" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
 				GENERATE_INFOPLIST_FILE = YES;
