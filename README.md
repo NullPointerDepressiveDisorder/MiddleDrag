@@ -2,7 +2,7 @@
 
 **Three-finger trackpad gestures for middle-click and middle-drag on macOS.**
 
-Finally use your MacBook for CAD work without carrying a mouse.
+The middle mouse button your Mac trackpad is missing.
 
 [![macOS 15+](https://img.shields.io/badge/macOS-15.0+-blue?logo=apple)](https://www.apple.com/macos/)
 [![Swift 5.9+](https://img.shields.io/badge/Swift-5.9+-orange?logo=swift)](https://swift.org)
@@ -19,30 +19,35 @@ Finally use your MacBook for CAD work without carrying a mouse.
 
 ## The Problem
 
-Professional 3D software expects middle-mouse-button navigation. MacBook trackpads don't have one.
-
-For years, CAD users on Mac have been forced to either carry an external mouse, use awkward four-key modifier combinations, or fight with unreliable workarounds. Forum threads dating back to 2017 are filled with users pleading for a solution.
+Mac trackpads don't have a middle mouse button. Many apps expect one.
 
 **MiddleDrag fixes this.** Three-finger tap for middle-click. Three-finger drag for middle-drag. Works alongside Mission Control and other system gestures.
 
-## Who This Is For
+## Use Cases
 
-MiddleDrag is essential for users of applications with **broken or missing trackpad navigation**:
+### Browsers
+- Open links in new background tabs
+- Close tabs with a click
+- Open bookmarks/history in new tabs
 
-| Application | Native Trackpad Support | MiddleDrag Value |
-|-------------|------------------------|------------------|
-| **FreeCAD** | ❌ Broken gestures | Essential — native gestures misfire constantly |
-| **OnShape** | ❌ Force-click only | Essential — no tap gestures, causes hand strain |
-| **ZBrush** | ❌ None | Essential — zero multi-touch recognition |
-| **SketchUp Pro** | ❌ 4-key combos | Essential — Ctrl+Cmd+Shift+drag is unusable |
-| **SolidWorks** | ❌ N/A (Windows VM) | Essential — only zoom works through Parallels |
-| **Cinema 4D** | ⚠️ Alt-key required | High — every action needs a modifier key |
-| **Fusion 360** | ⚠️ Buggy | High — breaks after updates and sleep cycles |
-| **Maya** | ⚠️ Erratic | High — viewport spins without input |
-| **Rhino** | ✅ Good | Moderate — sleep-wake bug breaks gestures |
-| **Blender** | ✅ Good | Optional — native support works, but Alt-key conflicts exist |
+### Design & Creative Tools
+- Pan canvas in Figma, Photoshop, Illustrator, GIMP
+- Navigate large documents in PDF viewers
+- Scroll in any direction without modifier keys
 
-Also useful for **browsers** (middle-click to open links in new tabs, close tabs) and **any application** expecting middle-mouse input.
+### Development
+- Close editor tabs in VS Code, Sublime Text, IDEs
+- Middle-click paste in terminals (where supported)
+- Pan around large codebases in code visualization tools
+
+### 3D & CAD Software
+- Orbit and pan viewports in Blender, FreeCAD, Fusion 360, SketchUp, Maya, ZBrush, OnShape
+- Navigate Google Earth and mapping applications
+- Essential for apps with broken or missing trackpad support
+
+### Productivity
+- Autoscroll in supported applications
+- Any workflow that expects middle-mouse input
 
 ## Features
 
@@ -211,7 +216,7 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 ---
 
 <p align="center">
-  <i>Built for the CAD users who've been asking for this since 2017.</i>
+  <i>The middle mouse button your Mac trackpad is missing.</i>
 </p>
 
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large&issueType=license)
