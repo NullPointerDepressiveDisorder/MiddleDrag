@@ -175,6 +175,15 @@ class TestableSystemAppLifecycleController: SystemAppLifecycleController {
     }
 }
 
+class MockFailingProcessRunner: AppLifecycleProcessRunner {
+    var executableURL: URL?
+    var arguments: [String]?
+
+    func run() throws {
+        throw NSError(domain: "Test", code: 1, userInfo: nil)
+    }
+}
+
 class SystemAppLifecycleControllerTests: XCTestCase {
     func testRelaunchConfiguresProcessCorrectly() {
         let controller = TestableSystemAppLifecycleController()
@@ -209,5 +218,27 @@ class SystemAppLifecycleControllerTests: XCTestCase {
 
         wait(for: [expectation], timeout: 1.0)
         XCTAssertTrue(controller.terminateCalled)
+    }
+
+    func testFallbackRelaunchConfiguresNewInstance() {
+        let controller = TestableSystemAppLifecycleController()
+        // Use a process runner that throws to trigger fallback
+        controller.processFactory = { MockFailingProcessRunner() }
+
+        let expectation = XCTestExpectation(description: "Fallback opener called")
+        var capturedConfig: NSWorkspace.OpenConfiguration?
+
+        controller.workspaceAppOpener = { url, config, completion in
+            capturedConfig = config
+            expectation.fulfill()
+            // Simulate success
+            completion(nil, nil)
+        }
+
+        controller.relaunch()
+
+        wait(for: [expectation], timeout: 1.0)
+        XCTAssertNotNil(capturedConfig)
+        XCTAssertTrue(capturedConfig?.createsNewApplicationInstance ?? false)
     }
 }

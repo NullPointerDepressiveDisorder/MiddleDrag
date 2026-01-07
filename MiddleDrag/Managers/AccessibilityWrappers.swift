@@ -65,11 +65,20 @@ class SystemAppLifecycleController: AppLifecycleControlling {
         }
     }
 
+    // Closure for opening applications, can be overridden for testing
+    internal var workspaceAppOpener:
+        (URL, NSWorkspace.OpenConfiguration, @escaping (NSRunningApplication?, Error?) -> Void) ->
+            Void = { url, config, completion in
+                NSWorkspace.shared.openApplication(
+                    at: url, configuration: config, completionHandler: completion)
+            }
+
     private func fallbackRelaunch() {
         let url = Bundle.main.bundleURL
         let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
 
-        NSWorkspace.shared.openApplication(at: url, configuration: config) { [weak self] _, error in
+        workspaceAppOpener(url, config) { [weak self] _, error in
             if let error = error {
                 Log.error("Failed to restart app: \(error.localizedDescription)", category: .app)
             } else {
