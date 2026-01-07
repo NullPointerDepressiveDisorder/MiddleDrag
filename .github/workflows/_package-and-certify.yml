@@ -35,15 +35,15 @@ jobs:
           INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_P12_BASE64 }}
           INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
         run: |
-          echo "${{ env.CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
-          echo "${{ env.INSTALLER_CERTIFICATE_BASE64 }}" | base64 --decode > installer.p12
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          echo "$INSTALLER_CERTIFICATE_BASE64" | base64 --decode > installer.p12
 
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
 
-          security import certificate.p12 -k build.keychain -P "${{ env.CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
-          security import installer.p12 -k build.keychain -P "${{ env.INSTALLER_CERTIFICATE_PASSWORD }}" -T /usr/bin/codesign
+          security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import installer.p12 -k build.keychain -P "$INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
       - name: Sign app
@@ -67,11 +67,14 @@ jobs:
           echo "pkg-name=MiddleDrag" >> $GITHUB_OUTPUT
 
       - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          NOTARY_PASSWORD: ${{ secrets.APP_SPECIFIC_PASSWORD }}
         run: |
           xcrun notarytool submit MiddleDrag.pkg \
-          --apple-id ${{ secrets.APPLE_ID }} \
+          --apple-id "$APPLE_ID" \
           --team-id ${{ vars.TEAM_ID }} \
-          --password ${{ secrets.APP_SPECIFIC_PASSWORD }} \
+          --password "$NOTARY_PASSWORD" \
           --wait
 
           xcrun stapler staple MiddleDrag.pkg
