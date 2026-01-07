@@ -22,15 +22,39 @@ protocol AppLifecycleControlling {
 /// Default implementation using NSWorkspace and NSApp
 class SystemAppLifecycleController: AppLifecycleControlling {
     func relaunch() {
+        let bundlePath = Bundle.main.bundlePath
+        
+        // Use a shell command to relaunch after this process terminates
+        // This ensures clean handoff without overlapping instances
+        let task = Process()
+        task.launchPath = "/bin/sh"
+        task.arguments = [
+            "-c",
+            // Wait briefly for current process to fully terminate, then open the app
+            "sleep 0.5 && open \"\(bundlePath)\""
+        ]
+        
+        do {
+            try task.run()
+            // Terminate after launching the background relaunch task
+            DispatchQueue.main.async {
+                self.terminate()
+            }
+        } catch {
+            Log.error("Failed to schedule app relaunch: \(error.localizedDescription)", category: .app)
+            // Fall back to direct launch if shell approach fails
+            fallbackRelaunch()
+        }
+    }
+    
+    private func fallbackRelaunch() {
         let url = Bundle.main.bundleURL
         let config = NSWorkspace.OpenConfiguration()
-        config.createsNewApplicationInstance = true
-
+        
         NSWorkspace.shared.openApplication(at: url, configuration: config) { [weak self] _, error in
             if let error = error {
                 Log.error("Failed to restart app: \(error.localizedDescription)", category: .app)
             } else {
-                // Terminate only after successful launch request
                 DispatchQueue.main.async {
                     self?.terminate()
                 }
