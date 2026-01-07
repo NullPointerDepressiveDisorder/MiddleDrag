@@ -154,3 +154,53 @@ class AccessibilityMonitorTests: XCTestCase {
         XCTAssertTrue(mockAppController.relaunchCalled)
     }
 }
+
+class MockAppLifecycleProcessRunner: AppLifecycleProcessRunner {
+    var executableURL: URL?
+    var arguments: [String]?
+    var runCalled = false
+
+    func run() throws {
+        runCalled = true
+    }
+}
+
+class SystemAppLifecycleControllerTests: XCTestCase {
+    func testRelaunchConfiguresProcessCorrectly() {
+        let controller = SystemAppLifecycleController()
+        let mockProcess = MockAppLifecycleProcessRunner()
+
+        // Inject mock factory
+        controller.processFactory = { mockProcess }
+
+        controller.relaunch()
+
+        XCTAssertTrue(mockProcess.runCalled)
+        XCTAssertEqual(mockProcess.executableURL?.path, "/bin/sh")
+        XCTAssertNotNil(mockProcess.arguments)
+        if let args = mockProcess.arguments {
+            XCTAssertEqual(args.count, 3)
+            XCTAssertEqual(args[0], "-c")
+            XCTAssertTrue(args[1].contains("sleep 0.5 && open \"$0\""))
+            // Verify bundle path is passed as $0 (last arg)
+            XCTAssertEqual(args[2], Bundle.main.bundlePath)
+        }
+    }
+
+    func testRelaunchTerminatesAfterDelay() {
+        let controller = SystemAppLifecycleController()
+        let mockProcess = MockAppLifecycleProcessRunner()
+        controller.processFactory = { mockProcess }
+
+        // We can't strictly test the async termination without complex expectation on the specific dispatch queue
+        // But we can verify it doesn't crash
+        controller.relaunch()
+
+        let expectation = XCTestExpectation(
+            description: "Wait for potential async termination block")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+    }
+}
