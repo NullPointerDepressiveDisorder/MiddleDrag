@@ -165,6 +165,16 @@ class MockAppLifecycleProcessRunner: AppLifecycleProcessRunner {
     }
 }
 
+class TestableSystemAppLifecycleController: SystemAppLifecycleController {
+    var terminateCalled = false
+    var terminateExpectation: XCTestExpectation?
+
+    override func terminate() {
+        terminateCalled = true
+        terminateExpectation?.fulfill()
+    }
+}
+
 class SystemAppLifecycleControllerTests: XCTestCase {
     func testRelaunchConfiguresProcessCorrectly() {
         let controller = SystemAppLifecycleController()
@@ -188,19 +198,16 @@ class SystemAppLifecycleControllerTests: XCTestCase {
     }
 
     func testRelaunchTerminatesAfterDelay() {
-        let controller = SystemAppLifecycleController()
+        let controller = TestableSystemAppLifecycleController()
         let mockProcess = MockAppLifecycleProcessRunner()
         controller.processFactory = { mockProcess }
 
-        // We can't strictly test the async termination without complex expectation on the specific dispatch queue
-        // But we can verify it doesn't crash
+        let expectation = XCTestExpectation(description: "Wait for termination")
+        controller.terminateExpectation = expectation
+
         controller.relaunch()
 
-        let expectation = XCTestExpectation(
-            description: "Wait for potential async termination block")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            expectation.fulfill()
-        }
         wait(for: [expectation], timeout: 1.0)
+        XCTAssertTrue(controller.terminateCalled)
     }
 }
