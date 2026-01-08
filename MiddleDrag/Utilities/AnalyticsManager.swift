@@ -194,11 +194,15 @@ final class CrashReporter {
             options.tracesSampleRate = self.performanceMonitoringEnabled ? 0.1 : 0.0
             
             // Environment
-            #if DEBUG
-            options.environment = "development"
-            #else
-            options.environment = "production"
-            #endif
+            if ProcessInfo.processInfo.environment["CI"] != nil {
+                options.environment = "CI"
+            } else {
+                #if DEBUG
+                options.environment = "development"
+                #else
+                options.environment = "production"
+                #endif
+            }
             
             // App version
             if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
