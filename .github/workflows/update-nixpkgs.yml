@@ -42,13 +42,13 @@ jobs:
         id: hash
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag.pkg"
-          
+          URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.pkg"
+
           # nix-prefetch-url returns the Nix store path and hash
           HASH=$(nix-prefetch-url --type sha256 "$URL" 2>/dev/null)
           # Convert to SRI format (sha256-base64)
           SRI_HASH=$(nix hash convert --hash-algo sha256 --to sri "$HASH")
-          
+
           echo "hash=${SRI_HASH}" >> $GITHUB_OUTPUT
           echo "SHA256 (SRI): ${SRI_HASH}"
 
@@ -73,7 +73,7 @@ jobs:
 
           # Update version
           sed -i '' "s/version = \".*\"/version = \"${VERSION}\"/" "$PACKAGE_FILE"
-          
+
           # Update hash (SRI format: sha256-XXXX=)
           sed -i '' "s|hash = \"sha256-.*\"|hash = \"${HASH}\"|" "$PACKAGE_FILE"
 
