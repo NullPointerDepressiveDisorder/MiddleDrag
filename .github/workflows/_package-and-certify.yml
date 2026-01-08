@@ -46,7 +46,7 @@ jobs:
           security unlock-keychain -p "" build.keychain
 
           security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security import installer.p12 -k build.keychain -P "$INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import installer.p12 -k build.keychain -P "$INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/pkgbuild -T /usr/bin/productbuild -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
       - name: Sign app
