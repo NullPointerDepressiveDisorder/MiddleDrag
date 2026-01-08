@@ -46,11 +46,11 @@ jobs:
 
   sentry:
     name: Sentry
-    needs: [version, package-and-certify]
+    needs: [version, package-and-certify, build]
     uses: ./.github/workflows/_sentry-upload.yml
     with:
       version: ${{ needs.version.outputs.version }}
-      artifact-name: ${{ needs.package-and-certify.outputs.package-name }}
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
     secrets:
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
       SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
