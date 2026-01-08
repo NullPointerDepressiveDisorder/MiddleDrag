@@ -78,8 +78,9 @@ class DeviceMonitor: TouchDeviceProviding {
     // MARK: - Public Interface
 
     /// Start monitoring the default multitouch device
-    func start() {
-        guard !isRunning else { return }
+    @discardableResult
+    func start() -> Bool {
+        guard !isRunning else { return true }
 
         Log.info("DeviceMonitor starting...", category: .device)
 
@@ -125,13 +126,17 @@ class DeviceMonitor: TouchDeviceProviding {
             }
         }
 
-        if device == nil {
-            Log.error("No multitouch device found!", category: .device)
-        } else {
-            Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
+        guard device != nil else {
+            Log.warning(
+                "No multitouch device found. MiddleDrag requires a built-in trackpad or Magic Trackpad.",
+                category: .device)
+            return false
         }
 
+        Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
+
         isRunning = true
+        return true
     }
 
     /// Stop monitoring

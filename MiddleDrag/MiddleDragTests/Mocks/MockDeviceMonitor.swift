@@ -26,9 +26,13 @@ class MockDeviceMonitor: TouchDeviceProviding {
 
     // MARK: - Protocol Methods
 
-    func start() {
+    var startShouldSucceed = true
+
+    @discardableResult
+    func start() -> Bool {
         startCalled = true
         startCallCount += 1
+        return startShouldSucceed
     }
 
     func stop() {
@@ -44,6 +48,7 @@ class MockDeviceMonitor: TouchDeviceProviding {
         stopCalled = false
         startCallCount = 0
         stopCallCount = 0
+        startShouldSucceed = true
     }
 
     /// Simulate receiving touch data

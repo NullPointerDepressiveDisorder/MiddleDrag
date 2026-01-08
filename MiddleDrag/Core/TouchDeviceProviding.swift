@@ -10,7 +10,9 @@ protocol TouchDeviceProviding: AnyObject {
     var delegate: DeviceMonitorDelegate? { get set }
 
     /// Start monitoring for touch input
-    func start()
+    /// - Returns: `true` if at least one multitouch device was successfully registered
+    @discardableResult
+    func start() -> Bool
 
     /// Stop monitoring for touch input
     func stop()

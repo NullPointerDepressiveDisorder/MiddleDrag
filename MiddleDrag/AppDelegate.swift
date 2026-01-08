@@ -57,7 +57,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             // Start multitouch manager (only if we have permission)
             multitouchManager.start()
-            Log.info("Multitouch manager started", category: .app)
+            if multitouchManager.isMonitoring {
+                Log.info("Multitouch manager started", category: .app)
+            } else {
+                Log.warning(
+                    "Multitouch manager inactive: no compatible multitouch hardware detected.",
+                    category: .device)
+            }
         } else {
             Log.warning("Accessibility permission not granted", category: .app)
         }

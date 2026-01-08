@@ -111,25 +111,20 @@ class MultitouchManager {
 
         deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
-        deviceMonitor?.start()
 
-        // Observe sleep/wake to reinitialize device connections
-        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.willSleepNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            Log.info("System going to sleep", category: .device)
+        guard deviceMonitor?.start() == true else {
+            Log.warning(
+                "No compatible multitouch hardware detected. Gesture monitoring disabled.",
+                category: .device)
+            deviceMonitor?.stop()
+            deviceMonitor = nil
+            teardownEventTap()
+            isMonitoring = false
+            isEnabled = false
+            return
         }
 
-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
-            forName: NSWorkspace.didWakeNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Log.info("System woke from sleep, restarting monitoring", category: .device)
-            self?.restart()
-        }
+        addSleepWakeObservers()
 
         isMonitoring = true
         isEnabled = true
@@ -139,15 +134,7 @@ class MultitouchManager {
     func stop() {
         guard isMonitoring else { return }
 
-        // Remove sleep/wake observers
-        if let observer = sleepObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            sleepObserver = nil
-        }
-        if let observer = wakeObserver {
-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
-            wakeObserver = nil
-        }
+        removeSleepWakeObservers()
 
         internalStop()
         isEnabled = false
@@ -177,12 +164,25 @@ class MultitouchManager {
             Log.error("Failed to restart: could not create event tap", category: .device)
             isMonitoring = false
             isEnabled = false
+            removeSleepWakeObservers()
             return
         }
 
         deviceMonitor = deviceProviderFactory()
         deviceMonitor?.delegate = self
-        deviceMonitor?.start()
+
+        guard deviceMonitor?.start() == true else {
+            Log.warning(
+                "Restart aborted: no compatible multitouch hardware detected.",
+                category: .device)
+            deviceMonitor?.stop()
+            deviceMonitor = nil
+            teardownEventTap()
+            isMonitoring = false
+            isEnabled = false
+            removeSleepWakeObservers()
+            return
+        }
 
         isMonitoring = true
         isEnabled = wasEnabled
@@ -204,6 +204,40 @@ class MultitouchManager {
         teardownEventTap()
 
         isMonitoring = false
+    }
+
+    // MARK: - Sleep/Wake Handling
+
+    private func addSleepWakeObservers() {
+        guard sleepObserver == nil, wakeObserver == nil else { return }
+
+        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.willSleepNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            Log.info("System going to sleep", category: .device)
+        }
+
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Log.info("System woke from sleep, restarting monitoring", category: .device)
+            self?.restart()
+        }
+    }
+
+    private func removeSleepWakeObservers() {
+        if let observer = sleepObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            sleepObserver = nil
+        }
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
     }
 
     /// Toggle enabled state

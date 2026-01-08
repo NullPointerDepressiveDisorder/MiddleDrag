@@ -167,6 +167,38 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
+    func testStartGracefullyHandlesMissingHardware() {
+        let mockDevice = MockDeviceMonitor()
+        mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        XCTAssertFalse(manager.isMonitoring)
+        XCTAssertFalse(manager.isEnabled)
+    }
+
+    func testRestartStopsWhenHardwareUnavailable() {
+        var factories: [Bool] = [true, false]
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                let monitor = MockDeviceMonitor()
+                monitor.startShouldSucceed = factories.isEmpty ? true : factories.removeFirst()
+                return monitor
+            },
+            eventTapSetup: { true }
+        )
+
+        manager.start()
+        XCTAssertTrue(manager.isMonitoring)
+
+        manager.restart()
+
+        XCTAssertFalse(manager.isMonitoring)
+        XCTAssertFalse(manager.isEnabled)
+    }
+
     func testStopSetsMonitoringToFalse() {
         let mockDevice = MockDeviceMonitor()
         let manager = MultitouchManager(
