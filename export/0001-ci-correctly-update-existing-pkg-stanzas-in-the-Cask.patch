@@ -1,0 +1,37 @@
+From 44dfa1481e0da7795ed3667fdae50bff5d81d810 Mon Sep 17 00:00:00 2001
+From: NullPointerDepressiveDisorder
+ <96403086+NullPointerDepressiveDisorder@users.noreply.github.com>
+Date: Wed, 7 Jan 2026 17:28:11 -0800
+Subject: [PATCH 1/2] ci: correctly update existing pkg stanzas in the Cask
+ file
+
+---
+ .github/workflows/update-homebrew.yml | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/.github/workflows/update-homebrew.yml b/.github/workflows/update-homebrew.yml
+index bfbc752..07b0bc8 100644
+--- a/.github/workflows/update-homebrew.yml
++++ b/.github/workflows/update-homebrew.yml
+@@ -68,11 +68,16 @@ jobs:
+             gsub(/MiddleDrag-.*\.pkg/, "MiddleDrag-" ver ".pkg")
+             gsub(/MiddleDrag-.*\.zip/, "MiddleDrag-" ver ".pkg")
+ 
+-            # Replace app stanza with pkg stanza
++            # Replace app stanza with pkg stanza (if converting from zip)
+             if ($0 ~ /app "MiddleDrag.app"/) {
+               print "  pkg \"MiddleDrag-" ver ".pkg\""
+               print "  uninstall pkgutil: \"app.middledrag.MiddleDrag\""
+-            } else {
++            } 
++            # Update existing pkg stanza (if already pkg)
++            else if ($0 ~ /pkg "MiddleDrag.*.pkg"/) {
++              print "  pkg \"MiddleDrag-" ver ".pkg\""
++            }
++            else {
+               print
+             }
+           }' Casks/middledrag.rb > Casks/middledrag.rb.tmp
+-- 
+2.43.0
+

@@ -1,0 +1,292 @@
+From 88f6ad1607c4f50bfca7ff5bc146b88b4221c0fc Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Thu, 8 Jan 2026 20:11:15 +0000
+Subject: [PATCH 1/2] Refactor: Improve multitouch device detection and logging
+
+This commit enhances the multitouch device detection logic by returning a boolean from the `start()` method of `TouchDeviceProviding`. This allows `MultitouchManager` to gracefully handle cases where no compatible hardware is found, logging a warning and disabling monitoring.
+
+Additionally, the commit refactors the sleep/wake observer handling into separate private methods within `MultitouchManager` for better organization.
+
+Unit tests have been added to cover the new hardware detection scenarios.
+
+Co-authored-by: mohindroo.k <mohindroo.k@northeastern.edu>
+---
+ MiddleDrag/AppDelegate.swift                  |  8 +-
+ MiddleDrag/Core/TouchDeviceProviding.swift    |  4 +-
+ MiddleDrag/Managers/DeviceMonitor.swift       | 17 ++--
+ MiddleDrag/Managers/MultitouchManager.swift   | 86 +++++++++++++------
+ .../Mocks/MockDeviceMonitor.swift             |  7 +-
+ .../MultitouchManagerTests.swift              | 32 +++++++
+ 6 files changed, 119 insertions(+), 35 deletions(-)
+
+diff --git a/MiddleDrag/AppDelegate.swift b/MiddleDrag/AppDelegate.swift
+index 83913eb..b170bf0 100644
+--- a/MiddleDrag/AppDelegate.swift
++++ b/MiddleDrag/AppDelegate.swift
+@@ -57,7 +57,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
+ 
+             // Start multitouch manager (only if we have permission)
+             multitouchManager.start()
+-            Log.info("Multitouch manager started", category: .app)
++            if multitouchManager.isMonitoring {
++                Log.info("Multitouch manager started", category: .app)
++            } else {
++                Log.warning(
++                    "Multitouch manager inactive: no compatible multitouch hardware detected.",
++                    category: .device)
++            }
+         } else {
+             Log.warning("Accessibility permission not granted", category: .app)
+         }
+diff --git a/MiddleDrag/Core/TouchDeviceProviding.swift b/MiddleDrag/Core/TouchDeviceProviding.swift
+index cf0afb9..53c5723 100644
+--- a/MiddleDrag/Core/TouchDeviceProviding.swift
++++ b/MiddleDrag/Core/TouchDeviceProviding.swift
+@@ -10,7 +10,9 @@ protocol TouchDeviceProviding: AnyObject {
+     var delegate: DeviceMonitorDelegate? { get set }
+ 
+     /// Start monitoring for touch input
+-    func start()
++    /// - Returns: `true` if at least one multitouch device was successfully registered
++    @discardableResult
++    func start() -> Bool
+ 
+     /// Stop monitoring for touch input
+     func stop()
+diff --git a/MiddleDrag/Managers/DeviceMonitor.swift b/MiddleDrag/Managers/DeviceMonitor.swift
+index e1e3db4..ec50051 100644
+--- a/MiddleDrag/Managers/DeviceMonitor.swift
++++ b/MiddleDrag/Managers/DeviceMonitor.swift
+@@ -78,8 +78,9 @@ class DeviceMonitor: TouchDeviceProviding {
+     // MARK: - Public Interface
+ 
+     /// Start monitoring the default multitouch device
+-    func start() {
+-        guard !isRunning else { return }
++    @discardableResult
++    func start() -> Bool {
++        guard !isRunning else { return true }
+ 
+         Log.info("DeviceMonitor starting...", category: .device)
+ 
+@@ -125,13 +126,17 @@ class DeviceMonitor: TouchDeviceProviding {
+             }
+         }
+ 
+-        if device == nil {
+-            Log.error("No multitouch device found!", category: .device)
+-        } else {
+-            Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
++        guard device != nil else {
++            Log.warning(
++                "No multitouch device found. MiddleDrag requires a built-in trackpad or Magic Trackpad.",
++                category: .device)
++            return false
+         }
+ 
++        Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
++
+         isRunning = true
++        return true
+     }
+ 
+     /// Stop monitoring
+diff --git a/MiddleDrag/Managers/MultitouchManager.swift b/MiddleDrag/Managers/MultitouchManager.swift
+index f6b81aa..12f1ecc 100644
+--- a/MiddleDrag/Managers/MultitouchManager.swift
++++ b/MiddleDrag/Managers/MultitouchManager.swift
+@@ -111,25 +111,20 @@ class MultitouchManager {
+ 
+         deviceMonitor = deviceProviderFactory()
+         deviceMonitor?.delegate = self
+-        deviceMonitor?.start()
+ 
+-        // Observe sleep/wake to reinitialize device connections
+-        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
+-            forName: NSWorkspace.willSleepNotification,
+-            object: nil,
+-            queue: .main
+-        ) { _ in
+-            Log.info("System going to sleep", category: .device)
++        guard deviceMonitor?.start() == true else {
++            Log.warning(
++                "No compatible multitouch hardware detected. Gesture monitoring disabled.",
++                category: .device)
++            deviceMonitor?.stop()
++            deviceMonitor = nil
++            teardownEventTap()
++            isMonitoring = false
++            isEnabled = false
++            return
+         }
+ 
+-        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+-            forName: NSWorkspace.didWakeNotification,
+-            object: nil,
+-            queue: .main
+-        ) { [weak self] _ in
+-            Log.info("System woke from sleep, restarting monitoring", category: .device)
+-            self?.restart()
+-        }
++        addSleepWakeObservers()
+ 
+         isMonitoring = true
+         isEnabled = true
+@@ -139,15 +134,7 @@ class MultitouchManager {
+     func stop() {
+         guard isMonitoring else { return }
+ 
+-        // Remove sleep/wake observers
+-        if let observer = sleepObserver {
+-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+-            sleepObserver = nil
+-        }
+-        if let observer = wakeObserver {
+-            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+-            wakeObserver = nil
+-        }
++        removeSleepWakeObservers()
+ 
+         internalStop()
+         isEnabled = false
+@@ -177,12 +164,25 @@ class MultitouchManager {
+             Log.error("Failed to restart: could not create event tap", category: .device)
+             isMonitoring = false
+             isEnabled = false
++            removeSleepWakeObservers()
+             return
+         }
+ 
+         deviceMonitor = deviceProviderFactory()
+         deviceMonitor?.delegate = self
+-        deviceMonitor?.start()
++
++        guard deviceMonitor?.start() == true else {
++            Log.warning(
++                "Restart aborted: no compatible multitouch hardware detected.",
++                category: .device)
++            deviceMonitor?.stop()
++            deviceMonitor = nil
++            teardownEventTap()
++            isMonitoring = false
++            isEnabled = false
++            removeSleepWakeObservers()
++            return
++        }
+ 
+         isMonitoring = true
+         isEnabled = wasEnabled
+@@ -206,6 +206,40 @@ class MultitouchManager {
+         isMonitoring = false
+     }
+ 
++    // MARK: - Sleep/Wake Handling
++
++    private func addSleepWakeObservers() {
++        guard sleepObserver == nil, wakeObserver == nil else { return }
++
++        sleepObserver = NSWorkspace.shared.notificationCenter.addObserver(
++            forName: NSWorkspace.willSleepNotification,
++            object: nil,
++            queue: .main
++        ) { _ in
++            Log.info("System going to sleep", category: .device)
++        }
++
++        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
++            forName: NSWorkspace.didWakeNotification,
++            object: nil,
++            queue: .main
++        ) { [weak self] _ in
++            Log.info("System woke from sleep, restarting monitoring", category: .device)
++            self?.restart()
++        }
++    }
++
++    private func removeSleepWakeObservers() {
++        if let observer = sleepObserver {
++            NSWorkspace.shared.notificationCenter.removeObserver(observer)
++            sleepObserver = nil
++        }
++        if let observer = wakeObserver {
++            NSWorkspace.shared.notificationCenter.removeObserver(observer)
++            wakeObserver = nil
++        }
++    }
++
+     /// Toggle enabled state
+     func toggleEnabled() {
+         isEnabled.toggle()
+diff --git a/MiddleDrag/MiddleDragTests/Mocks/MockDeviceMonitor.swift b/MiddleDrag/MiddleDragTests/Mocks/MockDeviceMonitor.swift
+index 33dbf39..e908138 100644
+--- a/MiddleDrag/MiddleDragTests/Mocks/MockDeviceMonitor.swift
++++ b/MiddleDrag/MiddleDragTests/Mocks/MockDeviceMonitor.swift
+@@ -26,9 +26,13 @@ class MockDeviceMonitor: TouchDeviceProviding {
+ 
+     // MARK: - Protocol Methods
+ 
+-    func start() {
++    var startShouldSucceed = true
++
++    @discardableResult
++    func start() -> Bool {
+         startCalled = true
+         startCallCount += 1
++        return startShouldSucceed
+     }
+ 
+     func stop() {
+@@ -44,6 +48,7 @@ class MockDeviceMonitor: TouchDeviceProviding {
+         stopCalled = false
+         startCallCount = 0
+         stopCallCount = 0
++        startShouldSucceed = true
+     }
+ 
+     /// Simulate receiving touch data
+diff --git a/MiddleDrag/MiddleDragTests/MultitouchManagerTests.swift b/MiddleDrag/MiddleDragTests/MultitouchManagerTests.swift
+index 684a876..dacd338 100644
+--- a/MiddleDrag/MiddleDragTests/MultitouchManagerTests.swift
++++ b/MiddleDrag/MiddleDragTests/MultitouchManagerTests.swift
+@@ -167,6 +167,38 @@ final class MultitouchManagerTests: XCTestCase {
+         manager.stop()
+     }
+ 
++    func testStartGracefullyHandlesMissingHardware() {
++        let mockDevice = MockDeviceMonitor()
++        mockDevice.startShouldSucceed = false
++        let manager = MultitouchManager(
++            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
++
++        manager.start()
++
++        XCTAssertFalse(manager.isMonitoring)
++        XCTAssertFalse(manager.isEnabled)
++    }
++
++    func testRestartStopsWhenHardwareUnavailable() {
++        var factories: [Bool] = [true, false]
++        let manager = MultitouchManager(
++            deviceProviderFactory: {
++                let monitor = MockDeviceMonitor()
++                monitor.startShouldSucceed = factories.isEmpty ? true : factories.removeFirst()
++                return monitor
++            },
++            eventTapSetup: { true }
++        )
++
++        manager.start()
++        XCTAssertTrue(manager.isMonitoring)
++
++        manager.restart()
++
++        XCTAssertFalse(manager.isMonitoring)
++        XCTAssertFalse(manager.isEnabled)
++    }
++
+     func testStopSetsMonitoringToFalse() {
+         let mockDevice = MockDeviceMonitor()
+         let manager = MultitouchManager(
+-- 
+2.43.0
+

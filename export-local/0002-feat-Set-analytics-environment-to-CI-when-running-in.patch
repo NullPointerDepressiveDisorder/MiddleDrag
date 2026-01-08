@@ -1,0 +1,38 @@
+From 58b7a1f39f004b35a5ab7e8c9a8580fcb9400cf0 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Thu, 8 Jan 2026 20:15:19 +0000
+Subject: [PATCH 2/2] feat: Set analytics environment to CI when running in CI
+
+Co-authored-by: mohindroo.k <mohindroo.k@northeastern.edu>
+---
+ MiddleDrag/Utilities/AnalyticsManager.swift | 14 +++++++++-----
+ 1 file changed, 9 insertions(+), 5 deletions(-)
+
+diff --git a/MiddleDrag/Utilities/AnalyticsManager.swift b/MiddleDrag/Utilities/AnalyticsManager.swift
+index e0dfbc7..6dd90d2 100644
+--- a/MiddleDrag/Utilities/AnalyticsManager.swift
++++ b/MiddleDrag/Utilities/AnalyticsManager.swift
+@@ -194,11 +194,15 @@ final class CrashReporter {
+             options.tracesSampleRate = self.performanceMonitoringEnabled ? 0.1 : 0.0
+             
+             // Environment
+-            #if DEBUG
+-            options.environment = "development"
+-            #else
+-            options.environment = "production"
+-            #endif
++            if ProcessInfo.processInfo.environment["CI"] != nil {
++                options.environment = "CI"
++            } else {
++                #if DEBUG
++                options.environment = "development"
++                #else
++                options.environment = "production"
++                #endif
++            }
+             
+             // App version
+             if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+-- 
+2.43.0
+
