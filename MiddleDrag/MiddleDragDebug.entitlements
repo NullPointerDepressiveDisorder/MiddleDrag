@@ -2,6 +2,17 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:middledrag.app</string>
+		<string>applinks:www.middledrag.app</string>
+		<string>webcredentials:middledrag.app</string>
+		<string>webcredentials:www.middledrag.app</string>
+	</array>
+	<key>com.apple.developer.devicecheck.app-attest-opt-in</key>
+	<array>
+		<string>CDhash</string>
+	</array>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
 	<key>com.apple.security.hardened-process</key>
