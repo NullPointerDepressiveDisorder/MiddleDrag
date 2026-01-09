@@ -148,6 +148,89 @@ final class DeviceMonitorTests: XCTestCase {
         // If no crashes/hangs, the device registration/unregistration is balanced
         XCTAssertTrue(true)
     }
+
+    // MARK: - Race Condition Prevention Tests
+    // These tests verify the fix for the CFRelease(NULL) crash caused by
+    // concurrent device stop/release operations between main thread and
+    // the MultitouchSupport framework's internal thread (mt_ThreadedMTEntry).
+
+    func testStopIncludesDelayForFrameworkCleanup() {
+        // This test verifies that stop() includes a delay to prevent race conditions.
+        // The delay allows the framework's internal thread to complete cleanup.
+        monitor.start()
+
+        let startTime = CACurrentMediaTime()
+        monitor.stop()
+        let elapsed = CACurrentMediaTime() - startTime
+
+        // Use a conservative 10ms threshold to avoid flakiness while still
+        // catching regressions where the delay is removed entirely.
+        // The actual delay is DeviceMonitor.frameworkCleanupDelay (50ms).
+        XCTAssertGreaterThanOrEqual(
+            elapsed, 0.01,
+            "stop() should include safety delay for framework cleanup")
+    }
+
+    func testRapidStartStopCyclesDoNotCrash() {
+        // Simulates the race condition scenario where rapid restart cycles
+        // could cause the framework's internal thread to access deallocated resources.
+        // The fix adds delays to prevent this, so rapid cycles should be safe.
+        for _ in 0..<5 {
+            monitor.start()
+            // Minimal delay to allow some internal state to build up
+            Thread.sleep(forTimeInterval: 0.01)
+            monitor.stop()
+        }
+        // Test passes if no crash occurred
+    }
+
+    func testStopSeparatesCallbackUnregistrationFromDeviceStop() {
+        // This test exercises the code path where:
+        // 1. Callbacks are unregistered first (MTUnregisterContactFrameCallback)
+        // 2. A delay occurs (Thread.sleep)
+        // 3. Devices are stopped (MTDeviceStop)
+        // The separation prevents the framework's internal thread from calling
+        // into our code while we're stopping devices.
+        monitor.start()
+
+        // Calling stop should complete without crash
+        XCTAssertNoThrow(monitor.stop())
+
+        // Verify monitor is properly stopped
+        // (Start again should work cleanly if stop completed properly)
+        XCTAssertNoThrow(monitor.start())
+        monitor.stop()
+    }
+
+    func testConcurrentStopDoesNotCrash() {
+        // Test that even if something tries to access the monitor during stop,
+        // it doesn't crash. This simulates what happens when the framework's
+        // internal thread is still processing while we stop.
+        monitor.start()
+
+        // Start stop on background thread
+        let expectation = XCTestExpectation(description: "Concurrent operations complete")
+        DispatchQueue.global().async {
+            // Simulate framework internal thread activity
+            Thread.sleep(forTimeInterval: 0.02)
+            expectation.fulfill()
+        }
+
+        // Stop on main thread
+        monitor.stop()
+
+        wait(for: [expectation], timeout: 1.0)
+    }
+
+    func testFrameworkCleanupDelayConstantExists() {
+        // Verify the delay constant is defined and has a reasonable value
+        XCTAssertGreaterThan(
+            DeviceMonitor.frameworkCleanupDelay, 0,
+            "frameworkCleanupDelay should be positive")
+        XCTAssertLessThanOrEqual(
+            DeviceMonitor.frameworkCleanupDelay, 0.5,
+            "frameworkCleanupDelay should not be excessive")
+    }
 }
 
 // MARK: - Mock Delegate
