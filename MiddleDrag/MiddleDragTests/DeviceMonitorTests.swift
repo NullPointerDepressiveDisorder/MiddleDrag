@@ -157,7 +157,10 @@ final class DeviceMonitorTests: XCTestCase {
     func testStopIncludesDelayForFrameworkCleanup() {
         // This test verifies that stop() includes a delay to prevent race conditions.
         // The delay allows the framework's internal thread to complete cleanup.
-        monitor.start()
+        guard monitor.start() else {
+            print("Skipping testStopIncludesDelayForFrameworkCleanup: No multitouch device found")
+            return
+        }
 
         let startTime = CACurrentMediaTime()
         monitor.stop()
