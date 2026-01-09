@@ -44,6 +44,15 @@ private let deviceContactCallback: MTContactCallbackFunction = {
 /// Monitors multitouch devices and reports touch events
 class DeviceMonitor: TouchDeviceProviding {
 
+    // MARK: - Constants
+
+    /// Delay between unregistering callbacks and stopping devices.
+    /// This allows the MultitouchSupport framework's internal thread (mt_ThreadedMTEntry)
+    /// to complete any in-flight callback processing before we stop devices.
+    /// Value determined empirically: 50ms is sufficient to avoid CFRelease(NULL) crashes
+    /// while keeping the stop operation reasonably fast.
+    static let frameworkCleanupDelay: TimeInterval = 0.05
+
     // MARK: - Properties
 
     /// Delegate to receive touch events
@@ -145,9 +154,22 @@ class DeviceMonitor: TouchDeviceProviding {
         // Safe to call when not running - just return early
         guard isRunning else { return }
 
-        // Unregister callbacks from ALL registered devices to prevent leaks
+        // IMPORTANT: Unregister callbacks FIRST, before stopping devices
+        // This prevents the framework's internal thread (mt_ThreadedMTEntry)
+        // from receiving callbacks while we're stopping devices, which causes
+        // a race condition crash (CFRelease called with NULL / invalid address)
         for deviceRef in registeredDevices {
             MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
+        }
+
+        // Brief pause to allow the framework's internal thread to see the
+        // unregistered callbacks and complete any in-flight operations.
+        // Without this, the framework thread may still be processing a callback
+        // when we call MTDeviceStop, causing a race condition.
+        Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
+
+        // Now safe to stop devices
+        for deviceRef in registeredDevices {
             MTDeviceStop(deviceRef)
         }
 
