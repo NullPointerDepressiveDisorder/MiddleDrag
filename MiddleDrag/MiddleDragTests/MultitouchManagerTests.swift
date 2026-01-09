@@ -197,7 +197,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let expectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -258,6 +260,76 @@ final class MultitouchManagerTests: XCTestCase {
         // Double stop when already stopped should not crash
         XCTAssertNoThrow(manager.stop())
         XCTAssertNoThrow(manager.stop())
+    }
+
+    func testRapidRestartDebouncesCalls() {
+        // Use a counter to track how many times the device provider factory is called.
+        // If debouncing works, we should see fewer creations than restart calls.
+        var creationCount = 0
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                creationCount += 1
+                return MockDeviceMonitor()
+            },
+            eventTapSetup: { true }
+        )
+
+        manager.start()
+        XCTAssertEqual(creationCount, 1)  // Initial start
+
+        // Call restart multiple times rapidly
+        for _ in 0..<5 {
+            manager.restart()
+        }
+
+        // Wait for possible async execution (restart delay is 0.1s)
+        let expectation = XCTestExpectation(description: "Debounced restart complete")
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.1
+        ) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // We expect:
+        // 1 initial creation
+        // + 1 creation for the final coalesced restart
+        // = 2 total creations
+        // If race condition existed (no debouncing), this would likely be > 2
+        XCTAssertEqual(creationCount, 2, "Should have coalesced multiple restarts")
+
+        manager.stop()
+    }
+
+    func testStopDuringRestartDelayStopsManager() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isMonitoring)
+
+        // Trigger restart - this enters the async delay window
+        // internalStop is called, so isMonitoring becomes false temporarily
+        manager.restart()
+        XCTAssertFalse(manager.isMonitoring)
+
+        // Call stop() immediately (during the delay)
+        // This MUST prevent the restart from happening
+        manager.stop()
+
+        // Wait for the restart delay to elapse
+        let expectation = XCTestExpectation(description: "Wait for restart delay")
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.1
+        ) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Verify manager is still stopped
+        XCTAssertFalse(manager.isMonitoring, "Manager should remain stopped")
+        XCTAssertFalse(manager.isEnabled, "Manager should be disabled")
     }
 
     // MARK: - GestureRecognizerDelegate State Transition Tests
@@ -1061,7 +1133,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let expectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -1093,7 +1167,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let expectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -1136,7 +1212,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let restartExpectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             restartExpectation.fulfill()
         }
         wait(for: [restartExpectation], timeout: 1.0)
@@ -1173,7 +1251,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let expectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
@@ -1209,7 +1289,8 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for all async restarts to complete
         let expectation = XCTestExpectation(description: "All restarts complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay * 4) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay * 4)
+        {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 2.0)
@@ -1254,7 +1335,9 @@ final class MultitouchManagerTests: XCTestCase {
 
         // Wait for async restart to complete
         let restartExpectation = XCTestExpectation(description: "Restart complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05) {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.05
+        ) {
             restartExpectation.fulfill()
         }
         wait(for: [restartExpectation], timeout: 1.0)
@@ -1277,7 +1360,9 @@ final class MultitouchManagerTests: XCTestCase {
         DispatchQueue.global().async {
             manager.restart()
             // Wait for async restart to complete before fulfilling
-            DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay + 0.1) {
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + MultitouchManager.restartCleanupDelay + 0.1
+            ) {
                 expectation.fulfill()
             }
         }
