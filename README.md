@@ -209,9 +209,12 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large&issueType=license)
+[![](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graphs/sunburst.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
+[![Star History Chart](https://api.star-history.com/svg?repos=NullPointerDepressiveDisorder/MiddleDrag&type=date&legend=top-left)](https://www.star-history.com/#NullPointerDepressiveDisorder/MiddleDrag&type=date&legend=top-left)
+
+---
+
 <p align="center">
   <i>The middle mouse button your Mac trackpad is missing.</i>
 </p>
-
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=large&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_large&issueType=license)
-[![](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graphs/sunburst.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
