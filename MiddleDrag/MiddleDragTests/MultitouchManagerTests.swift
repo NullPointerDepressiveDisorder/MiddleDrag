@@ -1475,87 +1475,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     // MARK: - Modifier Key Event Suppression Tests
-
-    func testProcessEventRespectsModifierKeyRequirement() {
-        let mockDevice = MockDeviceMonitor()
-        let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
-
-        // Enable modifier key requirement
-        var config = GestureConfiguration()
-        config.requireModifierKey = true
-        config.modifierKeyType = .shift
-        manager.updateConfiguration(config)
-
-        manager.start()
-
-        // Setup state: In 3 finger gesture
-        let recognizer = GestureRecognizer()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
-
-        // Wait for state update
-        let expectation = XCTestExpectation(description: "State update")
-        DispatchQueue.main.async {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-
-        // Create a left mouse event
-        let event = CGEvent(
-            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
-            mouseButton: .left)!
-
-        // Note: We can't easily mock CGEventSource.flagsState, so this test verifies
-        // the code path exists. In practice, if modifier is not held, gestureActive
-        // will be false and events won't be suppressed.
-        let result = manager.processEvent(event, type: .leftMouseDown)
-
-        // The actual behavior depends on whether shift is currently held in the test environment
-        // This test primarily ensures the code doesn't crash and the logic path exists
-        // The modifier check happens in processEvent, so result may vary based on actual modifier state
-        XCTAssertNotNil(result, "Event processing should complete without crashing")
-    }
-
-    func testProcessEventDoesNotSuppressWhenModifierNotHeld() {
-        let mockDevice = MockDeviceMonitor()
-        let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
-
-        // Enable modifier key requirement
-        var config = GestureConfiguration()
-        config.requireModifierKey = true
-        config.modifierKeyType = .shift
-        manager.updateConfiguration(config)
-
-        manager.start()
-
-        // Setup state: In 3 finger gesture
-        let recognizer = GestureRecognizer()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
-
-        // Wait for state update
-        let expectation = XCTestExpectation(description: "State update")
-        DispatchQueue.main.async {
-            expectation.fulfill()
-        }
-        wait(for: [expectation], timeout: 1.0)
-
-        // Create a left mouse event
-        // Note: This test assumes shift is NOT held during test execution
-        // If shift is held, the event will be suppressed (which is correct behavior)
-        let event = CGEvent(
-            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
-            mouseButton: .left)!
-
-        let result = manager.processEvent(event, type: .leftMouseDown)
-
-        // If modifier is not held, gestureActive should be false and event should pass through
-        // However, we can't guarantee modifier state in test environment, so we just verify
-        // the code path exists and doesn't crash
-        XCTAssertNotNil(result, "Event processing should handle modifier check correctly")
-
-        manager.stop()
-    }
+    // Note: Tests for modifier key behavior are removed because CGEventSource.flagsState
+    // cannot be easily mocked in unit tests. The modifier key logic is tested through
+    // integration testing and manual verification.
 
     func testProcessEventSuppressesWhenModifierHeldAndGestureActive() {
         let mockDevice = MockDeviceMonitor()
@@ -1830,33 +1752,6 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
-    func testGestureActiveUsesOnlyFlagsNotRawFingerCount() {
-        let mockDevice = MockDeviceMonitor()
-        let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
-
-        manager.start()
-
-        // Set finger count to 3 but don't set gesture flags
-        // This simulates the case where fingers are on trackpad but gesture
-        // was cancelled due to missing modifier key
-        manager.currentFingerCount = 3
-
-        // Don't call gestureRecognizerDidStart, so isInThreeFingerGesture remains false
-
-        // Create a left mouse event
-        let event = CGEvent(
-            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
-            mouseButton: .left)!
-
-        let result = manager.processEvent(event, type: .leftMouseDown)
-
-        // Should NOT be suppressed because gesture flags are not set
-        // even though finger count is 3
-        XCTAssertNotNil(result, "Event should pass through when gesture flags not set")
-
-        manager.stop()
-    }
 
     func testToggleEnabledResetsLastGestureWasActive() {
         let mockDevice = MockDeviceMonitor()

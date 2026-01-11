@@ -444,8 +444,11 @@ class MultitouchManager {
             return Unmanaged.passUnretained(event)
         }
 
-        // During 3-finger gesture: convert left clicks to middle clicks (force click support)
-        if gestureActive && isLeftButton && !isOurEvent {
+        // Force click support: convert left clicks to middle clicks when 3+ fingers are on trackpad
+        // This works based on raw finger count, not gesture activation state, so force clicks
+        // work even when gestures are cancelled (e.g., modifier key not held)
+        let hasThreeOrMoreFingers = currentFingerCount >= 3
+        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent {
             // Check event type - we want to handle both down and up
             if type == .leftMouseDown || type == .leftMouseUp {
                 // Perform middle click instead
