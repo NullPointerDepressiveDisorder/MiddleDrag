@@ -43,7 +43,7 @@ jobs:
           echo "$INSTALLER_CERTIFICATE_BASE64" | base64 --decode > installer.p12
 
           mkdir -p ~/Library/MobileDevice/Provisioning Profiles
-          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision"
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision"
 
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
@@ -55,7 +55,7 @@ jobs:
 
       - name: Sign app
         run: |
-          cp "~/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision" MiddleDrag.app/embedded.mobileprovision
+          cp "$HOME/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision" MiddleDrag.app/Contents/embedded.provisionprofile
 
           codesign --deep --force --options runtime \
           --sign "Developer ID Application: Karan Mohindroo (${{ vars.TEAM_ID }})" \
