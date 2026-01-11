@@ -34,6 +34,8 @@ class MultitouchManager {
 
     // Timestamp when gesture ended (for delayed event suppression)
     private var gestureEndTime: Double = 0
+    // Whether the last gesture that ended was actually active (not cancelled)
+    private var lastGestureWasActive: Bool = false
 
     // Core components
     private let gestureRecognizer = GestureRecognizer()
@@ -239,6 +241,8 @@ class MultitouchManager {
         isActivelyDragging = false
         isInThreeFingerGesture = false
         currentFingerCount = 0  // Reset finger count on stop
+        lastGestureWasActive = false
+        gestureEndTime = 0
 
         deviceMonitor?.stop()
         deviceMonitor = nil
@@ -290,6 +294,8 @@ class MultitouchManager {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
             currentFingerCount = 0  // Reset finger count when disabled
+            lastGestureWasActive = false
+            gestureEndTime = 0
         }
     }
 
@@ -407,13 +413,32 @@ class MultitouchManager {
         let userData = event.getIntegerValueField(.eventSourceUserData)
         let isOurEvent = userData == 0x4D44
 
-        // Check if we're in a 3-finger gesture using:
-        // 1. Thread-safe finger count (most reliable for force clicks)
-        // 2. Async-updated flag (for tap/drag state)
-        // 3. Direct gesture recognizer state (fallback)
-        let fingerCountSafe = currentFingerCount
-        let gestureActive =
-            isInThreeFingerGesture || gestureRecognizer.state != .idle || fingerCountSafe >= 3
+        // Check if modifier key is required and currently held
+        // This ensures we only suppress events when a valid gesture is actually active
+        let modifierFlags = CGEventSource.flagsState(.hidSystemState)
+        let modifierKeyHeld: Bool
+        if configuration.requireModifierKey {
+            switch configuration.modifierKeyType {
+            case .shift:
+                modifierKeyHeld = modifierFlags.contains(.maskShift)
+            case .control:
+                modifierKeyHeld = modifierFlags.contains(.maskControl)
+            case .option:
+                modifierKeyHeld = modifierFlags.contains(.maskAlternate)
+            case .command:
+                modifierKeyHeld = modifierFlags.contains(.maskCommand)
+            }
+        } else {
+            modifierKeyHeld = true  // No modifier required, so always "held"
+        }
+
+        // Only consider gesture active if:
+        // 1. We're actually in a three-finger gesture (flag set by delegate callbacks)
+        // 2. AND modifier key requirement is met (if required)
+        // We use isInThreeFingerGesture and isActivelyDragging instead of checking
+        // fingerCountSafe or gestureRecognizer.state directly, because those flags
+        // are only set when a valid gesture actually starts (respecting modifier keys)
+        let gestureActive = modifierKeyHeld && (isInThreeFingerGesture || isActivelyDragging)
 
         if isMiddleButton && isOurEvent {
             return Unmanaged.passUnretained(event)
@@ -433,7 +458,8 @@ class MultitouchManager {
         }
 
         // Suppress left/right events during gesture or shortly after
-        let shouldSuppress = gestureActive || timeSinceGestureEnd < 0.15
+        // Only suppress after gesture end if the last gesture was actually active (not cancelled)
+        let shouldSuppress = gestureActive || (timeSinceGestureEnd < 0.15 && lastGestureWasActive)
 
         if shouldSuppress && !isMiddleButton {
             return nil  // Suppress the event
@@ -501,6 +527,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
             DispatchQueue.main.async { [weak self] in
                 self?.isInThreeFingerGesture = false
                 self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = false  // Tap was disabled, so not active
             }
             return
         }
@@ -530,6 +557,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
+            self?.lastGestureWasActive = shouldPerformTap  // Active only if tap was performed
         }
 
         // Only perform the click if window meets size requirements
@@ -592,6 +620,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
+            self?.lastGestureWasActive = true  // Drag ended normally, was active
         }
         // Always call endDrag to ensure mouse generator state is cleaned up
         // even if middleDragEnabled was toggled off during an active drag
@@ -603,6 +632,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
+            self?.lastGestureWasActive = false  // Gesture was cancelled, not active
         }
     }
 
@@ -612,6 +642,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
+            self?.lastGestureWasActive = false  // Drag was cancelled, not active
         }
         mouseGenerator.cancelDrag()
     }
