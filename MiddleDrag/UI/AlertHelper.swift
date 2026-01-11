@@ -102,7 +102,7 @@ class AlertHelper {
     }
 
     /// Creates and returns a configured Gesture Configuration Prompt alert without presenting it
-    /// - Parameter isFirstLaunch: Whether this is shown on first launch (affects button text)
+    /// - Parameter isFirstLaunch: Whether this is shown on first launch (affects both the welcome message and the button text)
     static func createGestureConfigurationPromptAlert(isFirstLaunch: Bool = false) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Configure System Gestures"
@@ -202,7 +202,7 @@ class AlertHelper {
 
     /// Show dialog explaining gesture conflict and offering to apply changes
     /// - Parameters:
-    ///   - isFirstLaunch: Whether this is shown on first launch (affects button text)
+    ///   - isFirstLaunch: Whether this is shown on first launch (affects both the welcome message and the button text)
     ///   - onDismiss: Optional callback when user dismisses without applying changes
     /// - Returns: true if user wants to apply the recommended changes
     static func showGestureConfigurationPrompt(
@@ -214,7 +214,6 @@ class AlertHelper {
 
         if response == .alertSecondButtonReturn {
             openTrackpadSettings()
-            onDismiss?()
             return false
         }
 

@@ -64,6 +64,8 @@ class PreferencesManager {
             Keys.minimumWindowSizeFilterEnabled: false,
             Keys.minimumWindowWidth: 100.0,
             Keys.minimumWindowHeight: 100.0,
+            // Gesture configuration prompt tracking
+            Keys.hasShownGestureConfigurationPrompt: false,
         ])
     }
 
