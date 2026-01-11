@@ -1474,6 +1474,425 @@ final class MultitouchManagerTests: XCTestCase {
         XCTAssertNil(result)
     }
 
+    // MARK: - Modifier Key Event Suppression Tests
+
+    func testProcessEventRespectsModifierKeyRequirement() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        // Enable modifier key requirement
+        var config = GestureConfiguration()
+        config.requireModifierKey = true
+        config.modifierKeyType = .shift
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Setup state: In 3 finger gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        // Wait for state update
+        let expectation = XCTestExpectation(description: "State update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Create a left mouse event
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        // Note: We can't easily mock CGEventSource.flagsState, so this test verifies
+        // the code path exists. In practice, if modifier is not held, gestureActive
+        // will be false and events won't be suppressed.
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // The actual behavior depends on whether shift is currently held in the test environment
+        // This test primarily ensures the code doesn't crash and the logic path exists
+        // The modifier check happens in processEvent, so result may vary based on actual modifier state
+        XCTAssertNotNil(result, "Event processing should complete without crashing")
+    }
+
+    func testProcessEventDoesNotSuppressWhenModifierNotHeld() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        // Enable modifier key requirement
+        var config = GestureConfiguration()
+        config.requireModifierKey = true
+        config.modifierKeyType = .shift
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Setup state: In 3 finger gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        // Wait for state update
+        let expectation = XCTestExpectation(description: "State update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Create a left mouse event
+        // Note: This test assumes shift is NOT held during test execution
+        // If shift is held, the event will be suppressed (which is correct behavior)
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // If modifier is not held, gestureActive should be false and event should pass through
+        // However, we can't guarantee modifier state in test environment, so we just verify
+        // the code path exists and doesn't crash
+        XCTAssertNotNil(result, "Event processing should handle modifier check correctly")
+
+        manager.stop()
+    }
+
+    func testProcessEventSuppressesWhenModifierHeldAndGestureActive() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        // Don't require modifier key (so gesture is always considered active when flags are set)
+        var config = GestureConfiguration()
+        config.requireModifierKey = false
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Setup state: In 3 finger gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        // Wait for state update
+        let expectation = XCTestExpectation(description: "State update")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Create a left mouse event
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should be suppressed because gesture is active and modifier not required
+        XCTAssertNil(result, "Event should be suppressed during active gesture")
+
+        manager.stop()
+    }
+
+    // MARK: - Last Gesture Was Active Flag Tests
+
+    func testCancelledGestureDoesNotSuppressEventsAfterEnd() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Start a gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        // Wait for state update
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Cancel the gesture (e.g., modifier key released or 4th finger added)
+        manager.gestureRecognizerDidCancel(recognizer)
+
+        // Wait for cancel state update
+        let cancelExpectation = XCTestExpectation(description: "Cancel state")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            cancelExpectation.fulfill()
+        }
+        wait(for: [cancelExpectation], timeout: 1.0)
+
+        // Create a left mouse event after cancellation
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should NOT be suppressed because gesture was cancelled (lastGestureWasActive = false)
+        XCTAssertNotNil(result, "Event should pass through after cancelled gesture")
+
+        manager.stop()
+    }
+
+    func testActiveGestureSuppressesEventsAfterEnd() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.tapToClickEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Start a gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        // Wait for state update
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Complete the gesture with a tap (active gesture)
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Wait for tap state update
+        let tapExpectation = XCTestExpectation(description: "Tap state")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            tapExpectation.fulfill()
+        }
+        wait(for: [tapExpectation], timeout: 1.0)
+
+        // Immediately create a left mouse event after active gesture ends
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should be suppressed because gesture was active (lastGestureWasActive = true)
+        // and we're within the 0.15s suppression window
+        XCTAssertNil(result, "Event should be suppressed after active gesture ends")
+
+        manager.stop()
+    }
+
+    func testCancelledDragDoesNotSuppressEventsAfterEnd() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Start a drag
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        // Wait for state update
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Cancel the drag (e.g., 4th finger added for Mission Control)
+        manager.gestureRecognizerDidCancelDragging(recognizer)
+
+        // Wait for cancel state update
+        let cancelExpectation = XCTestExpectation(description: "Cancel state")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            cancelExpectation.fulfill()
+        }
+        wait(for: [cancelExpectation], timeout: 1.0)
+
+        // Create a left mouse event after cancellation
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should NOT be suppressed because drag was cancelled (lastGestureWasActive = false)
+        XCTAssertNotNil(result, "Event should pass through after cancelled drag")
+
+        manager.stop()
+    }
+
+    func testActiveDragSuppressesEventsAfterEnd() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Start a drag
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        // Wait for state update
+        let startExpectation = XCTestExpectation(description: "Start state")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // End the drag normally (active gesture)
+        manager.gestureRecognizerDidEndDragging(recognizer)
+
+        // Wait for end state update
+        let endExpectation = XCTestExpectation(description: "End state")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            endExpectation.fulfill()
+        }
+        wait(for: [endExpectation], timeout: 1.0)
+
+        // Immediately create a left mouse event after active drag ends
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should be suppressed because drag was active (lastGestureWasActive = true)
+        // and we're within the 0.15s suppression window
+        XCTAssertNil(result, "Event should be suppressed after active drag ends")
+
+        manager.stop()
+    }
+
+    func testEventSuppressionWindowExpires() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.tapToClickEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Start and complete a gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Wait for state update
+        let expectation = XCTestExpectation(description: "State update")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Wait for suppression window to expire (0.15s + buffer)
+        let waitExpectation = XCTestExpectation(description: "Wait for suppression window")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            waitExpectation.fulfill()
+        }
+        wait(for: [waitExpectation], timeout: 1.0)
+
+        // Create a left mouse event after suppression window expires
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should NOT be suppressed because suppression window has expired
+        XCTAssertNotNil(result, "Event should pass through after suppression window expires")
+
+        manager.stop()
+    }
+
+    func testGestureActiveUsesOnlyFlagsNotRawFingerCount() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Set finger count to 3 but don't set gesture flags
+        // This simulates the case where fingers are on trackpad but gesture
+        // was cancelled due to missing modifier key
+        manager.currentFingerCount = 3
+
+        // Don't call gestureRecognizerDidStart, so isInThreeFingerGesture remains false
+
+        // Create a left mouse event
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should NOT be suppressed because gesture flags are not set
+        // even though finger count is 3
+        XCTAssertNotNil(result, "Event should pass through when gesture flags not set")
+
+        manager.stop()
+    }
+
+    func testToggleEnabledResetsLastGestureWasActive() {
+        let mockDevice = MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Start and complete a gesture
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+        manager.gestureRecognizerDidTap(recognizer)
+
+        // Wait for state update
+        let expectation = XCTestExpectation(description: "State update")
+        DispatchQueue.main.async {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Toggle enabled off (should reset lastGestureWasActive)
+        manager.toggleEnabled()
+
+        // Create a left mouse event
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = manager.processEvent(event, type: .leftMouseDown)
+
+        // Should NOT be suppressed because toggleEnabled reset the flag
+        XCTAssertNotNil(result, "Event should pass through after toggleEnabled resets state")
+
+        manager.stop()
+    }
+
     // MARK: - Cleanup
 
     override func tearDown() {
