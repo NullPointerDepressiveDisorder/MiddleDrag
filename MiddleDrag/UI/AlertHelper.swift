@@ -102,11 +102,17 @@ class AlertHelper {
     }
 
     /// Creates and returns a configured Gesture Configuration Prompt alert without presenting it
-    static func createGestureConfigurationPromptAlert() -> NSAlert {
+    /// - Parameter isFirstLaunch: Whether this is shown on first launch (affects both the welcome message and the button text)
+    static func createGestureConfigurationPromptAlert(isFirstLaunch: Bool = false) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = "Configure System Gestures"
+        
+        let introText = isFirstLaunch
+            ? "Welcome to MiddleDrag! We detected that your trackpad has 3-finger gestures enabled which can conflict with MiddleDrag."
+            : "MiddleDrag uses 3-finger gestures which can conflict with macOS system gestures."
+        
         alert.informativeText = """
-            MiddleDrag uses 3-finger gestures which can conflict with macOS system gestures.
+            \(introText)
 
             Current conflicting settings:
             \(SystemGestureHelper.describeConflictingSettings())
@@ -120,7 +126,7 @@ class AlertHelper {
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Apply Changes")
         alert.addButton(withTitle: "Open Trackpad Settings")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: isFirstLaunch ? "Not Now" : "Cancel")
         return alert
     }
 
@@ -195,13 +201,25 @@ class AlertHelper {
     }
 
     /// Show dialog explaining gesture conflict and offering to apply changes
+    /// - Parameters:
+    ///   - isFirstLaunch: Whether this is shown on first launch (affects both the welcome message and the button text)
+    ///   - onDismiss: Optional callback when user dismisses without applying changes
     /// - Returns: true if user wants to apply the recommended changes
-    static func showGestureConfigurationPrompt() -> Bool {
-        let alert = createGestureConfigurationPromptAlert()
+    static func showGestureConfigurationPrompt(
+        isFirstLaunch: Bool = false,
+        onDismiss: (() -> Void)? = nil
+    ) -> Bool {
+        let alert = createGestureConfigurationPromptAlert(isFirstLaunch: isFirstLaunch)
         let response = presenter.runModal(alert)
 
         if response == .alertSecondButtonReturn {
             openTrackpadSettings()
+            return false
+        }
+
+        if response == .alertThirdButtonReturn {
+            // User dismissed (Cancel or Not Now)
+            onDismiss?()
             return false
         }
 

@@ -171,6 +171,36 @@ final class PreferencesManagerTests: XCTestCase {
         XCTAssertTrue(instance1 === instance2)
     }
 
+    // MARK: - Gesture Configuration Prompt Tracking Tests
+
+    func testHasShownGestureConfigurationPromptDefaultsToFalse() {
+        // Should default to false for fresh UserDefaults
+        XCTAssertFalse(preferencesManager.hasShownGestureConfigurationPrompt)
+    }
+
+    func testMarkGestureConfigurationPromptShown() {
+        // Initially should be false
+        XCTAssertFalse(preferencesManager.hasShownGestureConfigurationPrompt)
+
+        // Mark as shown
+        preferencesManager.markGestureConfigurationPromptShown()
+
+        // Should now be true
+        XCTAssertTrue(preferencesManager.hasShownGestureConfigurationPrompt)
+    }
+
+    func testGestureConfigurationPromptTrackingPersistence() {
+        // Mark as shown
+        preferencesManager.markGestureConfigurationPromptShown()
+        XCTAssertTrue(preferencesManager.hasShownGestureConfigurationPrompt)
+
+        // Create a new instance with the same UserDefaults to test persistence
+        let newManager = PreferencesManager(userDefaults: testDefaults)
+
+        // Should still be true after recreation
+        XCTAssertTrue(newManager.hasShownGestureConfigurationPrompt)
+    }
+
     // MARK: - Isolation Tests
 
     func testTestInstanceIsIsolatedFromShared() {

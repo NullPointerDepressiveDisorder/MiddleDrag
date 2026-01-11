@@ -27,6 +27,8 @@ class PreferencesManager {
         static let minimumWindowSizeFilterEnabled = "minimumWindowSizeFilterEnabled"
         static let minimumWindowWidth = "minimumWindowWidth"
         static let minimumWindowHeight = "minimumWindowHeight"
+        // Gesture configuration prompt tracking
+        static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
     }
 
     /// Production initializer using UserDefaults.standard
@@ -62,6 +64,8 @@ class PreferencesManager {
             Keys.minimumWindowSizeFilterEnabled: false,
             Keys.minimumWindowWidth: 100.0,
             Keys.minimumWindowHeight: 100.0,
+            // Gesture configuration prompt tracking
+            Keys.hasShownGestureConfigurationPrompt: false,
         ])
     }
 
@@ -118,5 +122,17 @@ class PreferencesManager {
             preferences.minimumWindowSizeFilterEnabled, forKey: Keys.minimumWindowSizeFilterEnabled)
         userDefaults.set(preferences.minimumWindowWidth, forKey: Keys.minimumWindowWidth)
         userDefaults.set(preferences.minimumWindowHeight, forKey: Keys.minimumWindowHeight)
+    }
+
+    // MARK: - Gesture Configuration Prompt Tracking
+
+    /// Check if the gesture configuration prompt has been shown before
+    var hasShownGestureConfigurationPrompt: Bool {
+        return userDefaults.bool(forKey: Keys.hasShownGestureConfigurationPrompt)
+    }
+
+    /// Mark that the gesture configuration prompt has been shown
+    func markGestureConfigurationPromptShown() {
+        userDefaults.set(true, forKey: Keys.hasShownGestureConfigurationPrompt)
     }
 }

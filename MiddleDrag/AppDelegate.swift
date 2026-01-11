@@ -100,6 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
 
+        // Check for gesture conflicts and show prompt on first launch if needed
+        checkAndPromptForGestureConfiguration()
+
         // Final cleanup of any stray windows
         closeAllWindows()
 
@@ -167,5 +170,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let enabled = notification.object as? Bool {
             LaunchAtLoginManager.shared.setLaunchAtLogin(enabled)
         }
+    }
+
+    // MARK: - Gesture Configuration
+
+    /// Check for gesture conflicts and prompt user if needed (only on first launch)
+    private func checkAndPromptForGestureConfiguration() {
+        // Only show on first launch if we haven't shown it before
+        let hasShownPrompt = PreferencesManager.shared.hasShownGestureConfigurationPrompt
+        guard !hasShownPrompt else { return }
+
+        // Only show if there are actual conflicts
+        guard SystemGestureHelper.hasConflictingSettings() else { return }
+
+        // Delay slightly to ensure UI is ready
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.showGestureConfigurationPromptOnFirstLaunch()
+        }
+    }
+
+    /// Show gesture configuration prompt on first launch
+    private func showGestureConfigurationPromptOnFirstLaunch() {
+        // Mark as shown regardless of user action to avoid showing again
+        PreferencesManager.shared.markGestureConfigurationPromptShown()
+
+        // Show prompt with first launch messaging
+        if AlertHelper.showGestureConfigurationPrompt(isFirstLaunch: true) {
+            // User chose to apply changes
+            if SystemGestureHelper.applyRecommendedSettings() {
+                AlertHelper.showGestureConfigurationSuccess()
+            } else {
+                AlertHelper.showGestureConfigurationFailure()
+            }
+        }
+        // If user dismissed, we've already marked it as shown so it won't appear again
     }
 }
