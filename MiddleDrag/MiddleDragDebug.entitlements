@@ -9,13 +9,15 @@
 		<string>webcredentials:middledrag.app</string>
 		<string>webcredentials:www.middledrag.app</string>
 	</array>
-	<key>com.apple.developer.devicecheck.app-attest-opt-in</key>
-	<array>
-		<string>CDhash</string>
-	</array>
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
 	<key>com.apple.security.hardened-process</key>
+	<true/>
+	<key>com.apple.security.hardened-process.checked-allocations</key>
+	<true/>
+	<key>com.apple.security.hardened-process.checked-allocations.enable-pure-data</key>
+	<true/>
+	<key>com.apple.security.hardened-process.checked-allocations.soft-mode</key>
 	<true/>
 	<key>com.apple.security.hardened-process.dyld-ro</key>
 	<true/>
