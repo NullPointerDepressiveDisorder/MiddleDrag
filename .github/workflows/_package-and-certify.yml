@@ -37,9 +37,13 @@ jobs:
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_CERTIFICATE_PASSWORD }}
           INSTALLER_CERTIFICATE_BASE64: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_P12_BASE64 }}
           INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
+          PROVISIONING_PROFILE_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
         run: |
           echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
           echo "$INSTALLER_CERTIFICATE_BASE64" | base64 --decode > installer.p12
+
+          mkdir -p ~/Library/MobileDevice/Provisioning Profiles
+          echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > "$HOME/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision"
 
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
@@ -51,6 +55,8 @@ jobs:
 
       - name: Sign app
         run: |
+          cp "$HOME/Library/MobileDevice/Provisioning Profiles/provisioning_profile.mobileprovision" MiddleDrag.app/Contents/embedded.provisionprofile
+
           codesign --deep --force --options runtime \
           --sign "Developer ID Application: Karan Mohindroo (${{ vars.TEAM_ID }})" \
           MiddleDrag.app
