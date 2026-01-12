@@ -34,25 +34,25 @@ enum Log {
     /// Debug level - only in debug builds, never sent anywhere
     static func debug(_ message: String, category: Category = .app) {
         #if DEBUG
-        os_log(.debug, log: category.osLog, "%{public}@", message)
+        unsafe os_log(.debug, log: category.osLog, "%{public}@", message)
         #endif
     }
     
     /// Info level - logged locally, breadcrumb added only if crash reporting enabled
     static func info(_ message: String, category: Category = .app) {
-        os_log(.info, log: category.osLog, "%{public}@", message)
+        unsafe os_log(.info, log: category.osLog, "%{public}@", message)
         CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .info)
     }
     
     /// Warning level - logged locally, breadcrumb added only if crash reporting enabled
     static func warning(_ message: String, category: Category = .app) {
-        os_log(.error, log: category.osLog, "⚠️ %{public}@", message)
+        unsafe os_log(.error, log: category.osLog, "⚠️ %{public}@", message)
         CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .warning)
     }
     
     /// Error level - logged locally, captured by Sentry only if crash reporting enabled
     static func error(_ message: String, category: Category = .app, error: Error? = nil) {
-        os_log(.fault, log: category.osLog, "❌ %{public}@", message)
+        unsafe os_log(.fault, log: category.osLog, "❌ %{public}@", message)
         CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .error)
         
         // Only capture to Sentry if enabled
@@ -72,7 +72,7 @@ enum Log {
     
     /// Fatal level - logged locally, captured by Sentry only if crash reporting enabled
     static func fatal(_ message: String, category: Category = .app, error: Error? = nil) {
-        os_log(.fault, log: category.osLog, "💀 FATAL: %{public}@", message)
+        unsafe os_log(.fault, log: category.osLog, "💀 FATAL: %{public}@", message)
         
         if CrashReporter.shared.isEnabled {
             SentrySDK.capture(message: "FATAL: \(message)") { scope in
@@ -119,7 +119,7 @@ final class CrashReporter {
     var isEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: crashReportingKey) }
         set {
-            let wasEnabled = isEnabled
+            let wasEnabled = UserDefaults.standard.bool(forKey: crashReportingKey)
             UserDefaults.standard.set(newValue, forKey: crashReportingKey)
             
             // Re-initialize or close Sentry based on new state
@@ -137,7 +137,7 @@ final class CrashReporter {
     var performanceMonitoringEnabled: Bool {
         get { UserDefaults.standard.bool(forKey: performanceMonitoringKey) }
         set {
-            let wasEnabled = performanceMonitoringEnabled
+            let wasEnabled = UserDefaults.standard.bool(forKey: performanceMonitoringKey)
             UserDefaults.standard.set(newValue, forKey: performanceMonitoringKey)
             
             // Re-initialize or close Sentry based on new state
@@ -165,7 +165,7 @@ final class CrashReporter {
     func initializeIfEnabled() {
         guard anyTelemetryEnabled else {
             #if DEBUG
-            os_log(.debug, "CrashReporter: Telemetry disabled (offline mode)")
+            unsafe os_log(.debug, "CrashReporter: Telemetry disabled (offline mode)")
             #endif
             return
         }
@@ -223,7 +223,7 @@ final class CrashReporter {
         isSentryInitialized = false
         
         #if DEBUG
-        os_log(.debug, "CrashReporter: Sentry closed (offline mode)")
+        unsafe os_log(.debug, "CrashReporter: Sentry closed (offline mode)")
         #endif
     }
     
