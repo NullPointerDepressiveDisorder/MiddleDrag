@@ -32,7 +32,7 @@ class MenuBarController: NSObject {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        if let button = statusItem.button {
+        if statusItem.button != nil {
             updateStatusIcon(enabled: multitouchManager?.isEnabled ?? false)
         }
 
@@ -361,7 +361,7 @@ class MenuBarController: NSObject {
 
     // MARK: - Actions
 
-    @objc private func toggleEnabled() {
+    @objc func toggleEnabled() {
         multitouchManager?.toggleEnabled()
         let isEnabled = multitouchManager?.isEnabled ?? false
 
@@ -373,7 +373,7 @@ class MenuBarController: NSObject {
         buildMenu()  // Rebuild to update status text
     }
 
-    @objc private func toggleMiddleDrag() {
+    @objc func toggleMiddleDrag() {
         preferences.middleDragEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -387,7 +387,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleTapToClick() {
+    @objc func toggleTapToClick() {
         preferences.tapToClickEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -401,11 +401,11 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func setSensitivity(_ sender: NSMenuItem) {
+    @objc func setSensitivity(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? Float else { return }
 
         // Update UI
-        if let menu = sender.menu {
+        if let menu = unsafe sender.menu {
             for item in menu.items {
                 item.state = item == sender ? .on : .off
             }
@@ -419,7 +419,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func configureSystemGestures() {
+    @objc func configureSystemGestures() {
         // Check if settings are already optimal
         if !SystemGestureHelper.hasConflictingSettings() {
             AlertHelper.showGestureConfigurationAlreadyOptimal()
@@ -438,7 +438,7 @@ class MenuBarController: NSObject {
 
     // MARK: - Palm Rejection Actions
 
-    @objc private func toggleExclusionZone() {
+    @objc func toggleExclusionZone() {
         preferences.exclusionZoneEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -450,7 +450,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func setExclusionZoneSize(_ sender: NSMenuItem) {
+    @objc func setExclusionZoneSize(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? Double else { return }
 
         preferences.exclusionZoneSize = value
@@ -463,7 +463,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleRequireModifierKey() {
+    @objc func toggleRequireModifierKey() {
         preferences.requireModifierKey.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -475,7 +475,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func setModifierKeyType(_ sender: NSMenuItem) {
+    @objc func setModifierKeyType(_ sender: NSMenuItem) {
         guard let rawValue = sender.representedObject as? String,
             let keyType = ModifierKeyType(rawValue: rawValue)
         else { return }
@@ -490,7 +490,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleContactSizeFilter() {
+    @objc func toggleContactSizeFilter() {
         preferences.contactSizeFilterEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -502,7 +502,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func setContactSizeThreshold(_ sender: NSMenuItem) {
+    @objc func setContactSizeThreshold(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? Double else { return }
 
         preferences.maxContactSize = value
@@ -515,7 +515,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleMinimumWindowSizeFilter() {
+    @objc func toggleMinimumWindowSizeFilter() {
         preferences.minimumWindowSizeFilterEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -528,7 +528,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func setMinimumWindowSize(_ sender: NSMenuItem) {
+    @objc func setMinimumWindowSize(_ sender: NSMenuItem) {
         guard let value = sender.representedObject as? Double else { return }
 
         // Set both width and height to the same value (square threshold)
@@ -544,7 +544,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleAllowReliftDuringDrag() {
+    @objc func toggleAllowReliftDuringDrag() {
         preferences.allowReliftDuringDrag.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
@@ -555,7 +555,7 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleLaunchAtLogin() {
+    @objc func toggleLaunchAtLogin() {
         preferences.launchAtLogin.toggle()
 
         if let item = statusItem.menu?.item(withTag: MenuItemTag.launchAtLogin.rawValue) {
@@ -567,12 +567,12 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc private func toggleCrashReporting() {
+    @objc func toggleCrashReporting() {
         CrashReporter.shared.isEnabled.toggle()
         buildMenu()  // Rebuild to update checkmark
     }
 
-    @objc private func togglePerformanceMonitoring() {
+    @objc func togglePerformanceMonitoring() {
         CrashReporter.shared.performanceMonitoringEnabled.toggle()
         buildMenu()  // Rebuild to update checkmark
     }
