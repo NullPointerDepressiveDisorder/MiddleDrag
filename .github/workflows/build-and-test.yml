@@ -21,7 +21,7 @@ jobs:
     needs: pre_job
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     name: Build & Test with Coverage
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout

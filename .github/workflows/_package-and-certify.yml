@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   package-and-certify:
-    runs-on: macos-15
+    runs-on: macos-latest
     outputs:
       package-name: ${{ steps.package.outputs.pkg-name }}
 

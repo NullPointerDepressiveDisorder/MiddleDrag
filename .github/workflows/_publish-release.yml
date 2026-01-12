@@ -23,7 +23,7 @@ permissions:
 jobs:
   publish:
     name: Publish GitHub Release
-    runs-on: macos-15
+    runs-on: macos-latest
 
     steps:
       - name: Checkout

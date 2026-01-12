@@ -26,7 +26,7 @@ permissions:
 jobs:
   resolve:
     name: Resolve Version
-    runs-on: macos-15
+    runs-on: macos-latest
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
       new-sha: ${{ steps.bump.outputs.NEW_SHA }}

@@ -23,7 +23,7 @@ permissions:
 jobs:
     build:
         name: Build Release Artifact
-        runs-on: macos-15
+        runs-on: macos-latest
         outputs:
             artifact-name: ${{ steps.artifact.outputs.name }}
 
