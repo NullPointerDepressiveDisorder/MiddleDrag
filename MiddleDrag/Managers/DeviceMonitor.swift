@@ -10,11 +10,11 @@ import Foundation
 // MARK: - Global Callback Storage
 
 // Required because C callbacks cannot capture Swift context
-private var gDeviceMonitor: DeviceMonitor?
+@unsafe private var gDeviceMonitor: DeviceMonitor?
 
 // MARK: - C Callback Function
 
-private let deviceContactCallback: MTContactCallbackFunction = {
+@unsafe private let deviceContactCallback: MTContactCallbackFunction = {
     device, touches, numTouches, timestamp, frame in
     #if DEBUG
         touchCount += 1
@@ -24,11 +24,11 @@ private let deviceContactCallback: MTContactCallbackFunction = {
         }
     #endif
 
-    guard let monitor = gDeviceMonitor,
-        let touches = touches
+    guard let monitor = unsafe gDeviceMonitor,
+          let touches = unsafe touches
     else { return 0 }
 
-    let shouldConsume = monitor.handleContact(
+    let shouldConsume = unsafe monitor.handleContact(
         device: device,
         touches: touches,
         count: numTouches,
@@ -42,6 +42,13 @@ private let deviceContactCallback: MTContactCallbackFunction = {
 // MARK: - DeviceMonitor
 
 /// Monitors multitouch devices and reports touch events
+///
+/// Note: This class uses unsafe pointer types (UnsafeMutableRawPointer) to interface
+/// with the private MultitouchSupport C framework. The unsafe usage is intentional
+/// and necessary for low-level touch device access. Properties are marked with
+/// `nonisolated(unsafe)` to indicate they store unsafe pointers that are managed
+/// outside of Swift's memory safety system.
+@unsafe @preconcurrency
 class DeviceMonitor: TouchDeviceProviding {
 
     // MARK: - Constants
@@ -58,8 +65,8 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Delegate to receive touch events
     weak var delegate: DeviceMonitorDelegate?
 
-    private var device: MTDeviceRef?
-    private var registeredDevices: Set<UnsafeMutableRawPointer> = []
+    nonisolated(unsafe) private var device: MTDeviceRef?
+    nonisolated(unsafe) private var registeredDevices: Set<UnsafeMutableRawPointer> = unsafe []
     private var isRunning = false
 
     /// Tracks whether this instance owns the global callback reference
@@ -70,31 +77,31 @@ class DeviceMonitor: TouchDeviceProviding {
     init() {
         // Only take ownership of the global reference if no other instance owns it
         // This prevents test interference when multiple DeviceMonitor instances are created
-        if gDeviceMonitor == nil {
-            gDeviceMonitor = self
-            ownsGlobalReference = true
+        if unsafe gDeviceMonitor == nil {
+            unsafe gDeviceMonitor = unsafe self
+            unsafe ownsGlobalReference = true
         }
     }
 
     deinit {
-        stop()
+        unsafe stop()
         // Only clear the global reference if this instance owns it
-        if ownsGlobalReference && gDeviceMonitor === self {
-            gDeviceMonitor = nil
+        if unsafe ownsGlobalReference && gDeviceMonitor === self {
+            unsafe gDeviceMonitor = nil
         }
     }
 
     // MARK: - Public Interface
 
     /// Start monitoring the default multitouch device
-    @discardableResult
+    @unsafe @discardableResult
     func start() -> Bool {
-        guard !isRunning else { return true }
+        guard unsafe !isRunning else { return true }
 
         Log.info("DeviceMonitor starting...", category: .device)
 
         var deviceCount = 0
-        registeredDevices.removeAll()  // Clear any previous registrations
+        unsafe registeredDevices.removeAll()  // Clear any previous registrations
 
         // Try to get all devices
         if let deviceList = MTDeviceCreateList() {
@@ -102,16 +109,16 @@ class DeviceMonitor: TouchDeviceProviding {
             Log.info("Found \(count) multitouch device(s)", category: .device)
 
             for i in 0..<count {
-                let devicePtr = CFArrayGetValueAtIndex(deviceList, i)
-                if let dev = devicePtr {
-                    let deviceRef = UnsafeMutableRawPointer(mutating: dev)
-                    MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
-                    MTDeviceStart(deviceRef, 0)
-                    registeredDevices.insert(deviceRef)
+                let devicePtr = unsafe CFArrayGetValueAtIndex(deviceList, i)
+                if let dev = unsafe devicePtr {
+                    let deviceRef = unsafe UnsafeMutableRawPointer(mutating: dev)
+                    unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
+                    unsafe MTDeviceStart(deviceRef, 0)
+                    unsafe registeredDevices.insert(deviceRef)
                     deviceCount += 1
 
-                    if device == nil {
-                        device = deviceRef
+                    if unsafe device == nil {
+                        unsafe device = unsafe deviceRef
                     }
                 }
             }
@@ -120,22 +127,22 @@ class DeviceMonitor: TouchDeviceProviding {
         }
 
         // Also try the default device if not already registered
-        if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
-            if !registeredDevices.contains(defaultDevice) {
-                MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
-                MTDeviceStart(defaultDevice, 0)
-                registeredDevices.insert(defaultDevice)
+        if let defaultDevice = unsafe MultitouchFramework.shared.getDefaultDevice() {
+            if unsafe !registeredDevices.contains(defaultDevice) {
+                unsafe MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
+                unsafe MTDeviceStart(defaultDevice, 0)
+                unsafe registeredDevices.insert(defaultDevice)
                 deviceCount += 1
 
-                if device == nil {
-                    device = defaultDevice
+                if unsafe device == nil {
+                    unsafe device = unsafe defaultDevice
                 }
             } else {
                 Log.debug("Default device already registered from device list", category: .device)
             }
         }
 
-        guard device != nil else {
+        guard unsafe device != nil else {
             Log.warning(
                 "No multitouch device found. MiddleDrag requires a built-in trackpad or Magic Trackpad.",
                 category: .device)
@@ -144,38 +151,37 @@ class DeviceMonitor: TouchDeviceProviding {
 
         Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
 
-        isRunning = true
+        unsafe isRunning = true
         return true
     }
 
     /// Stop monitoring
     /// Safe to call even if start() was never called
-    func stop() {
+    @unsafe func stop() {
         // Safe to call when not running - just return early
-        guard isRunning else { return }
+        guard unsafe isRunning else { return }
 
         // IMPORTANT: Unregister callbacks FIRST, before stopping devices
         // This prevents the framework's internal thread (mt_ThreadedMTEntry)
         // from receiving callbacks while we're stopping devices, which causes
         // a race condition crash (CFRelease called with NULL / invalid address)
-        for deviceRef in registeredDevices {
-            MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
+        for unsafe deviceRef in unsafe registeredDevices {
+            unsafe MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
         }
 
         // Brief pause to allow the framework's internal thread to see the
         // unregistered callbacks and complete any in-flight operations.
         // Without this, the framework thread may still be processing a callback
         // when we call MTDeviceStop, causing a race condition.
-        Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
+        unsafe Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
 
         // Now safe to stop devices
-        for deviceRef in registeredDevices {
-            MTDeviceStop(deviceRef)
+        for unsafe deviceRef in unsafe registeredDevices {
+            unsafe MTDeviceStop(deviceRef)
         }
-
-        registeredDevices.removeAll()
-        self.device = nil
-        isRunning = false
+        unsafe registeredDevices.removeAll()
+        unsafe self.device = nil
+        unsafe isRunning = false
 
         Log.info("DeviceMonitor stopped", category: .device)
     }
@@ -183,6 +189,7 @@ class DeviceMonitor: TouchDeviceProviding {
     // MARK: - Internal
 
     /// Handle contact from callback and return whether to consume the event
+    @unsafe @preconcurrency
     fileprivate func handleContact(
         device: MTDeviceRef?,
         touches: UnsafeMutableRawPointer,
@@ -190,7 +197,7 @@ class DeviceMonitor: TouchDeviceProviding {
         timestamp: Double
     ) -> Bool {
         // Pass touch data to delegate for gesture processing
-        delegate?.deviceMonitor(
+        unsafe delegate?.deviceMonitor(
             self, didReceiveTouches: touches, count: count, timestamp: timestamp)
 
         // Never consume at the device level - let all touches through to the system
@@ -203,7 +210,7 @@ class DeviceMonitor: TouchDeviceProviding {
 // MARK: - Delegate Protocol
 
 /// Protocol for receiving touch events from the device monitor
-protocol DeviceMonitorDelegate: AnyObject {
+@unsafe protocol DeviceMonitorDelegate: AnyObject {
     /// Called when new touch data is received
     /// - Parameters:
     ///   - monitor: The device monitor
