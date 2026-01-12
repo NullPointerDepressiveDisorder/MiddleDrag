@@ -5,8 +5,8 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:middledrag.app</string>
-		<string>webcredentials:middledrag.app</string>
 		<string>applinks:www.middledrag.app</string>
+		<string>webcredentials:middledrag.app</string>
 		<string>webcredentials:www.middledrag.app</string>
 	</array>
 	<key>com.apple.security.app-sandbox</key>
