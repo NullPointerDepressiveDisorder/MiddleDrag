@@ -17,8 +17,12 @@ jobs:
   update-nixpkgs:
     runs-on: macos-latest
     steps:
-      - name: Install Nix
-        uses: cachix/install-nix-action@v27
+      - name: Clean up previous Nix build users
+        run: |
+          for u in $(dscl . -list /Users | grep '^_nixbld'); do
+            sudo dscl . -delete /Users/$u || true
+          done
+          sudo dscl . -delete /Groups/nixbld || true
 
       - name: Determine version
         id: version
