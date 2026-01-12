@@ -128,34 +128,34 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Dependency Injection Tests (using mock)
 
     func testStartCallsDeviceMonitorStart() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
-        XCTAssertTrue(mockDevice.startCalled)
-        XCTAssertEqual(mockDevice.startCallCount, 1)
+        unsafe XCTAssertTrue(mockDevice.startCalled)
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 1)
 
         manager.stop()
     }
 
     func testStopCallsDeviceMonitorStop() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         manager.stop()
 
-        XCTAssertTrue(mockDevice.stopCalled)
-        XCTAssertEqual(mockDevice.stopCallCount, 1)
+        unsafe XCTAssertTrue(mockDevice.stopCalled)
+        unsafe XCTAssertEqual(mockDevice.stopCallCount, 1)
     }
 
     func testStartSetsMonitoringToTrue() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         XCTAssertFalse(manager.isMonitoring)
 
@@ -168,10 +168,10 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testStartGracefullyHandlesMissingHardware() {
-        let mockDevice = MockDeviceMonitor()
-        mockDevice.startShouldSucceed = false
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -183,9 +183,9 @@ final class MultitouchManagerTests: XCTestCase {
         var factories: [Bool] = [true, false]
         let manager = MultitouchManager(
             deviceProviderFactory: {
-                let monitor = MockDeviceMonitor()
-                monitor.startShouldSucceed = factories.isEmpty ? true : factories.removeFirst()
-                return monitor
+                let monitor = unsafe MockDeviceMonitor()
+                unsafe monitor.startShouldSucceed = factories.isEmpty ? true : factories.removeFirst()
+                return unsafe monitor
             },
             eventTapSetup: { true }
         )
@@ -209,9 +209,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testStopSetsMonitoringToFalse() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         XCTAssertTrue(manager.isMonitoring)
@@ -222,22 +222,22 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testDoubleStartOnlyStartsOnce() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         manager.start()  // Second call should be no-op
 
-        XCTAssertEqual(mockDevice.startCallCount, 1)
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 1)
 
         manager.stop()
     }
 
     func testToggleEnabledResetsState() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         XCTAssertTrue(manager.isEnabled)
@@ -269,7 +269,7 @@ final class MultitouchManagerTests: XCTestCase {
         let manager = MultitouchManager(
             deviceProviderFactory: {
                 creationCount += 1
-                return MockDeviceMonitor()
+                return unsafe MockDeviceMonitor()
             },
             eventTapSetup: { true }
         )
@@ -302,9 +302,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testStopDuringRestartDelayStopsManager() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         XCTAssertTrue(manager.isMonitoring)
@@ -335,9 +335,9 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - GestureRecognizerDelegate State Transition Tests
 
     func testGestureRecognizerDidStartSetsThreeFingerGestureState() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -358,9 +358,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidTapResetsGestureState() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -389,9 +389,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidTapWithTapToClickEnabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Enable tap to click
@@ -426,9 +426,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidTapWithTapToClickDisabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Disable tap to click
@@ -464,9 +464,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidBeginDraggingSetsActivelyDragging() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Enable middle drag so the state will be set
@@ -491,9 +491,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidEndDraggingResetsAllStates() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -525,9 +525,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidCancelResetsGestureState() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -556,9 +556,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidCancelDraggingResetsAllStates() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -590,9 +590,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidUpdateDraggingWithMiddleDragDisabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Disable middle drag
@@ -619,9 +619,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidUpdateDraggingWithZeroDelta() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -647,9 +647,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidBeginDraggingWithMiddleDragDisabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Disable middle drag
@@ -676,9 +676,9 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - DeviceMonitorDelegate Tests
 
     func testDeviceMonitorDelegateIgnoresTouchesWhenDisabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         manager.toggleEnabled()  // Disable
@@ -710,11 +710,11 @@ final class MultitouchManagerTests: XCTestCase {
             field15: 0,
             zDensity: 0
         )
-        withUnsafeMutablePointer(to: &touchData) { pointer in
+        unsafe withUnsafeMutablePointer(to: &touchData) { pointer in
             let rawPointer = UnsafeMutableRawPointer(pointer)
             // This should not crash and should be ignored
-            let tempMonitor = DeviceMonitor()
-            manager.deviceMonitor(
+            let tempMonitor = unsafe DeviceMonitor()
+            unsafe manager.deviceMonitor(
                 tempMonitor,
                 didReceiveTouches: rawPointer,
                 count: 1,
@@ -729,9 +729,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testDeviceMonitorDelegateProcessesTouchesWhenEnabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -812,10 +812,10 @@ final class MultitouchManagerTests: XCTestCase {
                 zDensity: 0
             ),
         ]
-        touchData.withUnsafeMutableBytes { buffer in
+        unsafe touchData.withUnsafeMutableBytes { buffer in
             guard let rawPointer = buffer.baseAddress else { return }
-            let tempMonitor = DeviceMonitor()
-            manager.deviceMonitor(
+            let tempMonitor = unsafe DeviceMonitor()
+            unsafe manager.deviceMonitor(
                 tempMonitor,
                 didReceiveTouches: rawPointer,
                 count: 3,
@@ -834,9 +834,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidUpdateDraggingWithMovement() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -871,9 +871,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidUpdateDraggingWithSmallMovement() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -907,9 +907,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidUpdateDraggingMultipleUpdates() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -948,9 +948,9 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Configuration Edge Cases
 
     func testToggleEnabledWhileDragging() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -974,9 +974,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testStopWhileDragging() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         manager.start()
@@ -999,9 +999,9 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Window Size Filter Tests
 
     func testGestureRecognizerDidBeginDraggingWithWindowSizeFilterEnabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Enable window size filter with minimum requirements
@@ -1028,9 +1028,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidTapWithWindowSizeFilterEnabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Enable window size filter
@@ -1066,9 +1066,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testGestureRecognizerDidTapWithWindowSizeFilterDisabled() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         // Ensure window size filter is disabled
@@ -1101,9 +1101,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testMinimumWindowSizeConfiguration() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         var config = GestureConfiguration()
         config.minimumWindowSizeFilterEnabled = true
@@ -1120,12 +1120,12 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Sleep/Wake Restart Tests
 
     func testRestartReconnectsDeviceMonitor() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
-        XCTAssertEqual(mockDevice.startCallCount, 1)
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 1)
         XCTAssertTrue(manager.isMonitoring)
         XCTAssertTrue(manager.isEnabled)
 
@@ -1144,16 +1144,16 @@ final class MultitouchManagerTests: XCTestCase {
         XCTAssertTrue(manager.isMonitoring)
         XCTAssertTrue(manager.isEnabled)
         // Verify device monitor was stopped and started again
-        XCTAssertEqual(mockDevice.stopCallCount, 1)
-        XCTAssertEqual(mockDevice.startCallCount, 2)  // Initial start + restart
+        unsafe XCTAssertEqual(mockDevice.stopCallCount, 1)
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 2)  // Initial start + restart
 
         manager.stop()
     }
 
     func testRestartPreservesEnabledState() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
         XCTAssertTrue(manager.isEnabled)
@@ -1181,9 +1181,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testRestartCleansUpActiveGesture() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -1231,12 +1231,12 @@ final class MultitouchManagerTests: XCTestCase {
     func testRestartUsesAsyncDelayForFrameworkCleanup() {
         // Verifies that restart() uses an async delay instead of blocking Thread.sleep.
         // This ensures the main thread is not blocked during wake-from-sleep.
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
-        XCTAssertEqual(mockDevice.startCallCount, 1)
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 1)
 
         // restart() should return immediately (not block for 100ms)
         let startTime = CACurrentMediaTime()
@@ -1247,7 +1247,7 @@ final class MultitouchManagerTests: XCTestCase {
         XCTAssertLessThan(elapsed, 0.05, "restart() should not block the calling thread")
 
         // But the actual restart happens after the delay
-        XCTAssertEqual(mockDevice.startCallCount, 1)  // Not yet restarted
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 1)  // Not yet restarted
 
         // Wait for async restart to complete
         let expectation = XCTestExpectation(description: "Restart complete")
@@ -1258,7 +1258,7 @@ final class MultitouchManagerTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 1.0)
 
-        XCTAssertEqual(mockDevice.startCallCount, 2)  // Now restarted
+        unsafe XCTAssertEqual(mockDevice.startCallCount, 2)  // Now restarted
 
         manager.stop()
     }
@@ -1276,9 +1276,9 @@ final class MultitouchManagerTests: XCTestCase {
     func testRapidRestartCyclesDoNotCrash() {
         // Simulates rapid wake-from-sleep scenarios where multiple restart
         // calls could occur in quick succession.
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -1304,9 +1304,9 @@ final class MultitouchManagerTests: XCTestCase {
     func testRestartDuringActiveGestureDoesNotCrash() {
         // Tests that restarting while a gesture is in progress doesn't crash.
         // This covers the scenario where sleep occurs during active use.
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
         let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
@@ -1350,9 +1350,9 @@ final class MultitouchManagerTests: XCTestCase {
     func testRestartFromBackgroundThreadDoesNotCrash() {
         // Tests restart being called from a different thread (simulating
         // the wake notification arriving on a background queue).
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -1377,33 +1377,33 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Event Processing Logic Tests
 
     func testProcessEventPassesThroughTapDisabledEvents() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         // We can't construct tapDisabledByTimeout directly as it is a specific system type
         // but we can verify that a standard event (representing a pass-through) works
         let event = CGEvent(source: nil)!
-        let result = manager.processEvent(event, type: .leftMouseDown)
-        XCTAssertNotNil(result)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
+        unsafe XCTAssertNotNil(result)
     }
 
     func testProcessEventIdentifiesOurEvents() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         let event = CGEvent(source: nil)!
         event.setIntegerValueField(.eventSourceUserData, value: 0x4D44)
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)  // Middle button
 
         // Simulate "Our Event" (middle click generated by us)
-        let result = manager.processEvent(event, type: .otherMouseDown)
+        let result = unsafe manager.processEvent(event, type: .otherMouseDown)
 
         // Should pass through
-        XCTAssertNotNil(result)
+        unsafe XCTAssertNotNil(result)
         // Verify it was NOT suppressed
-        if let returnedEvent = result?.takeUnretainedValue() {
+        if let returnedEvent = unsafe result?.takeUnretainedValue() {
             XCTAssertEqual(returnedEvent, event)
         } else {
             XCTFail("Event should not be suppressed")
@@ -1411,9 +1411,9 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testProcessEventIntercptsForceClick() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         // Setup state for force click: 3 fingers + left mouse down
         manager.currentFingerCount = 3
@@ -1424,16 +1424,16 @@ final class MultitouchManagerTests: XCTestCase {
             mouseButton: .left)!
 
         // It should be intercepted (return nil) and converted to middle click
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
-        XCTAssertNil(
+        unsafe XCTAssertNil(
             result, "Physical left click with 3 fingers should be suppressed (Force Click)")
     }
 
     func testProcessEventPassesNormalLeftClick() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         // Setup state: Only 1 finger
         manager.currentFingerCount = 1
@@ -1442,15 +1442,15 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
-        XCTAssertNotNil(result, "Normal left click should pass through")
+        unsafe XCTAssertNotNil(result, "Normal left click should pass through")
     }
 
     func testProcessEventSuppressesDuringGesture() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         // Setup state: In 3 finger gesture, but 0 fingers currently (e.g. lift off)
         let recognizer = GestureRecognizer()
@@ -1468,10 +1468,10 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should be suppressed
-        XCTAssertNil(result)
+        unsafe XCTAssertNil(result)
     }
 
     // MARK: - Modifier Key Event Suppression Tests
@@ -1480,9 +1480,9 @@ final class MultitouchManagerTests: XCTestCase {
     // integration testing and manual verification.
 
     func testProcessEventSuppressesWhenModifierHeldAndGestureActive() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         // Don't require modifier key (so gesture is always considered active when flags are set)
         var config = GestureConfiguration()
@@ -1508,10 +1508,10 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should be suppressed because gesture is active and modifier not required
-        XCTAssertNil(result, "Event should be suppressed during active gesture")
+        unsafe XCTAssertNil(result, "Event should be suppressed during active gesture")
 
         manager.stop()
     }
@@ -1519,9 +1519,9 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Last Gesture Was Active Flag Tests
 
     func testCancelledGestureDoesNotSuppressEventsAfterEnd() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -1553,18 +1553,18 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should NOT be suppressed because gesture was cancelled (lastGestureWasActive = false)
-        XCTAssertNotNil(result, "Event should pass through after cancelled gesture")
+        unsafe XCTAssertNotNil(result, "Event should pass through after cancelled gesture")
 
         manager.stop()
     }
 
     func testActiveGestureSuppressesEventsAfterEnd() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         var config = GestureConfiguration()
         config.tapToClickEnabled = true
@@ -1600,19 +1600,19 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should be suppressed because gesture was active (lastGestureWasActive = true)
         // and we're within the 0.15s suppression window
-        XCTAssertNil(result, "Event should be suppressed after active gesture ends")
+        unsafe XCTAssertNil(result, "Event should be suppressed after active gesture ends")
 
         manager.stop()
     }
 
     func testCancelledDragDoesNotSuppressEventsAfterEnd() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         var config = GestureConfiguration()
         config.middleDragEnabled = true
@@ -1650,18 +1650,18 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should NOT be suppressed because drag was cancelled (lastGestureWasActive = false)
-        XCTAssertNotNil(result, "Event should pass through after cancelled drag")
+        unsafe XCTAssertNotNil(result, "Event should pass through after cancelled drag")
 
         manager.stop()
     }
 
     func testActiveDragSuppressesEventsAfterEnd() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         var config = GestureConfiguration()
         config.middleDragEnabled = true
@@ -1699,19 +1699,19 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should be suppressed because drag was active (lastGestureWasActive = true)
         // and we're within the 0.15s suppression window
-        XCTAssertNil(result, "Event should be suppressed after active drag ends")
+        unsafe XCTAssertNil(result, "Event should be suppressed after active drag ends")
 
         manager.stop()
     }
 
     func testEventSuppressionWindowExpires() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         var config = GestureConfiguration()
         config.tapToClickEnabled = true
@@ -1744,19 +1744,19 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should NOT be suppressed because suppression window has expired
-        XCTAssertNotNil(result, "Event should pass through after suppression window expires")
+        unsafe XCTAssertNotNil(result, "Event should pass through after suppression window expires")
 
         manager.stop()
     }
 
 
     func testToggleEnabledResetsLastGestureWasActive() {
-        let mockDevice = MockDeviceMonitor()
+        let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
-            deviceProviderFactory: { mockDevice }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
 
         manager.start()
 
@@ -1780,10 +1780,10 @@ final class MultitouchManagerTests: XCTestCase {
             mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
             mouseButton: .left)!
 
-        let result = manager.processEvent(event, type: .leftMouseDown)
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
 
         // Should NOT be suppressed because toggleEnabled reset the flag
-        XCTAssertNotNil(result, "Event should pass through after toggleEnabled resets state")
+        unsafe XCTAssertNotNil(result, "Event should pass through after toggleEnabled resets state")
 
         manager.stop()
     }

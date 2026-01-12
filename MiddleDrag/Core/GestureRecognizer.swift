@@ -42,7 +42,7 @@ class GestureRecognizer {
         _ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double,
         modifierFlags: CGEventFlags
     ) {
-        let touchArray = touches.bindMemory(to: MTTouch.self, capacity: count)
+        let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: count)
 
         // Check modifier key requirement first (if enabled)
         if configuration.requireModifierKey {
@@ -73,7 +73,7 @@ class GestureRecognizer {
         var validFingers: [MTPoint] = []
 
         for i in 0..<count {
-            let touch = touchArray[i]
+            let touch = unsafe touchArray[i]
             if touch.state == 3 || touch.state == 4 {
                 let position = touch.normalizedVector.position
 
@@ -188,8 +188,6 @@ class GestureRecognizer {
             // Check if we should transition to drag
             guard let startPos = gestureStartPosition else { return }
             let movement = startPos.distance(to: centroid)
-            let elapsed = timestamp - gestureStartTime
-
             // Only transition to drag if there is actual movement
             // Resting fingers (no movement) should NOT trigger a drag
             if movement > configuration.moveThreshold {

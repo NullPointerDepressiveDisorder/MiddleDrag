@@ -94,7 +94,7 @@ class MultitouchManager {
         deviceProviderFactory: (() -> TouchDeviceProviding)? = nil,
         eventTapSetup: (() -> Bool)? = nil
     ) {
-        self.deviceProviderFactory = deviceProviderFactory ?? { DeviceMonitor() }
+        self.deviceProviderFactory = deviceProviderFactory ?? { unsafe DeviceMonitor() }
         gestureRecognizer.delegate = self
 
         // Set up event tap factory after self is available
@@ -124,7 +124,7 @@ class MultitouchManager {
         }
 
         deviceMonitor = deviceProviderFactory()
-        deviceMonitor?.delegate = self
+        unsafe deviceMonitor?.delegate = self
 
         guard deviceMonitor?.start() == true else {
             Log.warning(
@@ -213,7 +213,7 @@ class MultitouchManager {
         }
 
         deviceMonitor = deviceProviderFactory()
-        deviceMonitor?.delegate = self
+        unsafe deviceMonitor?.delegate = self
 
         guard deviceMonitor?.start() == true else {
             Log.warning(
@@ -327,23 +327,23 @@ class MultitouchManager {
         // NOTE: We intentionally do NOT intercept gesture events (29-32)
         // Doing so causes Mission Control and other system gestures to freeze
 
-        let refcon = Unmanaged.passUnretained(self).toOpaque()
+        let refcon = unsafe Unmanaged.passUnretained(self).toOpaque()
 
         guard
-            let tap = CGEvent.tapCreate(
+            let tap = unsafe CGEvent.tapCreate(
                 tap: .cgSessionEventTap,
                 place: .headInsertEventTap,
                 options: .defaultTap,
                 eventsOfInterest: eventMask,
                 callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
-                    guard let refcon = refcon else {
-                        return Unmanaged.passUnretained(event)
+                    guard let refcon = unsafe refcon else {
+                        return unsafe Unmanaged.passUnretained(event)
                     }
-                    let manager = Unmanaged<MultitouchManager>.fromOpaque(refcon)
+                    let manager = unsafe Unmanaged<MultitouchManager>.fromOpaque(refcon)
                         .takeUnretainedValue()
-                    return manager.handleEventTapCallback(proxy: proxy, type: type, event: event)
+                    return unsafe manager.handleEventTapCallback(proxy: proxy, type: type, event: event)
                 },
-                userInfo: refcon
+                userInfo: unsafe refcon
             )
         else {
             Log.warning("Could not create event tap", category: .device)
@@ -381,7 +381,7 @@ class MultitouchManager {
         type: CGEventType,
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
-        return processEvent(event, type: type)
+        return unsafe processEvent(event, type: type)
     }
 
     /// Internal method for processing events to allow unit testing
@@ -395,10 +395,10 @@ class MultitouchManager {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
-            return Unmanaged.passUnretained(event)
+            return unsafe Unmanaged.passUnretained(event)
         }
 
-        let sourceStateID = event.getIntegerValueField(.eventSourceStateID)
+        _ = event.getIntegerValueField(.eventSourceStateID)
         let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
 
         let now = CACurrentMediaTime()
@@ -441,7 +441,7 @@ class MultitouchManager {
         let gestureActive = modifierKeyHeld && (isInThreeFingerGesture || isActivelyDragging)
 
         if isMiddleButton && isOurEvent {
-            return Unmanaged.passUnretained(event)
+            return unsafe Unmanaged.passUnretained(event)
         }
 
         // Force click support: convert left clicks to middle clicks when 3+ fingers are on trackpad
@@ -468,7 +468,7 @@ class MultitouchManager {
             return nil  // Suppress the event
         }
 
-        return Unmanaged.passUnretained(event)
+        return unsafe Unmanaged.passUnretained(event)
     }
 
     // MARK: - Private Methods
@@ -502,7 +502,7 @@ extension MultitouchManager: DeviceMonitorDelegate {
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
         gestureQueue.async { [weak self] in
-            self?.gestureRecognizer.processTouches(
+            unsafe self?.gestureRecognizer.processTouches(
                 touches, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
         }
     }

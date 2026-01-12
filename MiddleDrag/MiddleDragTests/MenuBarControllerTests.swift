@@ -2,7 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
-final class MenuBarControllerTests: XCTestCase {
+@unsafe final class MenuBarControllerTests: XCTestCase {
 
     var mockDevice: MockDeviceMonitor!
     var manager: MultitouchManager!
@@ -13,32 +13,32 @@ final class MenuBarControllerTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        mockDevice = MockDeviceMonitor()
-        manager = MultitouchManager(
-            deviceProviderFactory: { self.mockDevice }, eventTapSetup: { true })
-        preferences = UserPreferences()
-        controller = MenuBarController(multitouchManager: manager, preferences: preferences)
+        unsafe mockDevice = unsafe MockDeviceMonitor()
+        unsafe manager = MultitouchManager(
+            deviceProviderFactory: { unsafe self.mockDevice }, eventTapSetup: { true })
+        unsafe preferences = UserPreferences()
+        unsafe controller = unsafe MenuBarController(multitouchManager: manager, preferences: preferences)
     }
 
     override func tearDown() {
-        NotificationCenter.default.removeObserver(self)
-        manager.stop()
-        controller = nil
-        manager = nil
-        mockDevice = nil
-        preferences = nil
+        unsafe NotificationCenter.default.removeObserver(self)
+        unsafe manager.stop()
+        unsafe controller = nil
+        unsafe manager = nil
+        unsafe mockDevice = nil
+        unsafe preferences = nil
         super.tearDown()
     }
 
     // MARK: - Initialization Tests
 
     func testInitializationCreatesController() {
-        XCTAssertNotNil(controller)
+        unsafe XCTAssertNotNil(controller)
     }
 
     func testInitializationWithDefaultPreferences() {
         let defaultPrefs = UserPreferences()
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: defaultPrefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: defaultPrefs)
         XCTAssertNotNil(ctrl)
     }
 
@@ -48,37 +48,37 @@ final class MenuBarControllerTests: XCTestCase {
         customPrefs.dragSensitivity = 2.0
         customPrefs.blockSystemGestures = true
 
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: customPrefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: customPrefs)
         XCTAssertNotNil(ctrl)
     }
 
     // MARK: - Build Menu Tests
 
     func testBuildMenuDoesNotCrash() {
-        XCTAssertNoThrow(controller.buildMenu())
+        unsafe XCTAssertNoThrow(controller.buildMenu())
     }
 
     func testBuildMenuMultipleTimes() {
         // Should be safe to rebuild menu multiple times
         for _ in 1...5 {
-            XCTAssertNoThrow(controller.buildMenu())
+            unsafe XCTAssertNoThrow(controller.buildMenu())
         }
     }
 
     // MARK: - Update Status Icon Tests
 
     func testUpdateStatusIconEnabledDoesNotCrash() {
-        XCTAssertNoThrow(controller.updateStatusIcon(enabled: true))
+        unsafe XCTAssertNoThrow(controller.updateStatusIcon(enabled: true))
     }
 
     func testUpdateStatusIconDisabledDoesNotCrash() {
-        XCTAssertNoThrow(controller.updateStatusIcon(enabled: false))
+        unsafe XCTAssertNoThrow(controller.updateStatusIcon(enabled: false))
     }
 
     func testUpdateStatusIconMultipleTimes() {
         // Toggle status icon multiple times
         for i in 0..<10 {
-            XCTAssertNoThrow(controller.updateStatusIcon(enabled: i % 2 == 0))
+            unsafe XCTAssertNoThrow(controller.updateStatusIcon(enabled: i % 2 == 0))
         }
     }
 
@@ -103,36 +103,36 @@ final class MenuBarControllerTests: XCTestCase {
     // MARK: - Manager Integration Tests
 
     func testControllerWithStartedManager() {
-        manager.start()
-        XCTAssertTrue(manager.isEnabled)
+        unsafe manager.start()
+        unsafe XCTAssertTrue(manager.isEnabled)
 
         // Rebuild menu while manager is running
-        XCTAssertNoThrow(controller.buildMenu())
-        XCTAssertNoThrow(controller.updateStatusIcon(enabled: true))
+        unsafe XCTAssertNoThrow(controller.buildMenu())
+        unsafe XCTAssertNoThrow(controller.updateStatusIcon(enabled: true))
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     func testControllerWithStoppedManager() {
-        manager.stop()
-        XCTAssertFalse(manager.isEnabled)
+        unsafe manager.stop()
+        unsafe XCTAssertFalse(manager.isEnabled)
 
         // Operations should still work
-        XCTAssertNoThrow(controller.buildMenu())
-        XCTAssertNoThrow(controller.updateStatusIcon(enabled: false))
+        unsafe XCTAssertNoThrow(controller.buildMenu())
+        unsafe XCTAssertNoThrow(controller.updateStatusIcon(enabled: false))
     }
 
     func testControllerWithToggleEnabled() {
-        manager.start()
-        XCTAssertTrue(manager.isEnabled)
+        unsafe manager.start()
+        unsafe XCTAssertTrue(manager.isEnabled)
 
-        manager.toggleEnabled()
-        XCTAssertFalse(manager.isEnabled)
+        unsafe manager.toggleEnabled()
+        unsafe XCTAssertFalse(manager.isEnabled)
 
         // Rebuild menu after toggle
-        XCTAssertNoThrow(controller.buildMenu())
+        unsafe XCTAssertNoThrow(controller.buildMenu())
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     // MARK: - Preferences State Tests
@@ -140,14 +140,14 @@ final class MenuBarControllerTests: XCTestCase {
     func testPreferencesMiddleDragEnabled() {
         var prefs = UserPreferences()
         prefs.middleDragEnabled = true
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
     }
 
     func testPreferencesMiddleDragDisabled() {
         var prefs = UserPreferences()
         prefs.middleDragEnabled = false
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
     }
 
@@ -160,7 +160,7 @@ final class MenuBarControllerTests: XCTestCase {
         prefs.contactSizeFilterEnabled = true
         prefs.maxContactSize = 2.0
 
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
         ctrl.buildMenu()  // Should create palm rejection submenu
     }
@@ -171,7 +171,7 @@ final class MenuBarControllerTests: XCTestCase {
         for sensitivity in sensitivities {
             var prefs = UserPreferences()
             prefs.dragSensitivity = sensitivity
-            let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
             XCTAssertNotNil(ctrl)
         }
     }
@@ -184,11 +184,11 @@ final class MenuBarControllerTests: XCTestCase {
         config.tapThreshold = 0.2
         config.middleDragEnabled = false
 
-        manager.updateConfiguration(config)
+        unsafe manager.updateConfiguration(config)
 
-        XCTAssertEqual(manager.configuration.sensitivity, 1.5, accuracy: 0.001)
-        XCTAssertEqual(manager.configuration.tapThreshold, 0.2, accuracy: 0.001)
-        XCTAssertFalse(manager.configuration.middleDragEnabled)
+        unsafe XCTAssertEqual(manager.configuration.sensitivity, 1.5, accuracy: 0.001)
+        unsafe XCTAssertEqual(manager.configuration.tapThreshold, 0.2, accuracy: 0.001)
+        unsafe XCTAssertFalse(manager.configuration.middleDragEnabled)
     }
 
     func testManagerConfigurationWithPalmRejection() {
@@ -200,23 +200,23 @@ final class MenuBarControllerTests: XCTestCase {
         config.contactSizeFilterEnabled = true
         config.maxContactSize = 1.0
 
-        manager.updateConfiguration(config)
+        unsafe manager.updateConfiguration(config)
 
-        XCTAssertTrue(manager.configuration.exclusionZoneEnabled)
-        XCTAssertEqual(manager.configuration.exclusionZoneSize, 0.25, accuracy: 0.001)
-        XCTAssertTrue(manager.configuration.requireModifierKey)
-        XCTAssertEqual(manager.configuration.modifierKeyType, .command)
-        XCTAssertTrue(manager.configuration.contactSizeFilterEnabled)
-        XCTAssertEqual(manager.configuration.maxContactSize, 1.0, accuracy: 0.001)
+        unsafe XCTAssertTrue(manager.configuration.exclusionZoneEnabled)
+        unsafe XCTAssertEqual(manager.configuration.exclusionZoneSize, 0.25, accuracy: 0.001)
+        unsafe XCTAssertTrue(manager.configuration.requireModifierKey)
+        unsafe XCTAssertEqual(manager.configuration.modifierKeyType, .command)
+        unsafe XCTAssertTrue(manager.configuration.contactSizeFilterEnabled)
+        unsafe XCTAssertEqual(manager.configuration.maxContactSize, 1.0, accuracy: 0.001)
     }
 
     // MARK: - Edge Case Tests
 
     func testControllerWithNilManagerState() {
         // Test with manager that hasn't been started
-        let freshMock = MockDeviceMonitor()
+        let freshMock = unsafe MockDeviceMonitor()
         let freshManager = MultitouchManager(
-            deviceProviderFactory: { freshMock }, eventTapSetup: { true })
+            deviceProviderFactory: { unsafe freshMock }, eventTapSetup: { true })
         let ctrl = MenuBarController(
             multitouchManager: freshManager, preferences: UserPreferences())
 
@@ -225,17 +225,17 @@ final class MenuBarControllerTests: XCTestCase {
     }
 
     func testRebuildMenuAfterPreferencesChange() {
-        preferences.launchAtLogin = true
-        controller.buildMenu()
+        unsafe preferences.launchAtLogin = true
+        unsafe controller.buildMenu()
 
-        preferences.launchAtLogin = false
-        controller.buildMenu()
+        unsafe preferences.launchAtLogin = false
+        unsafe controller.buildMenu()
 
-        preferences.blockSystemGestures = true
-        controller.buildMenu()
+        unsafe preferences.blockSystemGestures = true
+        unsafe controller.buildMenu()
 
         // Should not crash
-        XCTAssertNotNil(controller)
+        unsafe XCTAssertNotNil(controller)
     }
 
     func testModifierKeyTypeAllCases() {
@@ -244,7 +244,7 @@ final class MenuBarControllerTests: XCTestCase {
             prefs.requireModifierKey = true
             prefs.modifierKeyType = keyType
 
-            let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
             XCTAssertNotNil(ctrl)
             ctrl.buildMenu()
         }
@@ -258,7 +258,7 @@ final class MenuBarControllerTests: XCTestCase {
             prefs.exclusionZoneEnabled = true
             prefs.exclusionZoneSize = size
 
-            let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
             XCTAssertNotNil(ctrl)
             ctrl.buildMenu()
         }
@@ -272,7 +272,7 @@ final class MenuBarControllerTests: XCTestCase {
             prefs.contactSizeFilterEnabled = true
             prefs.maxContactSize = threshold
 
-            let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
             XCTAssertNotNil(ctrl)
             ctrl.buildMenu()
         }
@@ -283,46 +283,46 @@ final class MenuBarControllerTests: XCTestCase {
     // copy is modified, not the test's copy. We verify methods execute without crash.
 
     func testToggleEnabledViaSelector() {
-        manager.start()
-        XCTAssertTrue(manager.isEnabled)
+        unsafe manager.start()
+        unsafe XCTAssertTrue(manager.isEnabled)
 
         // Invoke the private @objc method via selector
-        controller.perform(Selector(("toggleEnabled")))
+        unsafe controller.perform(#selector(MenuBarController.toggleEnabled))
 
         // The toggle should have been called
-        XCTAssertFalse(manager.isEnabled)
+        unsafe XCTAssertFalse(manager.isEnabled)
 
         // Toggle back
-        controller.perform(Selector(("toggleEnabled")))
-        XCTAssertTrue(manager.isEnabled)
+        unsafe controller.perform(#selector(MenuBarController.toggleEnabled))
+        unsafe XCTAssertTrue(manager.isEnabled)
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     func testToggleTapToClickViaSelector() {
         // Initial state of manager
-        let initialManagerState = manager.configuration.tapToClickEnabled
+        let initialManagerState = unsafe manager.configuration.tapToClickEnabled
 
         // Invoke private @objc method
-        XCTAssertNoThrow(controller.perform(Selector(("toggleTapToClick"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleTapToClick)))
 
         // Should have updated the manager's configuration
-        XCTAssertNotEqual(manager.configuration.tapToClickEnabled, initialManagerState)
-        XCTAssertEqual(manager.configuration.tapToClickEnabled, !initialManagerState)
+        unsafe XCTAssertNotEqual(manager.configuration.tapToClickEnabled, initialManagerState)
+        unsafe XCTAssertEqual(manager.configuration.tapToClickEnabled, !initialManagerState)
     }
 
     func testToggleMiddleDragViaSelector() {
-        manager.start()
+        unsafe manager.start()
 
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleMiddleDrag"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleMiddleDrag)))
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     func testToggleLaunchAtLoginViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleLaunchAtLogin"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleLaunchAtLogin)))
     }
 
     // NOTE: testToggleSystemGestureBlockingViaSelector removed because
@@ -331,17 +331,17 @@ final class MenuBarControllerTests: XCTestCase {
 
     func testToggleExclusionZoneViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleExclusionZone"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleExclusionZone)))
     }
 
     func testToggleRequireModifierKeyViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleRequireModifierKey"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleRequireModifierKey)))
     }
 
     func testToggleContactSizeFilterViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleContactSizeFilter"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleContactSizeFilter)))
     }
 
     func testToggleCrashReportingViaSelector() {
@@ -349,7 +349,7 @@ final class MenuBarControllerTests: XCTestCase {
         let initialState = CrashReporter.shared.isEnabled
 
         // Invoke the private @objc method via selector
-        controller.perform(Selector(("toggleCrashReporting")))
+        unsafe controller.perform(#selector(MenuBarController.toggleCrashReporting))
 
         // Should have toggled (CrashReporter is a singleton, so state persists)
         XCTAssertNotEqual(CrashReporter.shared.isEnabled, initialState)
@@ -365,7 +365,7 @@ final class MenuBarControllerTests: XCTestCase {
         let initialState = CrashReporter.shared.performanceMonitoringEnabled
 
         // Invoke the private @objc method via selector
-        controller.perform(Selector(("togglePerformanceMonitoring")))
+        unsafe controller.perform(#selector(MenuBarController.togglePerformanceMonitoring))
 
         // Should have toggled
         XCTAssertNotEqual(CrashReporter.shared.performanceMonitoringEnabled, initialState)
@@ -379,7 +379,7 @@ final class MenuBarControllerTests: XCTestCase {
     // MARK: - Notification Posting Tests
 
     func testPreferencesChangedNotificationPosted() {
-        manager.start()
+        unsafe manager.start()
         let expectation = XCTestExpectation(description: "Preferences changed notification")
 
         let observer = NotificationCenter.default.addObserver(
@@ -391,12 +391,12 @@ final class MenuBarControllerTests: XCTestCase {
         }
 
         // Trigger action that posts notification
-        controller.perform(Selector(("toggleMiddleDrag")))
+        unsafe controller.perform(#selector(MenuBarController.toggleMiddleDrag))
 
-        wait(for: [expectation], timeout: 1.0)
+        unsafe wait(for: [expectation], timeout: 1.0)
         NotificationCenter.default.removeObserver(observer)
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     func testLaunchAtLoginNotificationPosted() {
@@ -411,9 +411,9 @@ final class MenuBarControllerTests: XCTestCase {
         }
 
         // Trigger action that posts notification
-        controller.perform(Selector(("toggleLaunchAtLogin")))
+        unsafe controller.perform(#selector(MenuBarController.toggleLaunchAtLogin))
 
-        wait(for: [expectation], timeout: 1.0)
+        unsafe wait(for: [expectation], timeout: 1.0)
         NotificationCenter.default.removeObserver(observer)
     }
 
@@ -427,7 +427,7 @@ final class MenuBarControllerTests: XCTestCase {
         menuItem.representedObject = Float(1.5)
 
         // Invoke setSensitivity via selector with the menu item - should not crash
-        XCTAssertNoThrow(controller.perform(Selector(("setSensitivity:")), with: menuItem))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setSensitivity(_:)), with: menuItem))
     }
 
     func testSetExclusionZoneSizeWithMenuItem() {
@@ -435,7 +435,7 @@ final class MenuBarControllerTests: XCTestCase {
         menuItem.representedObject = Double(0.25)
 
         // Invoke via selector - should not crash
-        XCTAssertNoThrow(controller.perform(Selector(("setExclusionZoneSize:")), with: menuItem))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setExclusionZoneSize(_:)), with: menuItem))
     }
 
     func testSetModifierKeyTypeWithMenuItem() {
@@ -443,7 +443,7 @@ final class MenuBarControllerTests: XCTestCase {
         menuItem.representedObject = ModifierKeyType.command.rawValue
 
         // Invoke via selector - should not crash
-        XCTAssertNoThrow(controller.perform(Selector(("setModifierKeyType:")), with: menuItem))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setModifierKeyType(_:)), with: menuItem))
     }
 
     func testSetContactSizeThresholdWithMenuItem() {
@@ -451,12 +451,12 @@ final class MenuBarControllerTests: XCTestCase {
         menuItem.representedObject = Double(2.0)
 
         // Invoke via selector - should not crash
-        XCTAssertNoThrow(controller.perform(Selector(("setContactSizeThreshold:")), with: menuItem))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setContactSizeThreshold(_:)), with: menuItem))
     }
 
     func testToggleMinimumWindowSizeFilterViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleMinimumWindowSizeFilter"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleMinimumWindowSizeFilter)))
     }
 
     func testSetMinimumWindowSizeWithMenuItem() {
@@ -464,7 +464,7 @@ final class MenuBarControllerTests: XCTestCase {
         menuItem.representedObject = Double(200)
 
         // Invoke via selector - should not crash
-        XCTAssertNoThrow(controller.perform(Selector(("setMinimumWindowSize:")), with: menuItem))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setMinimumWindowSize(_:)), with: menuItem))
     }
 
     func testBuildMenuWithMinimumWindowSizeFilterEnabled() {
@@ -473,7 +473,7 @@ final class MenuBarControllerTests: XCTestCase {
         prefs.minimumWindowWidth = 100
         prefs.minimumWindowHeight = 100
 
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
         ctrl.buildMenu()  // Should create window size submenu items
     }
@@ -485,7 +485,7 @@ final class MenuBarControllerTests: XCTestCase {
         prefs.contactSizeFilterEnabled = true
         prefs.minimumWindowSizeFilterEnabled = true
 
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
         ctrl.buildMenu()  // Should create all submenu items
     }
@@ -493,32 +493,32 @@ final class MenuBarControllerTests: XCTestCase {
     // MARK: - Multiple Toggle Cycles
 
     func testMultipleToggleCycles() {
-        manager.start()
+        unsafe manager.start()
 
         // Toggle enabled multiple times
         for _ in 0..<5 {
-            controller.perform(Selector(("toggleEnabled")))
+            unsafe controller.perform(#selector(MenuBarController.toggleEnabled))
         }
 
         // Toggle preferences multiple times
         for _ in 0..<3 {
-            controller.perform(Selector(("toggleMiddleDrag")))
-            controller.perform(Selector(("toggleExclusionZone")))
-            controller.perform(Selector(("toggleRequireModifierKey")))
-            controller.perform(Selector(("toggleContactSizeFilter")))
+            unsafe controller.perform(#selector(MenuBarController.toggleMiddleDrag))
+            unsafe controller.perform(#selector(MenuBarController.toggleExclusionZone))
+            unsafe controller.perform(#selector(MenuBarController.toggleRequireModifierKey))
+            unsafe controller.perform(#selector(MenuBarController.toggleContactSizeFilter))
         }
 
         // Should not crash
-        XCTAssertNotNil(controller)
+        unsafe XCTAssertNotNil(controller)
 
-        manager.stop()
+        unsafe manager.stop()
     }
 
     // MARK: - Allow Relift During Drag Tests
 
     func testToggleAllowReliftDuringDragViaSelector() {
         // Invoke the private @objc method via selector - should not throw
-        XCTAssertNoThrow(controller.perform(Selector(("toggleAllowReliftDuringDrag"))))
+        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleAllowReliftDuringDrag)))
     }
 
     func testToggleAllowReliftDuringDragPostsNotification() {
@@ -532,9 +532,9 @@ final class MenuBarControllerTests: XCTestCase {
             expectation.fulfill()
         }
 
-        controller.perform(Selector(("toggleAllowReliftDuringDrag")))
+        unsafe controller.perform(#selector(MenuBarController.toggleAllowReliftDuringDrag))
 
-        wait(for: [expectation], timeout: 1.0)
+        unsafe wait(for: [expectation], timeout: 1.0)
         NotificationCenter.default.removeObserver(observer)
     }
 
@@ -542,7 +542,7 @@ final class MenuBarControllerTests: XCTestCase {
         var prefs = UserPreferences()
         prefs.allowReliftDuringDrag = true
 
-        let ctrl = MenuBarController(multitouchManager: manager, preferences: prefs)
+        let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
         ctrl.buildMenu()  // Should include relift option
     }
@@ -554,28 +554,28 @@ final class MenuBarControllerTests: XCTestCase {
 
     func testConfigureSystemGesturesMethodExists() {
         // Verify the selector exists
-        let selector = Selector(("configureSystemGestures"))
-        XCTAssertTrue(controller.responds(to: selector))
+        let selector = #selector(MenuBarController.configureSystemGestures)
+        unsafe XCTAssertTrue(controller.responds(to: selector))
     }
 
     // MARK: - Comprehensive Preferences Toggle Tests
 
     func testAllPreferenceTogglesInSequence() {
-        manager.start()
+        unsafe manager.start()
 
         // Test all toggle methods in sequence
-        controller.perform(Selector(("toggleMiddleDrag")))
-        controller.perform(Selector(("toggleExclusionZone")))
-        controller.perform(Selector(("toggleRequireModifierKey")))
-        controller.perform(Selector(("toggleContactSizeFilter")))
-        controller.perform(Selector(("toggleMinimumWindowSizeFilter")))
-        controller.perform(Selector(("toggleAllowReliftDuringDrag")))
-        controller.perform(Selector(("toggleCrashReporting")))
-        controller.perform(Selector(("togglePerformanceMonitoring")))
+        unsafe controller.perform(#selector(MenuBarController.toggleMiddleDrag))
+        unsafe controller.perform(#selector(MenuBarController.toggleExclusionZone))
+        unsafe controller.perform(#selector(MenuBarController.toggleRequireModifierKey))
+        unsafe controller.perform(#selector(MenuBarController.toggleContactSizeFilter))
+        unsafe controller.perform(#selector(MenuBarController.toggleMinimumWindowSizeFilter))
+        unsafe controller.perform(#selector(MenuBarController.toggleAllowReliftDuringDrag))
+        unsafe controller.perform(#selector(MenuBarController.toggleCrashReporting))
+        unsafe controller.perform(#selector(MenuBarController.togglePerformanceMonitoring))
 
         // All toggles should complete without crash
-        XCTAssertNotNil(controller)
+        unsafe XCTAssertNotNil(controller)
 
-        manager.stop()
+        unsafe manager.stop()
     }
 }

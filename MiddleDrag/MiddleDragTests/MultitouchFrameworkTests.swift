@@ -26,16 +26,16 @@ final class MultitouchFrameworkTests: XCTestCase {
         let framework = MultitouchFramework.shared
         // Just verify that calling getDefaultDevice() does not crash
         // Note: Device handles may differ between calls, so we don't compare equality
-        _ = framework.getDefaultDevice()
-        _ = framework.getDefaultDevice()
+        _ = unsafe framework.getDefaultDevice()
+        _ = unsafe framework.getDefaultDevice()
     }
 
     func testGetDefaultDeviceReturnsConsistentValue() {
         let framework = MultitouchFramework.shared
-        let device1 = framework.getDefaultDevice()
-        let device2 = framework.getDefaultDevice()
+        let device1 = unsafe framework.getDefaultDevice()
+        let device2 = unsafe framework.getDefaultDevice()
         // Verify that repeated calls are consistent in availability (both nil or both non-nil),
         // without relying on pointer identity, which may legitimately differ.
-        XCTAssertEqual(device1 != nil, device2 != nil)
+        unsafe XCTAssertEqual(device1 != nil, device2 != nil)
     }
 }

@@ -2,7 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
-final class DeviceMonitorTests: XCTestCase {
+@unsafe final class DeviceMonitorTests: XCTestCase {
 
     // Note: DeviceMonitor uses a global variable (gDeviceMonitor) for C callback compatibility
     // This limits testing options since only one instance can be active at a time
@@ -14,13 +14,13 @@ final class DeviceMonitorTests: XCTestCase {
     override func setUp() {
         super.setUp()
         // Create a fresh monitor for each test
-        monitor = DeviceMonitor()
+        unsafe monitor = unsafe DeviceMonitor()
     }
 
     override func tearDown() {
         // Ensure monitor is stopped and cleaned up after each test
-        monitor?.stop()
-        monitor = nil
+        unsafe monitor?.stop()
+        unsafe monitor = nil
         // Small delay to ensure cleanup completes before next test
         // This helps prevent race conditions with the global gDeviceMonitor variable
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.01))
@@ -31,86 +31,86 @@ final class DeviceMonitorTests: XCTestCase {
 
     func testStartDoesNotCrash() {
         // Note: In test environment without a trackpad, this may log warnings
-        XCTAssertNoThrow(monitor.start())
+        unsafe XCTAssertNoThrow(monitor.start())
         // stop() is called in tearDown
     }
 
     func testStopWithoutStartDoesNotCrash() {
         // Calling stop on a monitor that was never started should not crash
         // The monitor is created in setUp, so we just call stop directly
-        XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor.stop())
     }
 
     func testDoubleStopDoesNotCrash() {
         // Should handle calling stop multiple times gracefully
-        monitor.start()
-        XCTAssertNoThrow(monitor.stop())
-        XCTAssertNoThrow(monitor.stop())
+        unsafe monitor.start()
+        unsafe XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor.stop())
     }
 
     func testStartStopStartDoesNotCrash() {
         // Should be able to restart the monitor
-        XCTAssertNoThrow(monitor.start())
-        XCTAssertNoThrow(monitor.stop())
-        XCTAssertNoThrow(monitor.start())
+        unsafe XCTAssertNoThrow(monitor.start())
+        unsafe XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor.start())
     }
 
     // MARK: - Delegate Tests
 
     func testDelegateIsSetCorrectly() {
         let delegate = MockDeviceMonitorDelegate()
-        monitor.delegate = delegate
+        unsafe monitor.delegate = delegate
 
-        XCTAssertNotNil(monitor.delegate)
-        XCTAssertTrue(monitor.delegate === delegate)
+        unsafe XCTAssertNotNil(monitor.delegate)
+        unsafe XCTAssertTrue(monitor.delegate === delegate)
     }
 
     func testDelegateCanBeCleared() {
         let delegate = MockDeviceMonitorDelegate()
-        monitor.delegate = delegate
-        XCTAssertNotNil(monitor.delegate)
+        unsafe monitor.delegate = delegate
+        unsafe XCTAssertNotNil(monitor.delegate)
 
-        monitor.delegate = nil
-        XCTAssertNil(monitor.delegate)
+        unsafe monitor.delegate = nil
+        unsafe XCTAssertNil(monitor.delegate)
     }
 
     func testDelegateIsWeakReference() {
         var delegate: MockDeviceMonitorDelegate? = MockDeviceMonitorDelegate()
-        monitor.delegate = delegate
+        unsafe monitor.delegate = delegate
 
-        XCTAssertNotNil(monitor.delegate)
+        unsafe XCTAssertNotNil(monitor.delegate)
 
         // Release the delegate
         delegate = nil
 
         // Delegate should be nil since it's a weak reference
-        XCTAssertNil(monitor.delegate)
+        unsafe XCTAssertNil(monitor.delegate)
     }
 
     // MARK: - Multiple Instance Tests
 
     func testMultipleInstancesDoNotCrash() {
         // Create multiple monitors - only first should own global reference
-        let monitor2 = DeviceMonitor()
-        let monitor3 = DeviceMonitor()
+        let monitor2 = unsafe DeviceMonitor()
+        let monitor3 = unsafe DeviceMonitor()
 
         // Starting/stopping multiple instances should not crash
-        XCTAssertNoThrow(monitor.start())
-        XCTAssertNoThrow(monitor2.start())
+        unsafe XCTAssertNoThrow(monitor.start())
+        unsafe XCTAssertNoThrow(monitor2.start())
 
-        XCTAssertNoThrow(monitor.stop())
-        XCTAssertNoThrow(monitor2.stop())
+        unsafe XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor2.stop())
         // monitor3 never started, just deallocates
-        _ = monitor3
+        _ = unsafe monitor3
     }
 
     func testSecondInstanceCanStartAfterFirstStops() {
-        monitor.start()
-        monitor.stop()
+        unsafe monitor.start()
+        unsafe monitor.stop()
 
-        let monitor2 = DeviceMonitor()
-        XCTAssertNoThrow(monitor2.start())
-        monitor2.stop()
+        let monitor2 = unsafe DeviceMonitor()
+        unsafe XCTAssertNoThrow(monitor2.start())
+        unsafe monitor2.stop()
     }
 
     // MARK: - Deinit/Cleanup Tests
@@ -122,28 +122,28 @@ final class DeviceMonitorTests: XCTestCase {
         // This exercises lines 74-75 in deinit that clear gDeviceMonitor
         weak var weakRef: DeviceMonitor?
         autoreleasepool {
-            let localMonitor = DeviceMonitor()
-            weakRef = localMonitor
+            let localMonitor = unsafe DeviceMonitor()
+            unsafe weakRef = unsafe localMonitor
             // Don't call start() - just let it deallocate
         }
         // The monitor should have been deallocated and global reference cleared
-        XCTAssertNil(weakRef, "Monitor should be deallocated")
+        unsafe XCTAssertNil(weakRef, "Monitor should be deallocated")
     }
 
     func testStopUnregistersAllDevices() {
         // This test ensures the new loop in stop() executes
         // In CI without devices, registeredDevices is empty but the code path is still exercised
-        monitor.start()
+        unsafe monitor.start()
         // Stop should unregister ALL registered devices (the new fix)
-        XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor.stop())
     }
 
     func testMultipleStartStopCyclesDoNotLeak() {
         // Exercise multiple start/stop cycles to test the registeredDevices cleanup
         // Works in CI because start/stop are no-ops when no devices are found
         for _ in 0..<3 {
-            monitor.start()
-            monitor.stop()
+            unsafe monitor.start()
+            unsafe monitor.stop()
         }
         // If no crashes/hangs, the device registration/unregistration is balanced
         XCTAssertTrue(true)
@@ -157,13 +157,13 @@ final class DeviceMonitorTests: XCTestCase {
     func testStopIncludesDelayForFrameworkCleanup() {
         // This test verifies that stop() includes a delay to prevent race conditions.
         // The delay allows the framework's internal thread to complete cleanup.
-        guard monitor.start() else {
+        guard unsafe monitor.start() else {
             print("Skipping testStopIncludesDelayForFrameworkCleanup: No multitouch device found")
             return
         }
 
         let startTime = CACurrentMediaTime()
-        monitor.stop()
+        unsafe monitor.stop()
         let elapsed = CACurrentMediaTime() - startTime
 
         // Use a conservative 10ms threshold to avoid flakiness while still
@@ -179,10 +179,10 @@ final class DeviceMonitorTests: XCTestCase {
         // could cause the framework's internal thread to access deallocated resources.
         // The fix adds delays to prevent this, so rapid cycles should be safe.
         for _ in 0..<5 {
-            monitor.start()
+            unsafe monitor.start()
             // Minimal delay to allow some internal state to build up
             Thread.sleep(forTimeInterval: 0.01)
-            monitor.stop()
+            unsafe monitor.stop()
         }
         // Test passes if no crash occurred
     }
@@ -194,22 +194,22 @@ final class DeviceMonitorTests: XCTestCase {
         // 3. Devices are stopped (MTDeviceStop)
         // The separation prevents the framework's internal thread from calling
         // into our code while we're stopping devices.
-        monitor.start()
+        unsafe monitor.start()
 
         // Calling stop should complete without crash
-        XCTAssertNoThrow(monitor.stop())
+        unsafe XCTAssertNoThrow(monitor.stop())
 
         // Verify monitor is properly stopped
         // (Start again should work cleanly if stop completed properly)
-        XCTAssertNoThrow(monitor.start())
-        monitor.stop()
+        unsafe XCTAssertNoThrow(monitor.start())
+        unsafe monitor.stop()
     }
 
     func testConcurrentStopDoesNotCrash() {
         // Test that even if something tries to access the monitor during stop,
         // it doesn't crash. This simulates what happens when the framework's
         // internal thread is still processing while we stop.
-        monitor.start()
+        unsafe monitor.start()
 
         // Start stop on background thread
         let expectation = XCTestExpectation(description: "Concurrent operations complete")
@@ -220,17 +220,17 @@ final class DeviceMonitorTests: XCTestCase {
         }
 
         // Stop on main thread
-        monitor.stop()
+        unsafe monitor.stop()
 
-        wait(for: [expectation], timeout: 1.0)
+        unsafe wait(for: [expectation], timeout: 1.0)
     }
 
     func testFrameworkCleanupDelayConstantExists() {
         // Verify the delay constant is defined and has a reasonable value
-        XCTAssertGreaterThan(
+        unsafe XCTAssertGreaterThan(
             DeviceMonitor.frameworkCleanupDelay, 0,
             "frameworkCleanupDelay should be positive")
-        XCTAssertLessThanOrEqual(
+        unsafe XCTAssertLessThanOrEqual(
             DeviceMonitor.frameworkCleanupDelay, 0.5,
             "frameworkCleanupDelay should not be excessive")
     }

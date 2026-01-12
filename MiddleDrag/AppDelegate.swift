@@ -48,7 +48,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Only show the system prompt if we don't already have permission
         if !hasAccessibilityPermission {
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            let options = unsafe [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
             hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
         }
 

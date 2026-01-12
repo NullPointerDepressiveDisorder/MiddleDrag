@@ -4,7 +4,7 @@ import Foundation
 
 /// Mock implementation of TouchDeviceProviding for unit testing.
 /// Allows simulating touch input without requiring hardware access.
-class MockDeviceMonitor: TouchDeviceProviding {
+@unsafe class MockDeviceMonitor: TouchDeviceProviding {
 
     // MARK: - Protocol Properties
 
@@ -30,25 +30,25 @@ class MockDeviceMonitor: TouchDeviceProviding {
 
     @discardableResult
     func start() -> Bool {
-        startCalled = true
-        startCallCount += 1
-        return startShouldSucceed
+        unsafe startCalled = true
+        unsafe startCallCount += 1
+        return unsafe startShouldSucceed
     }
 
     func stop() {
-        stopCalled = true
-        stopCallCount += 1
+        unsafe stopCalled = true
+        unsafe stopCallCount += 1
     }
 
     // MARK: - Test Helpers
 
     /// Reset all tracking state
     func reset() {
-        startCalled = false
-        stopCalled = false
-        startCallCount = 0
-        stopCallCount = 0
-        startShouldSucceed = true
+        unsafe startCalled = false
+        unsafe stopCalled = false
+        unsafe startCallCount = 0
+        unsafe stopCallCount = 0
+        unsafe startShouldSucceed = true
     }
 
     /// Simulate receiving touch data
@@ -63,8 +63,8 @@ class MockDeviceMonitor: TouchDeviceProviding {
     ) {
         // Create a temporary DeviceMonitor just for the delegate call signature
         // This is a workaround since the delegate expects DeviceMonitor type
-        let tempMonitor = DeviceMonitor()
-        delegate?.deviceMonitor(
+        let tempMonitor = unsafe DeviceMonitor()
+        unsafe delegate?.deviceMonitor(
             tempMonitor,
             didReceiveTouches: touches,
             count: count,

@@ -72,12 +72,12 @@ class MultitouchFramework {
     
     /// Check if the multitouch framework is available
     var isAvailable: Bool {
-        return MTDeviceCreateDefault() != nil
+        return unsafe MTDeviceCreateDefault() != nil
     }
     
     /// Get the default multitouch device (built-in trackpad)
     /// - Returns: Device reference, or nil if no device available
     func getDefaultDevice() -> MTDeviceRef? {
-        return MTDeviceCreateDefault()
+        return unsafe MTDeviceCreateDefault()
     }
 }

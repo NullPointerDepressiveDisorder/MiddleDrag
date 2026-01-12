@@ -58,13 +58,13 @@ final class GestureRecognizerTests: XCTestCase {
         let pointer = UnsafeMutablePointer<MTTouch>.allocate(capacity: count)
 
         for (index, touch) in touches.enumerated() {
-            pointer[index] = touch
+            unsafe pointer[index] = touch
         }
 
         let rawPointer = UnsafeMutableRawPointer(pointer)
-        let cleanup = { pointer.deallocate() }
+        let cleanup = { unsafe pointer.deallocate() }
 
-        return (rawPointer, count, cleanup)
+        return unsafe (rawPointer, count, cleanup)
     }
 
     // MARK: - Modifier Key Requirement Tests
@@ -80,18 +80,18 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Process with shift held - gesture should start
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: .maskShift)
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: .maskShift)
         XCTAssertTrue(mockDelegate.didStartCalled, "Gesture should start when modifier is held")
 
         // Reset delegate tracking
         mockDelegate.reset()
 
         // Now process without shift held - should cancel
-        recognizer.processTouches(pointer, count: count, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.1, modifierFlags: [])
         XCTAssertTrue(
             mockDelegate.didCancelCalled || mockDelegate.didCancelDraggingCalled,
             "Gesture should be cancelled when modifier is released")
@@ -106,11 +106,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Process with option key held (maskAlternate)
-        recognizer.processTouches(
+        unsafe recognizer.processTouches(
             pointer, count: count, timestamp: 0.0, modifierFlags: .maskAlternate)
 
         XCTAssertTrue(
@@ -138,10 +138,10 @@ final class GestureRecognizerTests: XCTestCase {
                 createTouch(x: 0.5, y: 0.5),
                 createTouch(x: 0.7, y: 0.5),
             ]
-            let (pointer, count, cleanup) = createTouchData(touches: touches)
+            let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
             defer { cleanup() }
 
-            recognizer.processTouches(
+            unsafe recognizer.processTouches(
                 pointer, count: count, timestamp: 0.0, modifierFlags: eventFlag)
 
             XCTAssertTrue(
@@ -158,11 +158,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Process with no modifiers
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -181,10 +181,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.15),  // y=0.15 < 0.2, filtered
             createTouch(x: 0.7, y: 0.05),  // y=0.05 < 0.2, filtered
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // All touches filtered = no valid 3-finger gesture
         XCTAssertFalse(
@@ -201,10 +201,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.6),
             createTouch(x: 0.7, y: 0.7),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -221,10 +221,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.1),
             createTouch(x: 0.7, y: 0.1),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -243,10 +243,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 1.5),  // Too large
             createTouch(x: 0.7, y: 0.5, zTotal: 3.0),  // Too large
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertFalse(
             mockDelegate.didStartCalled,
@@ -263,10 +263,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 0.8),
             createTouch(x: 0.7, y: 0.5, zTotal: 1.0),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -282,10 +282,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 15.0),
             createTouch(x: 0.7, y: 0.5, zTotal: 20.0),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -306,10 +306,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.7, y: 0.5),  // Passes
             createTouch(x: 0.8, y: 0.05),  // Filtered (y < 0.2)
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -328,10 +328,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes
             createTouch(x: 0.8, y: 0.5, zTotal: 5.0),  // Filtered (too large)
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -353,10 +353,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes both
             createTouch(x: 0.9, y: 0.05, zTotal: 0.5),  // Filtered (exclusion zone)
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
@@ -374,10 +374,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.7, y: 0.5),  // Passes
             createTouch(x: 0.8, y: 0.05),  // Filtered (exclusion zone)
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertFalse(
             mockDelegate.didStartCalled,
@@ -400,11 +400,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 0.8),
             createTouch(x: 0.7, y: 0.5, zTotal: 1.0),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Process with shift held
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: .maskShift)
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: .maskShift)
 
         XCTAssertTrue(
             mockDelegate.didStartCalled, "Gesture should start when all filters pass")
@@ -422,11 +422,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertEqual(
             recognizer.state, .possibleTap, "State should be possibleTap after initial touch")
@@ -441,11 +441,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer1, count1, cleanup1) = createTouchData(touches: touches1)
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
         defer { cleanup1() }
 
         // Start gesture
-        recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .possibleTap)
 
         // Move fingers (small delta to avoid centroid jump rejection > 0.03)
@@ -454,10 +454,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
 
         XCTAssertEqual(
             recognizer.state, .dragging, "State should transition to dragging after movement")
@@ -472,10 +472,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Move to trigger drag (small delta to avoid centroid jump rejection > 0.03)
         let touches2 = [
@@ -483,19 +483,19 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Lift all fingers (empty touch array) - need 2 frames for stable state
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "State should return to idle after lifting fingers")
     }
@@ -510,20 +510,20 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Lift fingers quickly (before tap threshold)
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
         // Two frames to trigger stable state
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.15, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.15, modifierFlags: [])
 
         XCTAssertTrue(mockDelegate.didTapCalled, "Tap should be detected for quick release")
     }
@@ -536,19 +536,19 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Lift fingers after tap threshold exceeded
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.5, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.6, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.5, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.6, modifierFlags: [])
 
         XCTAssertFalse(mockDelegate.didTapCalled, "Tap should not be detected when held too long")
     }
@@ -563,20 +563,20 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Lift fingers after max hold duration exceeded but within tap threshold
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
         // 0.5 seconds is within tap threshold (1.0s) but exceeds max hold (0.3s)
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.5, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.6, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.5, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.6, modifierFlags: [])
 
         XCTAssertFalse(
             mockDelegate.didTapCalled,
@@ -593,20 +593,20 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Lift fingers within both thresholds
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
         // 0.1 seconds is within both tap threshold and max hold
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.15, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.15, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didTapCalled, "Tap should be detected when within max hold duration")
@@ -621,11 +621,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
         // Start gesture
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Move with small delta (exceeds move threshold of 0.01 but avoids centroid jump > 0.03)
         // Centroid move: from 0.5 to 0.52 = 0.02 (below 0.03 jump threshold)
@@ -634,21 +634,21 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
 
         // Verify we're in dragging state
         XCTAssertEqual(recognizer.state, .dragging, "Should have transitioned to dragging")
 
         // Lift fingers
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.25, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.25, modifierFlags: [])
 
         // Tap should NOT be called because we transitioned to drag
         XCTAssertFalse(
@@ -666,10 +666,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertFalse(mockDelegate.didBeginDraggingCalled)
 
         // Move past threshold
@@ -678,10 +678,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didBeginDraggingCalled, "Drag should begin after movement threshold")
@@ -698,13 +698,13 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.51, y: 0.5),
             createTouch(x: 0.52, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Same position but after time threshold - should NOT start drag
-        recognizer.processTouches(pointer, count: count, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertFalse(
             mockDelegate.didBeginDraggingCalled,
@@ -719,10 +719,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // First movement to trigger drag
         let touches2 = [
@@ -730,10 +730,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didBeginDraggingCalled)
 
         // Additional movement - should trigger update (small delta 0.01 to avoid large jump rejection)
@@ -742,10 +742,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.53, y: 0.53),
             createTouch(x: 0.73, y: 0.53),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.2, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didUpdateDraggingCalled, "Drag updates should be sent during movement")
@@ -760,10 +760,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Move to start dragging
         let touches2 = [
@@ -771,19 +771,19 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didBeginDraggingCalled)
 
         // Lift fingers
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertTrue(mockDelegate.didEndDraggingCalled, "Drag should end when fingers lift")
     }
@@ -796,10 +796,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didStartCalled)
 
         // Add 4th finger
@@ -809,10 +809,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.6, y: 0.5),
             createTouch(x: 0.8, y: 0.5),
         ]
-        let (pointer4, count4, cleanup4) = createTouchData(touches: touches4)
+        let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        recognizer.processTouches(pointer4, count: count4, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.1, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didCancelCalled || mockDelegate.didCancelDraggingCalled,
@@ -828,10 +828,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Start dragging
         let touches2 = [
@@ -839,10 +839,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Add 4th finger
@@ -852,10 +852,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.6, y: 0.5),
             createTouch(x: 0.8, y: 0.5),
         ]
-        let (pointer4, count4, cleanup4) = createTouchData(touches: touches4)
+        let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
 
         XCTAssertTrue(mockDelegate.didCancelDraggingCalled, "4 fingers should cancel dragging")
     }
@@ -873,10 +873,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         // Move to start dragging
         let touches3b = [
@@ -884,10 +884,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        let (pointer3b, count3b, cleanup3b) = unsafe createTouchData(touches: touches3b)
         defer { cleanup3b() }
 
-        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
         mockDelegate.reset()
 
@@ -898,17 +898,17 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.6, y: 0.5),
             createTouch(x: 0.8, y: 0.5),
         ]
-        let (pointer4, count4, cleanup4) = createTouchData(touches: touches4)
+        let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didCancelDraggingCalled, "4 fingers should cancel dragging")
         XCTAssertEqual(recognizer.state, .idle, "State should be idle after cancel")
 
         // Now try 3 fingers again - since state is idle, cooldown should clear
         // and gesture should be allowed (this is the intended behavior)
         mockDelegate.reset()
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.3, modifierFlags: [])
 
         // Gesture SHOULD start because cooldown clears when (state == .idle && fingerCount == 3)
         XCTAssertTrue(
@@ -921,10 +921,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         // 4 fingers trigger cancellation
         let touches4 = [
@@ -933,24 +933,24 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.6, y: 0.5),
             createTouch(x: 0.8, y: 0.5),
         ]
-        let (pointer4, count4, cleanup4) = createTouchData(touches: touches4)
+        let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        recognizer.processTouches(pointer4, count: count4, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.1, modifierFlags: [])
 
         // Drop to 2 fingers to clear cooldown
         let touches2 = [
             createTouch(x: 0.4, y: 0.5),
             createTouch(x: 0.6, y: 0.5),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
 
         // Now 3 fingers should work again
         mockDelegate.reset()
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertTrue(mockDelegate.didStartCalled, "Gesture should start after cooldown clears")
     }
@@ -963,10 +963,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertNotEqual(recognizer.state, .idle)
 
         recognizer.reset()
@@ -981,10 +981,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 0.5, state: 4),  // Active - counted
             createTouch(x: 0.7, y: 0.5, zTotal: 0.5, state: 4),  // Active - counted
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         // Only 2 valid touches, should not start gesture
         XCTAssertFalse(mockDelegate.didStartCalled, "Should not start with only 2 valid touches")
@@ -997,10 +997,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5, zTotal: 0.5, state: 3),
             createTouch(x: 0.7, y: 0.5, zTotal: 0.5, state: 3),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertTrue(mockDelegate.didStartCalled, "State 3 touches should be accepted")
     }
@@ -1011,19 +1011,19 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertNotEqual(recognizer.state, .idle)
 
         // Empty touch array
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "State should be idle after zero touches")
     }
@@ -1033,10 +1033,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.3, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertFalse(mockDelegate.didStartCalled, "2 fingers should not start gesture")
         XCTAssertEqual(recognizer.state, .idle, "State should remain idle with 2 fingers")
@@ -1050,10 +1050,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer1, count1, cleanup1) = createTouchData(touches: touches1)
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
         defer { cleanup1() }
 
-        recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
 
         // Move enough to start dragging
         let touches2 = [
@@ -1061,10 +1061,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didBeginDraggingCalled)
 
         mockDelegate.reset()
@@ -1075,10 +1075,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.2, y: 0.1),
             createTouch(x: 0.3, y: 0.1),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.2, modifierFlags: [])
 
         // Large centroid jump should NOT trigger an update (it resets reference)
         XCTAssertFalse(
@@ -1092,10 +1092,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertNotEqual(recognizer.state, .idle)
 
         // Only one frame with fewer fingers
@@ -1103,17 +1103,17 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.4, y: 0.5),
             createTouch(x: 0.6, y: 0.5),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
 
         // Should NOT have ended yet (needs 2 stable frames)
         XCTAssertNotEqual(
             recognizer.state, .idle, "Should not end after only 1 frame of fewer fingers")
 
         // Second frame with fewer fingers
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "Should end after 2 stable frames")
     }
@@ -1124,10 +1124,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer, count, cleanup) = createTouchData(touches: touches)
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
         XCTAssertTrue(mockDelegate.didStartCalled)
 
         mockDelegate.reset()
@@ -1140,10 +1140,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.7, y: 0.5),
             createTouch(x: 0.9, y: 0.5),
         ]
-        let (pointer5, count5, cleanup5) = createTouchData(touches: touches5)
+        let (pointer5, count5, cleanup5) = unsafe createTouchData(touches: touches5)
         defer { cleanup5() }
 
-        recognizer.processTouches(pointer5, count: count5, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer5, count: count5, timestamp: 0.1, modifierFlags: [])
 
         XCTAssertTrue(
             mockDelegate.didCancelCalled || mockDelegate.didCancelDraggingCalled,
@@ -1231,10 +1231,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         // Move to start dragging
         let touches3b = [
@@ -1242,10 +1242,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        let (pointer3b, count3b, cleanup3b) = unsafe createTouchData(touches: touches3b)
         defer { cleanup3b() }
 
-        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Drop to 2 fingers - should end after stable frames
@@ -1253,11 +1253,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.4, y: 0.5),
             createTouch(x: 0.6, y: 0.5),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertEqual(
             recognizer.state, .idle, "Drag should end with 2 fingers when relift is disabled")
@@ -1275,10 +1275,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         // Move to start dragging
         let touches3b = [
@@ -1286,10 +1286,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        let (pointer3b, count3b, cleanup3b) = unsafe createTouchData(touches: touches3b)
         defer { cleanup3b() }
 
-        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Drop to 2 fingers - should NOT end
@@ -1297,11 +1297,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.35, y: 0.55),
             createTouch(x: 0.55, y: 0.55),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertEqual(
             recognizer.state, .dragging,
@@ -1318,10 +1318,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.4, y: 0.5),
             createTouch(x: 0.6, y: 0.5),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.0, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "Should not start gesture with 2 fingers")
         XCTAssertFalse(mockDelegate.didStartCalled)
@@ -1338,31 +1338,31 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         let touches3b = [
             createTouch(x: 0.32, y: 0.52),
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        let (pointer3b, count3b, cleanup3b) = unsafe createTouchData(touches: touches3b)
         defer { cleanup3b() }
 
-        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Drop to 1 finger
         let touches1 = [
             createTouch(x: 0.5, y: 0.5)
         ]
-        let (pointer1, count1, cleanup1) = createTouchData(touches: touches1)
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
         defer { cleanup1() }
 
-        recognizer.processTouches(pointer1, count: count1, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(pointer1, count: count1, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "Drag should end with 1 finger")
         XCTAssertTrue(mockDelegate.didEndDraggingCalled)
@@ -1379,29 +1379,29 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
 
         let touches3b = [
             createTouch(x: 0.32, y: 0.52),
             createTouch(x: 0.52, y: 0.52),
             createTouch(x: 0.72, y: 0.52),
         ]
-        let (pointer3b, count3b, cleanup3b) = createTouchData(touches: touches3b)
+        let (pointer3b, count3b, cleanup3b) = unsafe createTouchData(touches: touches3b)
         defer { cleanup3b() }
 
-        recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3b, count: count3b, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
         // Lift all fingers
         let emptyTouches: [MTTouch] = []
-        let (emptyPointer, _, emptyCleanup) = createTouchData(touches: emptyTouches)
+        let (emptyPointer, _, emptyCleanup) = unsafe createTouchData(touches: emptyTouches)
         defer { emptyCleanup() }
 
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
-        recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.2, modifierFlags: [])
+        unsafe recognizer.processTouches(emptyPointer, count: 0, timestamp: 0.3, modifierFlags: [])
 
         XCTAssertEqual(recognizer.state, .idle, "Drag should end when all fingers lift")
         XCTAssertTrue(mockDelegate.didEndDraggingCalled)
@@ -1418,10 +1418,10 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.5, y: 0.5),
             createTouch(x: 0.7, y: 0.5),
         ]
-        let (pointer3, count3, cleanup3) = createTouchData(touches: touches3)
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
         defer { cleanup3() }
 
-        recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.0, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .possibleTap)
 
         // Drop to 2 fingers while still in possibleTap - should end
@@ -1429,11 +1429,11 @@ final class GestureRecognizerTests: XCTestCase {
             createTouch(x: 0.4, y: 0.5),
             createTouch(x: 0.6, y: 0.5),
         ]
-        let (pointer2, count2, cleanup2) = createTouchData(touches: touches2)
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
         defer { cleanup2() }
 
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
-        recognizer.processTouches(pointer2, count: count2, timestamp: 0.08, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.08, modifierFlags: [])
 
         XCTAssertEqual(
             recognizer.state, .idle,
