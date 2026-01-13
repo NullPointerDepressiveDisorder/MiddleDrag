@@ -5,7 +5,7 @@
 The middle mouse button your Mac trackpad is missing.
 
 [![macOS 15+](https://img.shields.io/badge/macOS-15.0+-blue?logo=apple)](https://www.apple.com/macos/)
-[![Swift 5.9+](https://img.shields.io/badge/Swift-5.9+-orange?logo=swift)](https://swift.org)
+[![Swift 6.2+](https://img.shields.io/badge/Swift-6.2+-orange?logo=swift)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Homebrew](https://img.shields.io/badge/Homebrew-tap-brown?logo=homebrew)](https://github.com/NullPointerDepressiveDisorder/homebrew-tap)
 [![GitHub release](https://img.shields.io/github/v/release/NullPointerDepressiveDisorder/MiddleDrag)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
