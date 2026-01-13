@@ -114,12 +114,24 @@ final class CrashReporter {
     private let crashReportingKey = "crashReportingEnabled"
     private let performanceMonitoringKey = "performanceMonitoringEnabled"
     
+    // MARK: - UserDefaults Helpers
+    
+    /// Read crash reporting enabled state from UserDefaults
+    private func readCrashReportingEnabled() -> Bool {
+        return UserDefaults.standard.bool(forKey: crashReportingKey)
+    }
+    
+    /// Read performance monitoring enabled state from UserDefaults
+    private func readPerformanceMonitoringEnabled() -> Bool {
+        return UserDefaults.standard.bool(forKey: performanceMonitoringKey)
+    }
+    
     /// Whether crash reporting is enabled (default: false - user must opt in)
     /// When enabled, sends crash reports to help fix bugs
     var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: crashReportingKey) }
+        get { readCrashReportingEnabled() }
         set {
-            let wasEnabled = UserDefaults.standard.bool(forKey: crashReportingKey)
+            let wasEnabled = readCrashReportingEnabled()
             UserDefaults.standard.set(newValue, forKey: crashReportingKey)
             
             // Re-initialize or close Sentry based on new state
@@ -135,9 +147,9 @@ final class CrashReporter {
     /// When enabled, sends anonymous performance traces during normal app use
     /// This helps identify slow operations and improve app responsiveness
     var performanceMonitoringEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: performanceMonitoringKey) }
+        get { readPerformanceMonitoringEnabled() }
         set {
-            let wasEnabled = UserDefaults.standard.bool(forKey: performanceMonitoringKey)
+            let wasEnabled = readPerformanceMonitoringEnabled()
             UserDefaults.standard.set(newValue, forKey: performanceMonitoringKey)
             
             // Re-initialize or close Sentry based on new state

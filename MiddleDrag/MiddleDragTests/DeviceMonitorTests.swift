@@ -2,7 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
-@unsafe final class DeviceMonitorTests: XCTestCase {
+final class DeviceMonitorTests: XCTestCase {
 
     // Note: DeviceMonitor uses a global variable (gDeviceMonitor) for C callback compatibility
     // This limits testing options since only one instance can be active at a time

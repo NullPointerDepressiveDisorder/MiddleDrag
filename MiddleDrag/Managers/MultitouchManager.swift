@@ -398,7 +398,6 @@ class MultitouchManager {
             return unsafe Unmanaged.passUnretained(event)
         }
 
-        _ = event.getIntegerValueField(.eventSourceStateID)
         let buttonNumber = event.getIntegerValueField(.mouseEventButtonNumber)
 
         let now = CACurrentMediaTime()
