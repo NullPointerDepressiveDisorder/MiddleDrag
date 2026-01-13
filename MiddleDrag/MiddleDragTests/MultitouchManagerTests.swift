@@ -1799,4 +1799,104 @@ final class MultitouchManagerTests: XCTestCase {
 
         super.tearDown()
     }
+
+    // MARK: - Sleep/Wake Observer Tests
+
+    func testAddSleepWakeObservers() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        // Observers should be added when starting
+        // We can't directly test the observers, but we can verify start doesn't crash
+        XCTAssertTrue(manager.isMonitoring)
+
+        manager.stop()
+    }
+
+    func testRemoveSleepWakeObservers() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        manager.stop()
+        // Observers should be removed when stopping
+        // Verify stop completes without crash
+        XCTAssertFalse(manager.isMonitoring)
+    }
+
+    func testPerformRestartWithEventTapFailure() {
+        // Test performRestart when event tap setup fails (lines 207-213)
+        let mockDevice = unsafe MockDeviceMonitor()
+        var eventTapSetupCalled = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice },
+            eventTapSetup: {
+                eventTapSetupCalled = true
+                return false  // Simulate event tap failure
+            })
+
+        manager.start()
+        // Simulate wake from sleep by calling restart
+        manager.restart()
+
+        // Wait a bit for async operations
+        let expectation = XCTestExpectation(description: "Restart completes")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Manager should handle the failure gracefully
+        XCTAssertTrue(eventTapSetupCalled)
+        manager.stop()
+    }
+
+    func testPerformRestartWithDeviceStartFailure() {
+        // Test performRestart when device start fails (lines 218-229)
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        // Simulate wake from sleep by calling restart
+        manager.restart()
+
+        // Wait a bit for async operations
+        let expectation = XCTestExpectation(description: "Restart completes")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Manager should handle the failure gracefully
+        manager.stop()
+    }
+
+    func testPerformRestartGuardWhenWakeObserverNil() {
+        // Test performRestart guard when wakeObserver is nil (line 202)
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        // Start and stop to clear observers
+        manager.start()
+        manager.stop()
+
+        // Now restart should return early because wakeObserver is nil
+        manager.restart()
+
+        // Wait a bit for async operations
+        let expectation = XCTestExpectation(description: "Restart completes")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Should complete without crash
+        XCTAssertFalse(manager.isMonitoring)
+    }
 }
