@@ -77,13 +77,33 @@ jobs:
         id: package
         run: |
           mkdir -p payload/Applications
+          mkdir -p scripts
+          
+          # Create preinstall script to ensure clean installation
+          cat > scripts/preinstall << 'EOF'
+#!/bin/bash
+# Quit the app if running
+osascript -e 'quit app "MiddleDrag"' 2>/dev/null || true
+sleep 1
+
+# Remove existing app (handles both manual and Homebrew installs)
+rm -rf "/Applications/MiddleDrag.app"
+
+# Forget any existing package receipts
+pkgutil --forget app.middledrag.MiddleDrag 2>/dev/null || true
+
+exit 0
+EOF
+          chmod +x scripts/preinstall
+          
           mv MiddleDrag.app payload/Applications/
           pkgbuild --root payload \
-          --identifier app.middledrag.MiddleDrag \
-          --version ${{ inputs.version }} \
-          --install-location / \
-          --sign "Developer ID Installer: Karan Mohindroo (${{ vars.TEAM_ID }})" \
-          MiddleDrag-${{ inputs.version }}.pkg
+            --scripts scripts \
+            --identifier app.middledrag.MiddleDrag \
+            --version ${{ inputs.version }} \
+            --install-location / \
+            --sign "Developer ID Installer: Karan Mohindroo (${{ vars.TEAM_ID }})" \
+            MiddleDrag-${{ inputs.version }}.pkg
 
           echo "pkg-name=MiddleDrag-${{ inputs.version }}" >> $GITHUB_OUTPUT
 
