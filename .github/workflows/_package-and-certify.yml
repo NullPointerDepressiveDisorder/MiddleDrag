@@ -81,19 +81,19 @@ jobs:
           
           # Create preinstall script to ensure clean installation
           cat > scripts/preinstall << 'EOF'
-#!/bin/bash
-# Quit the app if running
-osascript -e 'quit app "MiddleDrag"' 2>/dev/null || true
-sleep 1
-
-# Remove existing app (handles both manual and Homebrew installs)
-rm -rf "/Applications/MiddleDrag.app"
-
-# Forget any existing package receipts
-pkgutil --forget app.middledrag.MiddleDrag 2>/dev/null || true
-
-exit 0
-EOF
+          #!/bin/bash
+          # Quit the app if running
+          osascript -e 'quit app "MiddleDrag"' 2>/dev/null || true
+          sleep 1
+          
+          # Remove existing app (handles both manual and Homebrew installs)
+          rm -rf "/Applications/MiddleDrag.app"
+          
+          # Forget any existing package receipts
+          pkgutil --forget app.middledrag.MiddleDrag 2>/dev/null || true
+          
+          exit 0
+          EOF
           chmod +x scripts/preinstall
           
           mv MiddleDrag.app payload/Applications/
