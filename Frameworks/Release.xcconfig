@@ -5,3 +5,5 @@
 //
 
 #include? "Secrets.xcconfig"
+
+EXCLUDED_ARCHS = arm64e
