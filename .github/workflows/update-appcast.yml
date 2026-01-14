@@ -65,7 +65,22 @@ jobs:
           FILE_SIZE=$(stat -f%z "$PKG_FILE")
           
           # Generate EdDSA signature
-          SIGNATURE=$(echo -n "$SPARKLE_PRIVATE_KEY" | ./Sparkle/bin/sign_update "$PKG_FILE")
+          SIGNATURE=$(echo -n "$SPARKLE_PRIVATE_KEY" | ./Sparkle/bin/sign_update "$PKG_FILE" 2>&1)
+          SIGN_EXIT_CODE=$?
+          
+          if [ $SIGN_EXIT_CODE -ne 0 ] || [ -z "$SIGNATURE" ]; then
+            echo "::error::Failed to generate EdDSA signature"
+            echo "sign_update output: $SIGNATURE"
+            exit 1
+          fi
+          
+          # Validate signature looks like base64 (basic sanity check)
+          if ! echo "$SIGNATURE" | grep -qE '^[A-Za-z0-9+/=]+$'; then
+            echo "::error::Generated signature doesn't look valid: $SIGNATURE"
+            exit 1
+          fi
+          
+          echo "Generated signature: ${SIGNATURE:0:20}... (truncated)"
           
           # Get release notes from GitHub
           RELEASE_NOTES=$(gh release view "v${VERSION}" --repo ${{ github.repository }} --json body -q '.body' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
