@@ -1,0 +1,144 @@
+# .github/workflows/update-appcast.yml
+name: Update Appcast
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to add (e.g., 2.0.1) - leave empty to use latest release"
+        required: false
+        type: string
+  repository_dispatch:
+    types: [appcast_release]
+
+permissions:
+  contents: write
+
+jobs:
+  update-appcast:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine version
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -n "${{ github.event.client_payload.version }}" ]; then
+            VERSION="${{ github.event.client_payload.version }}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION=$(gh release view --repo ${{ github.repository }} --json tagName -q '.tagName')
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Using version: ${VERSION}"
+
+      - name: Download release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          curl -L -o "MiddleDrag-${VERSION}.pkg" \
+            "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.pkg"
+
+      - name: Install Sparkle
+        run: |
+          # Download Sparkle 2 for generate_appcast tool
+          curl -L -o Sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz"
+          mkdir -p Sparkle
+          tar -xf Sparkle.tar.xz -C Sparkle
+
+      - name: Generate appcast entry
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PKG_FILE="MiddleDrag-${VERSION}.pkg"
+          
+          # Get file size
+          FILE_SIZE=$(stat -f%z "$PKG_FILE")
+          
+          # Generate EdDSA signature
+          SIGNATURE=$(echo -n "$SPARKLE_PRIVATE_KEY" | ./Sparkle/bin/sign_update "$PKG_FILE")
+          
+          # Get release notes from GitHub
+          RELEASE_NOTES=$(gh release view "v${VERSION}" --repo ${{ github.repository }} --json body -q '.body' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
+          
+          # Get current date in RFC 2822 format
+          PUB_DATE=$(date -R)
+          
+          # Download URL
+          DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.pkg"
+          
+          # Create new item entry
+          cat > new_item.xml << EOF
+            <item>
+              <title>Version ${VERSION}</title>
+              <pubDate>${PUB_DATE}</pubDate>
+              <sparkle:version>${VERSION}</sparkle:version>
+              <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+              <description><![CDATA[
+                ${RELEASE_NOTES}
+              ]]></description>
+              <enclosure 
+                url="${DOWNLOAD_URL}"
+                sparkle:edSignature="${SIGNATURE}"
+                length="${FILE_SIZE}"
+                type="application/octet-stream" />
+              <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            </item>
+          EOF
+          
+          echo "Generated appcast entry for version ${VERSION}"
+          cat new_item.xml
+
+      - name: Update appcast.xml
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          if [ ! -f appcast.xml ]; then
+            # Create initial appcast.xml if it doesn't exist
+            cat > appcast.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>MiddleDrag Updates</title>
+              <link>https://middledrag.app</link>
+              <description>Most recent updates to MiddleDrag</description>
+              <language>en</language>
+            </channel>
+          </rss>
+          EOF
+          fi
+          
+          # Check if this version already exists
+          if grep -q "sparkle:version>${VERSION}<" appcast.xml; then
+            echo "Version ${VERSION} already exists in appcast, removing old entry..."
+            # Remove existing entry for this version (handles re-runs)
+            sed -i '' "/<item>/{:a;N;/<\/item>/!ba;/sparkle:version>${VERSION}</d}" appcast.xml
+          fi
+          
+          # Insert new item after <channel> opening (but after metadata)
+          # Find the line with </language> and insert after it
+          sed -i '' "/<\/language>/r new_item.xml" appcast.xml
+          
+          # Clean up
+          rm -f new_item.xml
+          
+          echo "Updated appcast.xml:"
+          cat appcast.xml
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add appcast.xml
+          git commit -m "Update appcast for version ${VERSION}" || echo "No changes to commit"
+          git push
