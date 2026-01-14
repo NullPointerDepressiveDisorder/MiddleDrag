@@ -80,20 +80,23 @@ jobs:
           mkdir -p scripts
           
           # Create preinstall script to ensure clean installation
-          cat > scripts/preinstall << 'EOF'
-#!/bin/bash
-# Quit the app if running (pkill is more reliable for menu bar apps)
-pkill -x MiddleDrag 2>/dev/null || true
-sleep 1
+          cat > scripts/preinstall << 'PREINSTALL'
+          #!/bin/bash
+          # Quit the app if running (pkill is more reliable for menu bar apps)
+          pkill -x MiddleDrag 2>/dev/null || true
+          sleep 1
 
-# Remove existing app (handles both manual and Homebrew installs)
-rm -rf "/Applications/MiddleDrag.app"
+          # Remove existing app (handles both manual and Homebrew installs)
+          rm -rf "/Applications/MiddleDrag.app"
 
-# Forget any existing package receipts
-pkgutil --forget app.middledrag.MiddleDrag 2>/dev/null || true
+          # Forget any existing package receipts
+          pkgutil --forget app.middledrag.MiddleDrag 2>/dev/null || true
 
-exit 0
-EOF
+          exit 0
+          PREINSTALL
+          
+          # Remove leading whitespace from preinstall script
+          sed -i '' 's/^          //' scripts/preinstall
           chmod +x scripts/preinstall
           
           mv MiddleDrag.app payload/Applications/
