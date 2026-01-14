@@ -41,6 +41,7 @@ ignore:
   - "**/AppDelegate.swift"
   - "**/MiddleDragApp.swift"
   - "**/Assets.xcassets/**"
+  - "**/UpdateManager.swift"
 
 flags:
   Unit-Tests:
