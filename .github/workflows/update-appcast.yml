@@ -49,7 +49,6 @@ jobs:
 
       - name: Install Sparkle
         run: |
-          # Download Sparkle 2.6.4 for sign_update tool
           curl -L -o Sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz"
           mkdir -p Sparkle
           tar -xf Sparkle.tar.xz -C Sparkle
@@ -66,85 +65,61 @@ jobs:
           FILE_SIZE=$(stat -f%z "$PKG_FILE")
           
           # Generate EdDSA signature
-          echo "Attempting to sign package..."
-          
-          # Sign using stdin method (pass key via pipe)
           SIGN_OUTPUT=$(echo -n "$SPARKLE_PRIVATE_KEY" | ./Sparkle/bin/sign_update --ed-key-file - "$PKG_FILE" 2>&1)
-          SIGN_EXIT_CODE=$?
-          echo "sign_update exit code: $SIGN_EXIT_CODE"
-          echo "sign_update output: $SIGN_OUTPUT"
-          
-          if [ $SIGN_EXIT_CODE -ne 0 ]; then
-            echo "::error::Failed to generate EdDSA signature"
+          if [ $? -ne 0 ]; then
+            echo "::error::Failed to generate EdDSA signature: $SIGN_OUTPUT"
             exit 1
           fi
           
-          # Extract just the signature value from sparkle:edSignature="..."
+          # Extract signature value
           SIGNATURE=$(echo "$SIGN_OUTPUT" | grep -o 'edSignature="[^"]*"' | sed 's/edSignature="//;s/"$//')
-          
           if [ -z "$SIGNATURE" ]; then
-            echo "::error::Could not extract signature from output: $SIGN_OUTPUT"
+            echo "::error::Could not extract signature from: $SIGN_OUTPUT"
             exit 1
           fi
+          echo "Signature: ${SIGNATURE:0:20}..."
           
-          echo "Extracted signature: ${SIGNATURE:0:20}... (truncated)"
-          
-          # Get release notes from GitHub and escape for XML
+          # Get release notes
           RELEASE_NOTES=$(gh release view "v${VERSION}" --repo ${{ github.repository }} --json body -q '.body' | \
             sed "s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/\"/\&quot;/g; s/'/\&apos;/g")
           
-          # Get current date in RFC 2822 format
           PUB_DATE=$(date -R)
-          
-          # Download URL
           DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/v${VERSION}/MiddleDrag-${VERSION}.pkg"
           
-          # Create new item entry
-          cat > new_item.xml << EOF
-          <item>
-            <title>Version ${VERSION}</title>
-            <pubDate>${PUB_DATE}</pubDate>
-            <sparkle:version>${VERSION}</sparkle:version>
-            <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
-            <description><![CDATA[
-          ${RELEASE_NOTES}
-                ]]></description>
-                <enclosure 
-                  url="${DOWNLOAD_URL}"
-                  sparkle:edSignature="${SIGNATURE}"
-                  length="${FILE_SIZE}"
-                  type="application/octet-stream" />
-                <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-              </item>
-          EOF
-                    
-                    echo "Generated appcast entry for version ${VERSION}"
-                    cat new_item.xml
+          # Create appcast item (write to file to avoid heredoc issues)
+          echo "    <item>" > new_item.xml
+          echo "      <title>Version ${VERSION}</title>" >> new_item.xml
+          echo "      <pubDate>${PUB_DATE}</pubDate>" >> new_item.xml
+          echo "      <sparkle:version>${VERSION}</sparkle:version>" >> new_item.xml
+          echo "      <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>" >> new_item.xml
+          echo "      <description><![CDATA[${RELEASE_NOTES}]]></description>" >> new_item.xml
+          echo "      <enclosure url=\"${DOWNLOAD_URL}\" sparkle:edSignature=\"${SIGNATURE}\" length=\"${FILE_SIZE}\" type=\"application/octet-stream\" />" >> new_item.xml
+          echo "      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>" >> new_item.xml
+          echo "    </item>" >> new_item.xml
+          
+          echo "Generated appcast entry:"
+          cat new_item.xml
 
-                - name: Update appcast.xml
-                  run: |
-                    VERSION="${{ steps.version.outputs.version }}"
-                    
-                    if [ ! -f appcast.xml ]; then
-                      # Create initial appcast.xml if it doesn't exist
-                      cat > appcast.xml << 'EOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-            <channel>
-              <title>MiddleDrag Updates</title>
-              <link>https://middledrag.app</link>
-              <description>Most recent updates to MiddleDrag</description>
-              <language>en</language>
-            </channel>
-          </rss>
-          EOF
+      - name: Update appcast.xml
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Create initial appcast if needed
+          if [ ! -f appcast.xml ]; then
+            echo '<?xml version="1.0" encoding="utf-8"?>' > appcast.xml
+            echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">' >> appcast.xml
+            echo '  <channel>' >> appcast.xml
+            echo '    <title>MiddleDrag Updates</title>' >> appcast.xml
+            echo '    <link>https://middledrag.app</link>' >> appcast.xml
+            echo '    <description>Most recent updates to MiddleDrag</description>' >> appcast.xml
+            echo '    <language>en</language>' >> appcast.xml
+            echo '  </channel>' >> appcast.xml
+            echo '</rss>' >> appcast.xml
           fi
           
-          # Remove existing entry for this version if present (handles re-runs)
+          # Remove existing entry for this version if present
           if grep -q "sparkle:version>${VERSION}<" appcast.xml; then
-            echo "Version ${VERSION} already exists in appcast, removing old entry..."
-            
-            # Use awk instead of Python for portability (no indentation issues)
+            echo "Removing existing entry for ${VERSION}..."
             awk -v ver="${VERSION}" '
               /<item>/ { in_item=1; buffer=$0; next }
               in_item {
@@ -159,10 +134,8 @@ jobs:
             ' appcast.xml > appcast.xml.tmp && mv appcast.xml.tmp appcast.xml
           fi
           
-          # Insert new item after </language> tag
+          # Insert new item after </language>
           sed -i '' "/<\/language>/r new_item.xml" appcast.xml
-          
-          # Clean up
           rm -f new_item.xml
           
           echo "Updated appcast.xml:"
