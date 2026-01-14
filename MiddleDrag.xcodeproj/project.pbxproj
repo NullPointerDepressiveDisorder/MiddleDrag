@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
+		ECCE59182F16F72300962494 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECCE59172F16F72300962494 /* Sparkle */; settings = {ATTRIBUTES = (Required, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -96,6 +97,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */,
+				ECCE59182F16F72300962494 /* Sparkle in Frameworks */,
 			);
 		};
 		MDT00000010 /* Frameworks */ = {
@@ -153,6 +155,9 @@
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
+			packageProductDependencies = (
+				ECCE59172F16F72300962494 /* Sparkle */,
+			);
 			productName = MiddleDrag;
 			productReference = 1A0000004 /* MiddleDrag.app */;
 			productType = "com.apple.product-type.application";
@@ -207,6 +212,7 @@
 			mainGroup = 1A0000008;
 			packageReferences = (
 				EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 1A0000010 /* Products */;
@@ -474,6 +480,7 @@
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -540,6 +547,7 @@
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -629,6 +637,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -636,6 +652,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
+		};
+		ECCE59172F16F72300962494 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
