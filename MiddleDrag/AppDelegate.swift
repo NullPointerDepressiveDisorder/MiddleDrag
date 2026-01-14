@@ -100,6 +100,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
 
+        // Initialize update manager (offline by default, respects user preference)
+        UpdateManager.shared.initialize()
+
         // Check for gesture conflicts and show prompt on first launch if needed
         checkAndPromptForGestureConfiguration()
 

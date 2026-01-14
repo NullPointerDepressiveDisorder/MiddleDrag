@@ -78,6 +78,8 @@ class MenuBarController: NSObject {
         // App items
         menu.addItem(createMenuItem(title: "About MiddleDrag", action: #selector(showAbout)))
         menu.addItem(createLaunchAtLoginItem())
+        menu.addItem(createCheckForUpdatesItem())
+        menu.addItem(createAutoUpdateItem())
         menu.addItem(NSMenuItem.separator())
 
         // Actions
@@ -132,6 +134,21 @@ class MenuBarController: NSObject {
         item.target = self  // IMPORTANT: Set target
         item.state = preferences.launchAtLogin ? .on : .off
         item.tag = MenuItemTag.launchAtLogin.rawValue
+        return item
+    }
+
+    private func createCheckForUpdatesItem() -> NSMenuItem {
+        let item = NSMenuItem(
+            title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    private func createAutoUpdateItem() -> NSMenuItem {
+        let item = NSMenuItem(
+            title: "Automatically Check for Updates", action: #selector(toggleAutoUpdate), keyEquivalent: "")
+        item.target = self
+        item.state = UpdateManager.shared.automaticallyChecksForUpdates ? .on : .off
         return item
     }
 
@@ -565,6 +582,15 @@ class MenuBarController: NSObject {
         NotificationCenter.default.post(
             name: .launchAtLoginChanged, object: preferences.launchAtLogin)
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func checkForUpdates() {
+        UpdateManager.shared.checkForUpdates()
+    }
+
+    @objc func toggleAutoUpdate() {
+        UpdateManager.shared.automaticallyChecksForUpdates.toggle()
+        buildMenu()  // Rebuild to update checkmark
     }
 
     @objc func toggleCrashReporting() {
