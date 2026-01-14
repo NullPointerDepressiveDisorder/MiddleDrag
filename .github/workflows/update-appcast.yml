@@ -49,7 +49,7 @@ jobs:
 
       - name: Install Sparkle
         run: |
-          # Download Sparkle 2 for generate_appcast tool
+          # Download Sparkle 2.6.4 for sign_update tool
           curl -L -o Sparkle.tar.xz "https://github.com/sparkle-project/Sparkle/releases/download/2.6.4/Sparkle-2.6.4.tar.xz"
           mkdir -p Sparkle
           tar -xf Sparkle.tar.xz -C Sparkle
@@ -57,6 +57,7 @@ jobs:
       - name: Generate appcast entry
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_EDDSA_PRIVATE_KEY }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           PKG_FILE="MiddleDrag-${VERSION}.pkg"
@@ -82,8 +83,9 @@ jobs:
           
           echo "Generated signature: ${SIGNATURE:0:20}... (truncated)"
           
-          # Get release notes from GitHub
-          RELEASE_NOTES=$(gh release view "v${VERSION}" --repo ${{ github.repository }} --json body -q '.body' | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/"/\&quot;/g')
+          # Get release notes from GitHub and escape for XML
+          RELEASE_NOTES=$(gh release view "v${VERSION}" --repo ${{ github.repository }} --json body -q '.body' | \
+            sed "s/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g; s/\"/\&quot;/g; s/'/\&apos;/g")
           
           # Get current date in RFC 2822 format
           PUB_DATE=$(date -R)
@@ -93,33 +95,33 @@ jobs:
           
           # Create new item entry
           cat > new_item.xml << EOF
-            <item>
-              <title>Version ${VERSION}</title>
-              <pubDate>${PUB_DATE}</pubDate>
-              <sparkle:version>${VERSION}</sparkle:version>
-              <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
-              <description><![CDATA[
-                ${RELEASE_NOTES}
-              ]]></description>
-              <enclosure 
-                url="${DOWNLOAD_URL}"
-                sparkle:edSignature="${SIGNATURE}"
-                length="${FILE_SIZE}"
-                type="application/octet-stream" />
-              <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
-            </item>
+          <item>
+            <title>Version ${VERSION}</title>
+            <pubDate>${PUB_DATE}</pubDate>
+            <sparkle:version>${VERSION}</sparkle:version>
+            <sparkle:shortVersionString>${VERSION}</sparkle:shortVersionString>
+            <description><![CDATA[
+          ${RELEASE_NOTES}
+                ]]></description>
+                <enclosure 
+                  url="${DOWNLOAD_URL}"
+                  sparkle:edSignature="${SIGNATURE}"
+                  length="${FILE_SIZE}"
+                  type="application/octet-stream" />
+                <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+              </item>
           EOF
-          
-          echo "Generated appcast entry for version ${VERSION}"
-          cat new_item.xml
+                    
+                    echo "Generated appcast entry for version ${VERSION}"
+                    cat new_item.xml
 
-      - name: Update appcast.xml
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          
-          if [ ! -f appcast.xml ]; then
-            # Create initial appcast.xml if it doesn't exist
-            cat > appcast.xml << 'EOF'
+                - name: Update appcast.xml
+                  run: |
+                    VERSION="${{ steps.version.outputs.version }}"
+                    
+                    if [ ! -f appcast.xml ]; then
+                      # Create initial appcast.xml if it doesn't exist
+                      cat > appcast.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
             <channel>
@@ -132,15 +134,46 @@ jobs:
           EOF
           fi
           
-          # Check if this version already exists
+          # Remove existing entry for this version if present (handles re-runs)
+          # Using Python for reliable multi-line XML manipulation
           if grep -q "sparkle:version>${VERSION}<" appcast.xml; then
             echo "Version ${VERSION} already exists in appcast, removing old entry..."
-            # Remove existing entry for this version (handles re-runs)
-            sed -i '' "/<item>/{:a;N;/<\/item>/!ba;/sparkle:version>${VERSION}</d}" appcast.xml
+            python3 - "$VERSION" << 'PY'
+          import sys
+          version = sys.argv[1]
+          needle = f"sparkle:version>{version}<"
+
+          with open("appcast.xml", "r", encoding="utf-8") as f:
+              lines = f.readlines()
+
+          out_lines = []
+          in_item = False
+          buffer = []
+          skip_item = False
+
+          for line in lines:
+              if "<item>" in line and not in_item:
+                  in_item = True
+                  buffer = [line]
+                  skip_item = False
+              elif in_item:
+                  buffer.append(line)
+                  if needle in line:
+                      skip_item = True
+                  if "</item>" in line:
+                      if not skip_item:
+                          out_lines.extend(buffer)
+                      in_item = False
+                      buffer = []
+              else:
+                  out_lines.append(line)
+
+          with open("appcast.xml", "w", encoding="utf-8") as f:
+              f.writelines(out_lines)
+          PY
           fi
           
-          # Insert new item after <channel> opening (but after metadata)
-          # Find the line with </language> and insert after it
+          # Insert new item after </language> tag
           sed -i '' "/<\/language>/r new_item.xml" appcast.xml
           
           # Clean up
