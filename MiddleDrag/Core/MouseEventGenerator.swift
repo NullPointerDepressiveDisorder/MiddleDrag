@@ -99,13 +99,18 @@ class MouseEventGenerator {
         // 2. Before macOS processes it, we read current position (still old)
         // 3. We add delta to old position = snap-back effect
         // Solution: Track our own position and build from it sequentially
+        
+        // Read current position before acquiring lock to avoid blocking other threads
+        // This is only used as fallback if lastSentPosition is nil
+        let fallbackPosition = currentMouseLocationQuartz
+        
         positionLock.lock()
         let basePosition: CGPoint
         if let lastPos = lastSentPosition {
             basePosition = lastPos
         } else {
             // First update - initialize from current position
-            basePosition = currentMouseLocationQuartz
+            basePosition = fallbackPosition
         }
 
         let newLocation = CGPoint(
@@ -143,36 +148,36 @@ class MouseEventGenerator {
 
             // Only log to Sentry if telemetry is enabled (offline by default)
             // App must be offline by default - no network calls unless user opts in
-            guard CrashReporter.shared.anyTelemetryEnabled else { return }
+            if CrashReporter.shared.anyTelemetryEnabled {
+                let attributes: [String: Any] = unsafe [
+                    "category": "gesture",
+                    "drag_movement": "horizontal",
+                    "axis": "horizontal",
+                    "movement_type": potentialSnapBack ? "snap_back" : "normal",
+                    "deltaX_magnitude": String(format: "%.0f", abs(deltaX)),
+                    "rawDeltaX": deltaX,
+                    "smoothedDeltaX": smoothedDeltaX,
+                    "rawDeltaY": deltaY,
+                    "smoothedDeltaY": smoothedDeltaY,
+                    "baseX": basePosition.x,
+                    "baseY": basePosition.y,
+                    "newX": newLocation.x,
+                    "newY": newLocation.y,
+                    "positionChangeX": positionChange,
+                    "positionChangeY": abs(newLocation.y - basePosition.y),
+                    "horizontalChange": horizontalChange,
+                    "potentialSnapBack": potentialSnapBack,
+                    "smoothingFactor": smoothingFactor,
+                    "minMovementThreshold": minimumMovementThreshold,
+                    "timestamp": Date().timeIntervalSince1970,
+                    "session_id": Log.sessionID,
+                ]
 
-            let attributes: [String: Any] = unsafe [
-                "category": "gesture",
-                "drag_movement": "horizontal",
-                "axis": "horizontal",
-                "movement_type": potentialSnapBack ? "snap_back" : "normal",
-                "deltaX_magnitude": String(format: "%.0f", abs(deltaX)),
-                "rawDeltaX": deltaX,
-                "smoothedDeltaX": smoothedDeltaX,
-                "rawDeltaY": deltaY,
-                "smoothedDeltaY": smoothedDeltaY,
-                "baseX": basePosition.x,
-                "baseY": basePosition.y,
-                "newX": newLocation.x,
-                "newY": newLocation.y,
-                "positionChangeX": positionChange,
-                "positionChangeY": abs(newLocation.y - basePosition.y),
-                "horizontalChange": horizontalChange,
-                "potentialSnapBack": potentialSnapBack,
-                "smoothingFactor": smoothingFactor,
-                "minMovementThreshold": minimumMovementThreshold,
-                "timestamp": Date().timeIntervalSince1970,
-                "session_id": Log.sessionID,
-            ]
-
-            if potentialSnapBack {
-                SentrySDK.logger.warn(message, attributes: attributes)
-            } else {
-                SentrySDK.logger.info(message, attributes: attributes)
+                if potentialSnapBack {
+                    SentrySDK.logger.warn(message, attributes: attributes)
+                } else {
+                    SentrySDK.logger.info(message, attributes: attributes)
+                }
             }
         }
 
@@ -351,9 +356,10 @@ class MouseEventGenerator {
     }
 
     private func sendRelativeMouseMove(deltaX: CGFloat, deltaY: CGFloat) {
-        // We're already on positionQueue, so we can access lastSentPosition directly
         // Use the last sent position to build relative movements correctly
         // This prevents jumps from reading stale current mouse positions
+        // Note: This function appears to be unused but kept for potential future use
+        positionLock.lock()
         let basePosition: CGPoint
         if let lastPos = lastSentPosition {
             basePosition = lastPos
@@ -367,8 +373,9 @@ class MouseEventGenerator {
             y: basePosition.y + deltaY
         )
 
-        // Update last sent position (we're already on positionQueue)
+        // Update last sent position
         lastSentPosition = newLocation
+        positionLock.unlock()
 
         guard
             let event = CGEvent(
