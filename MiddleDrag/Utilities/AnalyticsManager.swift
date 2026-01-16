@@ -4,7 +4,7 @@ import Sentry
 import os.log
 
 // MARK: - Logger
-/// A unified logger that writes to os_log (and optionally Sentry breadcrumbs if crash reporting is enabled)
+/// A unified logger that writes to os_log (always) and Sentry (if enabled)
 /// Usage: Log.debug("message"), Log.info("message"), Log.warning("message"), Log.error("message"), Log.fatal("message")
 enum Log {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.middledrag"
@@ -14,6 +14,16 @@ enum Log {
     private static let deviceLog = OSLog(subsystem: subsystem, category: "device")
     private static let crashLog = OSLog(subsystem: subsystem, category: "crash")
     private static let appLog = OSLog(subsystem: subsystem, category: "app")
+    
+    // Session ID to distinguish different testing/debugging sessions
+    static let sessionID: String = {
+        // Generate a short, readable session ID (e.g., "2026-01-16-abc123")
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateStr = dateFormatter.string(from: Date())
+        let randomStr = unsafe String(format: "%06x", arc4random_uniform(0xFFFFFF))
+        return "\(dateStr)-\(randomStr)"
+    }()
     
     enum Category: String {
         case gesture
@@ -31,57 +41,70 @@ enum Log {
         }
     }
     
-    /// Debug level - only in debug builds, never sent anywhere
+    private static func attributes(category: Category) -> [String: Any] {
+        var attrs: [String: Any] = ["category": category.rawValue]
+        attrs["session_id"] = sessionID
+        return attrs
+    }
+    
+    /// Check if Sentry logging should be enabled (only if telemetry is enabled)
+    private static var shouldLogToSentry: Bool {
+        return CrashReporter.shared.anyTelemetryEnabled
+    }
+    
+    /// Debug level - only in debug builds
     static func debug(_ message: String, category: Category = .app) {
         #if DEBUG
         unsafe os_log(.debug, log: category.osLog, "%{public}@", message)
         #endif
-    }
-    
-    /// Info level - logged locally, breadcrumb added only if crash reporting enabled
-    static func info(_ message: String, category: Category = .app) {
-        unsafe os_log(.info, log: category.osLog, "%{public}@", message)
-        CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .info)
-    }
-    
-    /// Warning level - logged locally, breadcrumb added only if crash reporting enabled
-    static func warning(_ message: String, category: Category = .app) {
-        unsafe os_log(.error, log: category.osLog, "⚠️ %{public}@", message)
-        CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .warning)
-    }
-    
-    /// Error level - logged locally, captured by Sentry only if crash reporting enabled
-    static func error(_ message: String, category: Category = .app, error: Error? = nil) {
-        unsafe os_log(.fault, log: category.osLog, "❌ %{public}@", message)
-        CrashReporter.shared.addBreadcrumbIfEnabled(message: message, category: category.rawValue, level: .error)
-        
-        // Only capture to Sentry if enabled
-        if CrashReporter.shared.isEnabled {
-            if let error = error {
-                SentrySDK.capture(error: error) { scope in
-                    scope.setContext(value: ["message": message], key: "log_context")
-                }
-            } else {
-                SentrySDK.capture(message: message) { scope in
-                    scope.setLevel(.error)
-                    scope.setTag(value: category.rawValue, key: "log_category")
-                }
-            }
+        // Only log to Sentry if telemetry is enabled (offline by default)
+        if shouldLogToSentry {
+            SentrySDK.logger.debug(message, attributes: attributes(category: category))
         }
     }
     
-    /// Fatal level - logged locally, captured by Sentry only if crash reporting enabled
+    /// Info level
+    static func info(_ message: String, category: Category = .app) {
+        unsafe os_log(.info, log: category.osLog, "%{public}@", message)
+        // Only log to Sentry if telemetry is enabled (offline by default)
+        if shouldLogToSentry {
+            SentrySDK.logger.info(message, attributes: attributes(category: category))
+        }
+    }
+    
+    /// Warning level
+    static func warning(_ message: String, category: Category = .app) {
+        unsafe os_log(.error, log: category.osLog, "⚠️ %{public}@", message)
+        // Only log to Sentry if telemetry is enabled (offline by default)
+        if shouldLogToSentry {
+            SentrySDK.logger.warn(message, attributes: attributes(category: category))
+        }
+    }
+    
+    /// Error level
+    static func error(_ message: String, category: Category = .app, error: Error? = nil) {
+        unsafe os_log(.fault, log: category.osLog, "❌ %{public}@", message)
+        // Only log to Sentry if telemetry is enabled (offline by default)
+        if shouldLogToSentry {
+            var attrs = attributes(category: category)
+            if let error = error {
+                attrs["error"] = error.localizedDescription
+            }
+            SentrySDK.logger.error(message, attributes: attrs)
+        }
+    }
+    
+    /// Fatal level
     static func fatal(_ message: String, category: Category = .app, error: Error? = nil) {
         unsafe os_log(.fault, log: category.osLog, "💀 FATAL: %{public}@", message)
-        
-        if CrashReporter.shared.isEnabled {
-            SentrySDK.capture(message: "FATAL: \(message)") { scope in
-                scope.setLevel(.fatal)
-                scope.setTag(value: category.rawValue, key: "log_category")
-                if let error = error {
-                    scope.setContext(value: ["error": error.localizedDescription], key: "error_info")
-                }
+        // Only log to Sentry if telemetry is enabled (offline by default)
+        if shouldLogToSentry {
+            var attrs = attributes(category: category)
+            attrs["level"] = "fatal"
+            if let error = error {
+                attrs["error"] = error.localizedDescription
             }
+            SentrySDK.logger.fatal(message, attributes: attrs)
         }
     }
 }
@@ -177,7 +200,7 @@ final class CrashReporter {
     func initializeIfEnabled() {
         guard anyTelemetryEnabled else {
             #if DEBUG
-            unsafe os_log(.debug, "CrashReporter: Telemetry disabled (offline mode)")
+            SentrySDK.logger.debug("CrashReporter: Telemetry disabled (offline mode)")
             #endif
             return
         }
@@ -197,6 +220,10 @@ final class CrashReporter {
             options.dsn = self.sentryDSN
             options.debug = false
             
+            // Enable structured logs for querying and analysis
+            // This allows us to query logs in Sentry Discover and create dashboard widgets
+            options.enableLogs = true
+            
             // Crash reporting - always enabled if Sentry is initialized
             options.enableCrashHandler = true
             options.enableUncaughtNSExceptionReporting = true
@@ -209,10 +236,20 @@ final class CrashReporter {
             if ProcessInfo.processInfo.environment["CI"] != nil {
                 options.environment = "CI"
             } else {
+                // Check if running from Xcode build (Debug) vs installed app (Release)
+                // Xcode builds typically have the app in DerivedData or Build/Products/Debug
+                let bundlePath = Bundle.main.bundlePath
+                let isDebugBuild = bundlePath.contains("/DerivedData/") ||
+                                   bundlePath.contains("/Build/Products/Debug/") ||
+                                   bundlePath.contains("/Xcode/DerivedData/")
+                
                 #if DEBUG
+                // Compile-time: definitely debug if DEBUG flag is set
                 options.environment = "development"
                 #else
-                options.environment = "production"
+                // Runtime: check if it looks like a debug build path
+                // This handles cases where Release config is used but running from Xcode
+                options.environment = isDebugBuild ? "development" : "production"
                 #endif
             }
             
@@ -222,10 +259,21 @@ final class CrashReporter {
             }
         }
         
+        // Set session ID as a tag for easy filtering in Sentry
+        SentrySDK.configureScope { scope in
+            scope.setTag(value: Log.sessionID, key: "session_id")
+        }
+        
+        // Log session start
+        SentrySDK.logger.info("Session started", attributes: [
+            "session_id": Log.sessionID,
+            "category": "app"
+        ])
+        
         isSentryInitialized = true
         
         #if DEBUG
-        os_log(.debug, "CrashReporter: Sentry initialized (crash=\(self.isEnabled), perf=\(self.performanceMonitoringEnabled))")
+        SentrySDK.logger.debug("CrashReporter: Sentry initialized (crash=\(self.isEnabled), perf=\(self.performanceMonitoringEnabled))")
         #endif
     }
     
@@ -235,22 +283,7 @@ final class CrashReporter {
         isSentryInitialized = false
         
         #if DEBUG
-        unsafe os_log(.debug, "CrashReporter: Sentry closed (offline mode)")
+        SentrySDK.logger.debug("CrashReporter: Sentry closed (offline mode)")
         #endif
-    }
-    
-    // MARK: - Breadcrumbs (local storage until crash)
-    
-    /// Add breadcrumb only if crash reporting is enabled
-    /// Breadcrumbs are stored locally and only sent WITH a crash report
-    func addBreadcrumbIfEnabled(message: String, category: String, level: SentryLevel) {
-        guard isEnabled, isSentryInitialized else { return }
-        
-        let breadcrumb = Breadcrumb()
-        breadcrumb.category = category
-        breadcrumb.message = message
-        breadcrumb.level = level
-        breadcrumb.timestamp = Date()
-        SentrySDK.addBreadcrumb(breadcrumb)
     }
 }

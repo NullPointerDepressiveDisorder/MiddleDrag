@@ -17,7 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize crash reporting only if user has opted in (offline by default)
         CrashReporter.shared.initializeIfEnabled()
 
-        Log.info("MiddleDrag starting...", category: .app)
+        Log.info("MiddleDrag starting... (Session: \(Log.sessionID))", category: .app)
 
         // Hide dock icon (menu bar app only)
         NSApp.setActivationPolicy(.accessory)

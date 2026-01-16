@@ -341,7 +341,8 @@ class MultitouchManager {
                     }
                     let manager = unsafe Unmanaged<MultitouchManager>.fromOpaque(refcon)
                         .takeUnretainedValue()
-                    return unsafe manager.handleEventTapCallback(proxy: proxy, type: type, event: event)
+                    return unsafe manager.handleEventTapCallback(
+                        proxy: proxy, type: type, event: event)
                 },
                 userInfo: unsafe refcon
             )
@@ -446,8 +447,9 @@ class MultitouchManager {
         // Force click support: convert left clicks to middle clicks when 3+ fingers are on trackpad
         // This works based on raw finger count, not gesture activation state, so force clicks
         // work even when gestures are cancelled (e.g., modifier key not held)
+        // However, don't perform force clicks during an active drag to avoid interference
         let hasThreeOrMoreFingers = currentFingerCount >= 3
-        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent {
+        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging {
             // Check event type - we want to handle both down and up
             if type == .leftMouseDown || type == .leftMouseUp {
                 // Perform middle click instead
@@ -558,9 +560,14 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // Always reset state regardless of whether tap is performed
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
+            self?.isActivelyDragging = false  // Ensure drag state is cleared
             self?.gestureEndTime = CACurrentMediaTime()
             self?.lastGestureWasActive = shouldPerformTap  // Active only if tap was performed
         }
+
+        // Cancel any active drag before performing click to prevent sticky window bug
+        // This handles edge cases where a drag might have been started but not properly ended
+        mouseGenerator.cancelDrag()
 
         // Only perform the click if window meets size requirements
         if shouldPerformTap {
@@ -610,9 +617,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
         guard delta.x != 0 || delta.y != 0 else { return }
 
-        let scaleFactor: CGFloat = 1600.0 * CGFloat(configuration.sensitivity)
-        let scaledDeltaX = delta.x * scaleFactor
-        let scaledDeltaY = -delta.y * scaleFactor  // Invert Y for natural movement
+        let baseScaleFactor: CGFloat = 1600.0 * CGFloat(configuration.sensitivity)
+        // Use symmetric scaling for both axes - previous horizontal restrictions caused
+        // glitchy and restricted movement by reducing horizontal by 65% and capping at 18px
+        let scaledDeltaX = delta.x * baseScaleFactor
+        let scaledDeltaY = -delta.y * baseScaleFactor  // Invert Y for natural movement
 
         mouseGenerator.updateDrag(deltaX: scaledDeltaX, deltaY: scaledDeltaY)
     }
