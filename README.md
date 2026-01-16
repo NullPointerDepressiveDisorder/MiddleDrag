@@ -203,6 +203,10 @@ Use soft taps instead of physical clicks. The app is designed to coexist with sy
 
 Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Acknowledgements
+
+MiddleDrag uses [Sentry](https://sentry.io) for crash reporting and [Sparkle](https://sparkle-project.org) for auto-updates. See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for full license texts.
+
 ## License
 
 [MIT License](LICENSE)

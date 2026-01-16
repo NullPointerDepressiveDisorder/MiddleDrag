@@ -87,6 +87,12 @@ if [ -z "$APP_PATH" ]; then
     exit 1
 fi
 
+# Copy third-party licenses to app bundle
+if [ -f "THIRD_PARTY_LICENSES" ]; then
+    cp "THIRD_PARTY_LICENSES" "$APP_PATH/Contents/Resources/"
+    echo "📄 Added third-party licenses to bundle"
+fi
+
 echo "✅ Build successful!"
 echo "📦 App location: $APP_PATH"
 

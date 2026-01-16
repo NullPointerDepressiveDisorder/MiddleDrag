@@ -64,6 +64,10 @@ jobs:
                   derived-data-path: build
                   universal-binary: "true"
 
+            - name: Copy Third-Party Licenses
+              run: |
+                  cp THIRD_PARTY_LICENSES build/Build/Products/Release/MiddleDrag.app/Contents/Resources/
+
             - name: Create App Zip
               id: artifact
               run: |

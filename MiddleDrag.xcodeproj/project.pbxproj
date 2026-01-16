@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		EC0E54092F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
+		EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
+		EC0E540B2F19EF04001AC128 /* THIRD_PARTY_LICENSES in CopyFiles */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
 		ECCE59182F16F72300962494 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECCE59172F16F72300962494 /* Sparkle */; settings = {ATTRIBUTES = (Required, ); }; };
 /* End PBXBuildFile section */
@@ -21,8 +24,20 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		EC0E54072F19EEA0001AC128 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Resources;
+			files = (
+				EC0E540B2F19EF04001AC128 /* THIRD_PARTY_LICENSES in CopyFiles */,
+			);
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		1A0000004 /* MiddleDrag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiddleDrag.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = "<group>"; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -111,6 +126,7 @@
 		1A0000008 = {
 			isa = PBXGroup;
 			children = (
+				EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 				1A0000010 /* Products */,
 				EC79661A2EFD8784007453A4 /* Frameworks */,
@@ -147,6 +163,7 @@
 				1A0000007 /* Frameworks */,
 				1A0000014 /* Resources */,
 				EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */,
+				EC0E54072F19EEA0001AC128 /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -229,11 +246,13 @@
 		1A0000014 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */,
 			);
 		};
 		MDT00000011 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
+				EC0E54092F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
