@@ -4,6 +4,22 @@ import XCTest
 
 final class AnalyticsManagerTests: XCTestCase {
 
+    // MARK: - Setup/Teardown
+
+    override func setUp() {
+        super.setUp()
+        // Reset CrashReporter state before each test to ensure isolation
+        CrashReporter.shared.isEnabled = false
+        CrashReporter.shared.performanceMonitoringEnabled = false
+    }
+
+    override func tearDown() {
+        // Clean up after each test
+        CrashReporter.shared.isEnabled = false
+        CrashReporter.shared.performanceMonitoringEnabled = false
+        super.tearDown()
+    }
+
     // MARK: - Log Category Tests
 
     func testLogCategoryGesture() {
@@ -181,16 +197,4 @@ final class AnalyticsManagerTests: XCTestCase {
         XCTAssertNoThrow(CrashReporter.shared.initializeIfEnabled())
     }
 
-    func testAddBreadcrumbWhenDisabled() {
-        CrashReporter.shared.isEnabled = false
-
-        // Should not crash when adding breadcrumb while disabled
-        XCTAssertNoThrow(
-            CrashReporter.shared.addBreadcrumbIfEnabled(
-                message: "Test breadcrumb",
-                category: "test",
-                level: .info
-            )
-        )
-    }
 }

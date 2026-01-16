@@ -2,7 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
-final class DeviceMonitorTests: XCTestCase {
+@unsafe final class DeviceMonitorTests: XCTestCase {
 
     // Note: DeviceMonitor uses a global variable (gDeviceMonitor) for C callback compatibility
     // This limits testing options since only one instance can be active at a time
@@ -245,7 +245,7 @@ final class DeviceMonitorTests: XCTestCase {
         // Note: In real usage, this would be a pointer to MTTouch array from the framework
         // For testing, we just need a non-nil pointer to exercise the code path
         let mockTouches = UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
-        defer { mockTouches.deallocate() }
+        defer { unsafe mockTouches.deallocate() }
 
         // Access handleContact through a workaround since it's fileprivate
         // We'll test it indirectly by verifying delegate is called when monitor receives touches
