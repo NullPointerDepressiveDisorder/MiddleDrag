@@ -6,6 +6,32 @@
     <description>Most recent updates to MiddleDrag</description>
     <language>en</language>
     <item>
+      <title>Version 1.3.8.7</title>
+      <pubDate>Fri, 16 Jan 2026 02:58:09 +0000</pubDate>
+      <sparkle:version>1.3.8.7</sparkle:version>
+      <sparkle:shortVersionString>1.3.8.7</sparkle:shortVersionString>
+      <description><![CDATA[Enhance mouse event handling and logging for improved drag performance (#69)
+
+* Enhance mouse event handling and logging for improved drag performance
+
+- Updated the MouseEventGenerator to track the last sent mouse position, preventing jumps from stale positions during drag operations.
+- Implemented smoothing for mouse movement updates, allowing for more consistent and responsive drag actions.
+- Enhanced logging to detect and report potential snap-back issues during horizontal drag movements, integrating with Sentry for telemetry.
+- Modified AppDelegate to include session ID in startup logs for better tracking.
+- Improved MultitouchManager to ensure proper handling of force clicks and drag states, preventing interference during active drags.
+- Added setup and teardown methods in AnalyticsManagerTests to isolate test cases and ensure consistent state.
+
+* Refactor mouse event handling to improve thread safety and logging
+
+- Updated MouseEventGenerator to read the current mouse position before acquiring a lock, enhancing thread safety during drag operations.
+- Simplified telemetry logging by consolidating the guard statement, ensuring logs are only sent when telemetry is enabled.
+- Retained the sendRelativeMouseMove function for potential future use while clarifying its purpose in comments.
+---
+**SHA256:** `04df585d0a712fa1979014d4f2ffb86702fdd54736c443e5c47a0303b46ea562`]]></description>
+      <enclosure url="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/download/v1.3.8.7/MiddleDrag-1.3.8.7.pkg" sparkle:edSignature="ZSRKprzlkxgkRBZq5/lKAunOUNKPXt7EXcF9/NQ/R1GzzEMJuPFTNCItjSuFRG2YCLSEMW+R6S6pnby2IX1NDw==" length="3098947" type="application/octet-stream" />
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
       <title>Version 1.3.8.6</title>
       <pubDate>Wed, 14 Jan 2026 03:24:39 +0000</pubDate>
       <sparkle:version>1.3.8.6</sparkle:version>
