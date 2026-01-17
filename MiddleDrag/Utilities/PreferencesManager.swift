@@ -27,6 +27,8 @@ class PreferencesManager {
         static let minimumWindowSizeFilterEnabled = "minimumWindowSizeFilterEnabled"
         static let minimumWindowWidth = "minimumWindowWidth"
         static let minimumWindowHeight = "minimumWindowHeight"
+        // Desktop filter key
+        static let ignoreDesktop = "ignoreDesktop"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
     }
@@ -64,6 +66,8 @@ class PreferencesManager {
             Keys.minimumWindowSizeFilterEnabled: false,
             Keys.minimumWindowWidth: 100.0,
             Keys.minimumWindowHeight: 100.0,
+            // Desktop filter default
+            Keys.ignoreDesktop: false,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
         ])
@@ -96,6 +100,7 @@ class PreferencesManager {
             forKey: Keys.minimumWindowSizeFilterEnabled)
         prefs.minimumWindowWidth = userDefaults.double(forKey: Keys.minimumWindowWidth)
         prefs.minimumWindowHeight = userDefaults.double(forKey: Keys.minimumWindowHeight)
+        prefs.ignoreDesktop = userDefaults.bool(forKey: Keys.ignoreDesktop)
 
         return prefs
     }
@@ -122,6 +127,8 @@ class PreferencesManager {
             preferences.minimumWindowSizeFilterEnabled, forKey: Keys.minimumWindowSizeFilterEnabled)
         userDefaults.set(preferences.minimumWindowWidth, forKey: Keys.minimumWindowWidth)
         userDefaults.set(preferences.minimumWindowHeight, forKey: Keys.minimumWindowHeight)
+        // Desktop filter
+        userDefaults.set(preferences.ignoreDesktop, forKey: Keys.ignoreDesktop)
     }
 
     // MARK: - Gesture Configuration Prompt Tracking

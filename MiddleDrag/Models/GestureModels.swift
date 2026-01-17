@@ -67,6 +67,9 @@ struct GestureConfiguration {
     var minimumWindowWidth: CGFloat = 100  // Minimum window width in pixels
     var minimumWindowHeight: CGFloat = 100  // Minimum window height in pixels
 
+    // Desktop filter - ignore gestures when cursor is over desktop (no window)
+    var ignoreDesktop: Bool = false
+
     // Relift during drag - allow continuing drag with 2 fingers after lifting one
     var allowReliftDuringDrag: Bool = false
 
@@ -133,6 +136,9 @@ struct UserPreferences: Codable {
     var minimumWindowWidth: Double = 100
     var minimumWindowHeight: Double = 100
 
+    // Desktop filter - ignore gestures when cursor is over desktop (no window)
+    var ignoreDesktop: Bool = false
+
     // Relift during drag - allow continuing drag with 2 fingers after lifting one
     var allowReliftDuringDrag: Bool = false
 
@@ -156,6 +162,7 @@ struct UserPreferences: Codable {
             minimumWindowSizeFilterEnabled: minimumWindowSizeFilterEnabled,
             minimumWindowWidth: CGFloat(minimumWindowWidth),
             minimumWindowHeight: CGFloat(minimumWindowHeight),
+            ignoreDesktop: ignoreDesktop,
             allowReliftDuringDrag: allowReliftDuringDrag
         )
     }

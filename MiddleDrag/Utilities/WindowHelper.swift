@@ -103,6 +103,12 @@ class WindowHelper {
         return window.width >= minWidth && window.height >= minHeight
     }
 
+    /// Check if the cursor is currently over the desktop (no window underneath)
+    /// - Returns: true if cursor is over desktop (no window found), false if over a window
+    static func isCursorOverDesktop() -> Bool {
+        return getWindowAtCursor() == nil
+    }
+
     /// Get the bundle identifier for a process
     /// - Parameter pid: Process ID
     /// - Returns: Bundle identifier string, or nil if not found

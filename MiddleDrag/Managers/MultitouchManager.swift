@@ -536,6 +536,28 @@ extension MultitouchManager: GestureRecognizerDelegate {
             return
         }
 
+        // Check if cursor is over desktop when ignoreDesktop is enabled
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
+        if configuration.ignoreDesktop {
+            let checkDesktop = { WindowHelper.isCursorOverDesktop() }
+            let isOverDesktop: Bool
+            if Thread.isMainThread {
+                isOverDesktop = checkDesktop()
+            } else {
+                isOverDesktop = DispatchQueue.main.sync { checkDesktop() }
+            }
+            if isOverDesktop {
+                // Cursor is over desktop - skip tap
+                DispatchQueue.main.async { [weak self] in
+                    self?.isInThreeFingerGesture = false
+                    self?.gestureEndTime = CACurrentMediaTime()
+                    self?.lastGestureWasActive = false
+                }
+                return
+            }
+        }
+
         // Check window size filter before performing tap
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
         // which must be called from the main thread
@@ -577,6 +599,23 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
         guard configuration.middleDragEnabled else { return }
+
+        // Check if cursor is over desktop when ignoreDesktop is enabled
+        // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+        // which must be called from the main thread
+        if configuration.ignoreDesktop {
+            let checkDesktop = { WindowHelper.isCursorOverDesktop() }
+            let isOverDesktop: Bool
+            if Thread.isMainThread {
+                isOverDesktop = checkDesktop()
+            } else {
+                isOverDesktop = DispatchQueue.main.sync { checkDesktop() }
+            }
+            if isOverDesktop {
+                // Cursor is over desktop - skip drag
+                return
+            }
+        }
 
         // Check window size filter before starting drag
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
