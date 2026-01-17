@@ -94,6 +94,11 @@ class WindowHelper {
     ///   - minWidth: Minimum window width in pixels
     ///   - minHeight: Minimum window height in pixels
     /// - Returns: true if window meets minimum size or no window found, false if too small
+    /// - Note: When no window is found (cursor over desktop), this returns true to allow gestures.
+    ///         However, if `ignoreDesktop` is enabled in MultitouchManager, the desktop check
+    ///         takes precedence and blocks gestures before this method is called. This method
+    ///         returning true for desktop is intentional to handle edge cases where desktop
+    ///         detection might fail, but the primary desktop filtering should use `ignoreDesktop`.
     static func windowAtCursorMeetsMinimumSize(minWidth: CGFloat, minHeight: CGFloat) -> Bool {
         guard let window = getWindowAtCursor() else {
             // No window found - allow gesture (could be desktop or edge case)
@@ -107,6 +112,15 @@ class WindowHelper {
     /// - Returns: true if cursor is over desktop (no window found), false if over a window
     static func isCursorOverDesktop() -> Bool {
         return getWindowAtCursor() == nil
+    }
+
+    /// Internal method for testing - allows injecting mock window data and point
+    /// - Parameters:
+    ///   - point: Screen point in Quartz coordinates (origin top-left) to check
+    ///   - windowList: Array of window info dictionaries (from CGWindowListCopyWindowInfo or mock)
+    /// - Returns: true if no window found at point (over desktop), false if window exists
+    static func isCursorOverDesktop(at point: CGPoint, windowList: [[CFString: Any]]) -> Bool {
+        return getWindowAt(point: point, windowList: windowList) == nil
     }
 
     /// Get the bundle identifier for a process
