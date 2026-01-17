@@ -163,6 +163,21 @@ final class PreferencesManagerTests: XCTestCase {
         XCTAssertEqual(loaded.minimumWindowHeight, 150.0, accuracy: 0.001)
     }
 
+    func testLoadPreferencesIgnoreDesktopDefault() {
+        let prefs = preferencesManager.loadPreferences()
+        XCTAssertFalse(prefs.ignoreDesktop)
+    }
+
+    func testSaveAndLoadIgnoreDesktopPreference() {
+        var prefs = UserPreferences()
+        prefs.ignoreDesktop = true
+
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
+
+        XCTAssertTrue(loaded.ignoreDesktop)
+    }
+
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {

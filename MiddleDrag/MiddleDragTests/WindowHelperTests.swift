@@ -289,4 +289,21 @@ final class WindowHelperTests: XCTestCase {
         XCTAssertNotNil(result)
         XCTAssertNil(result?.bundleIdentifier)  // No PID means no bundle ID lookup
     }
+
+    // MARK: - isCursorOverDesktop Tests
+
+    func testIsCursorOverDesktop_DoesNotCrash() {
+        // Calling isCursorOverDesktop should never crash, even without windows
+        let result = WindowHelper.isCursorOverDesktop()
+        // Result could be true or false depending on environment
+        // Just verify it doesn't crash and returns a valid Bool
+        XCTAssertNotNil(result)
+    }
+
+    func testIsCursorOverDesktop_ReturnsBool() {
+        // isCursorOverDesktop should always return a Bool (true or false)
+        // We can't control the environment, but verify the return type
+        let result = WindowHelper.isCursorOverDesktop()
+        XCTAssertTrue(result == true || result == false)
+    }
 }

@@ -239,4 +239,25 @@ final class GestureModelsTests: XCTestCase {
 
         XCTAssertTrue(config.allowReliftDuringDrag)
     }
+
+    // MARK: - Ignore Desktop Filter Tests
+
+    func testDefaultGestureConfigurationIgnoreDesktopField() {
+        let config = GestureConfiguration()
+        XCTAssertFalse(config.ignoreDesktop)
+    }
+
+    func testDefaultUserPreferencesIgnoreDesktopField() {
+        let prefs = UserPreferences()
+        XCTAssertFalse(prefs.ignoreDesktop)
+    }
+
+    func testUserPreferencesToGestureConfigIgnoreDesktopMapping() {
+        var prefs = UserPreferences()
+        prefs.ignoreDesktop = true
+
+        let config = prefs.gestureConfig
+
+        XCTAssertTrue(config.ignoreDesktop)
+    }
 }
