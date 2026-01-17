@@ -116,5 +116,5 @@ jobs:
               --title "MiddleDrag: update to ${VERSION}" \
               --body "Routine version update for MiddleDrag to ${VERSION}.
 
-            # Release notes: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}"
+            Release notes: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}"
           fi
