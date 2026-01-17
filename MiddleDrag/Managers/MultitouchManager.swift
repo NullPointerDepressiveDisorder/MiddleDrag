@@ -598,7 +598,15 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
-        guard configuration.middleDragEnabled else { return }
+        guard configuration.middleDragEnabled else {
+            // Reset state even if drag is disabled
+            DispatchQueue.main.async { [weak self] in
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = false  // Drag was disabled, so not active
+            }
+            return
+        }
 
         // Check if cursor is over desktop when ignoreDesktop is enabled
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
@@ -613,6 +621,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
             }
             if isOverDesktop {
                 // Cursor is over desktop - skip drag
+                DispatchQueue.main.async { [weak self] in
+                    self?.isInThreeFingerGesture = false
+                    self?.gestureEndTime = CACurrentMediaTime()
+                    self?.lastGestureWasActive = false
+                }
                 return
             }
         }
@@ -636,6 +649,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
             }
             if !meetsMinimumSize {
                 // Window too small - skip drag
+                DispatchQueue.main.async { [weak self] in
+                    self?.isInThreeFingerGesture = false
+                    self?.gestureEndTime = CACurrentMediaTime()
+                    self?.lastGestureWasActive = false
+                }
                 return
             }
         }
