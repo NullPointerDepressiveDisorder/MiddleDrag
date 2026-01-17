@@ -103,7 +103,7 @@ jobs:
           git push -u origin "${BRANCH_NAME}" --force
 
           # Check if PR already exists
-          EXISTING_PR=$(gh pr list --repo macports/macports-ports --head "NullPointerDepressiveDisorder:${BRANCH_NAME}" --json number --jq '.[0].number' 2>/dev/null || echo "")
+          EXISTING_PR=$(gh pr list --repo macports/macports-ports --head "NullPointerDepressiveDisorder:${BRANCH_NAME}" --json number --jq 'if length > 0 then .[0].number else empty end' 2>/dev/null || echo "")
 
           if [ -n "$EXISTING_PR" ]; then
             echo "PR #${EXISTING_PR} already exists, updated with latest changes"
