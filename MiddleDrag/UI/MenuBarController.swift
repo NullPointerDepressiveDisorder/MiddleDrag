@@ -237,6 +237,14 @@ class MenuBarController: NSObject {
             }
         }
 
+        // Ignore Desktop option (suppress gestures when cursor is over desktop)
+        let ignoreDesktopItem = createAdvancedMenuItem(
+            title: "Ignore Desktop",
+            isOn: preferences.ignoreDesktop,
+            action: #selector(toggleIgnoreDesktop)
+        )
+        submenu.addItem(ignoreDesktopItem)
+
         submenu.addItem(NSMenuItem.separator())
 
         // Relift during drag - Linux-style text selection
@@ -555,6 +563,17 @@ class MenuBarController: NSObject {
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.minimumWindowWidth = CGFloat(value)
         config.minimumWindowHeight = CGFloat(value)
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func toggleIgnoreDesktop() {
+        preferences.ignoreDesktop.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.ignoreDesktop = preferences.ignoreDesktop
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()
