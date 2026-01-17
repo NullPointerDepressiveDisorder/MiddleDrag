@@ -21,7 +21,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
+          if [ -n "${{ github.event.client_payload.version }}" ]; then
+            # Repository dispatch event
+            VERSION="${{ github.event.client_payload.version }}"
+            VERSION="${VERSION#v}"
+          elif [ -n "${{ inputs.version }}" ]; then
             # Manual trigger with specified version
             VERSION="${{ inputs.version }}"
             VERSION="${VERSION#v}"  # Remove 'v' prefix if present
