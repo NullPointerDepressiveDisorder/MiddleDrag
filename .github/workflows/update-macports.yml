@@ -37,11 +37,12 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Using version: ${VERSION}"
 
-      - name: Update Portfile
+      - name: Update Portfile and create PR
         env:
-          MACPORTS_PORTS_TOKEN: ${{ secrets.MACPORTS_PORTS_TOKEN }}
+          GH_TOKEN: ${{ secrets.MACPORTS_PORTS_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          BRANCH_NAME="middledrag-${VERSION}"
 
           # Download source tarball
           curl -L -o source.tar.gz "https://github.com/${{ github.repository }}/archive/refs/tags/v${VERSION}.tar.gz"
@@ -55,10 +56,19 @@ jobs:
           echo "SHA256: $SHA256"
           echo "SIZE: $SIZE"
 
-          # Clone ports repo
           git clone --depth 1 --filter=blob:none --sparse \
-            https://x-access-token:${MACPORTS_PORTS_TOKEN}@github.com/nullpointerdepressivedisorder/macports-ports.git
+            https://x-access-token:${GH_TOKEN}@github.com/NullPointerDepressiveDisorder/macports-ports.git
           cd macports-ports
+          git sparse-checkout set sysutils/MiddleDrag
+
+          # Add upstream and fetch latest
+          git remote add upstream https://github.com/macports/macports-ports.git
+          git fetch upstream master --depth 1
+
+          # Create branch from upstream/master
+          git checkout -b "${BRANCH_NAME}" upstream/master
+
+          # Re-apply sparse checkout after branch switch
           git sparse-checkout set sysutils/MiddleDrag
 
           PORTFILE="sysutils/MiddleDrag/Portfile"
@@ -82,8 +92,29 @@ jobs:
 
           # Check if there are changes before committing
           if git diff --staged --quiet; then
-            echo "No changes to commit"
+            echo "No changes to commit - Portfile already up to date"
+            exit 0
+          fi
+
+          # Commit with MacPorts convention: <portname>: <description>
+          git commit -m "MiddleDrag: update to ${VERSION}"
+
+          # Push to fork
+          git push -u origin "${BRANCH_NAME}" --force
+
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --repo macports/macports-ports --head "NullPointerDepressiveDisorder:${BRANCH_NAME}" --json number --jq '.[0].number' 2>/dev/null || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR #${EXISTING_PR} already exists, updated with latest changes"
           else
-            git commit -m "Update MiddleDrag to ${VERSION}"
-            git push
+            # Create PR against upstream
+            gh pr create \
+              --repo macports/macports-ports \
+              --base master \
+              --head "NullPointerDepressiveDisorder:${BRANCH_NAME}" \
+              --title "MiddleDrag: update to ${VERSION}" \
+              --body "Routine version update for MiddleDrag to ${VERSION}.
+
+            # Release notes: https://github.com/${{ github.repository }}/releases/tag/v${VERSION}"
           fi
