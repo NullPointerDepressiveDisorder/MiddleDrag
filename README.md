@@ -214,6 +214,16 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 MiddleDrag uses [Sentry](https://sentry.io) for crash reporting and [Sparkle](https://sparkle-project.org) for auto-updates. See [THIRD_PARTY_LICENSES](THIRD_PARTY_LICENSES) for full license texts.
 
+## Trademark
+
+"MiddleDrag" is a trademark of Karan Kunal Mohindroo. The MIT License grants rights to the code, not the name. You may use the name "MiddleDrag" for:
+
+- Forks intended for contribution back to this project
+- Describing compatibility (e.g., "works with MiddleDrag")
+- Factual references and reviews
+
+If you distribute a modified version as a separate project, please choose a different name to avoid user confusion.
+
 ## License
 
 [MIT License](LICENSE)
