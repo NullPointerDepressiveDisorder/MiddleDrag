@@ -11,6 +11,8 @@
 		EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
 		ECABF29E2F1C41D700912BC9 /* snippet-extract in Frameworks */ = {isa = PBXBuildFile; productRef = ECABF29D2F1C41D700912BC9 /* snippet-extract */; };
+		ECABF2A02F1C43B200912BC9 /* Documentation.docc in Sources */ = {isa = PBXBuildFile; fileRef = ECABF29F2F1C43B200912BC9 /* Documentation.docc */; };
+		ECABF2A12F1C43B200912BC9 /* Documentation.docc in Sources */ = {isa = PBXBuildFile; fileRef = ECABF29F2F1C43B200912BC9 /* Documentation.docc */; };
 		ECCE59182F16F72300962494 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECCE59172F16F72300962494 /* Sparkle */; settings = {ATTRIBUTES = (Required, ); }; };
 /* End PBXBuildFile section */
 
@@ -29,6 +31,7 @@
 		EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = "<group>"; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		ECABF29F2F1C43B200912BC9 /* Documentation.docc */ = {isa = PBXFileReference; lastKnownFileType = folder.documentationcatalog; path = Documentation.docc; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -51,10 +54,9 @@
 			);
 			target = MDT00000007 /* MiddleDragTests */;
 		};
-		EC7967092EFE76AA007453A4 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+		ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Info.plist,
 				MiddleDragTests/AccessibilityMonitorTests.swift,
 				MiddleDragTests/AlertHelperTests.swift,
 				MiddleDragTests/AnalyticsManagerTests.swift,
@@ -89,7 +91,7 @@
 		ECB868372EFAC6C200DC9C8F /* MiddleDrag */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				EC7967092EFE76AA007453A4 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
+				ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";
@@ -116,6 +118,7 @@
 		1A0000008 = {
 			isa = PBXGroup;
 			children = (
+				ECABF29F2F1C43B200912BC9 /* Documentation.docc */,
 				EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 				1A0000010 /* Products */,
@@ -284,11 +287,13 @@
 		1A0000013 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				ECABF2A12F1C43B200912BC9 /* Documentation.docc in Sources */,
 			);
 		};
 		MDT00000009 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				ECABF2A02F1C43B200912BC9 /* Documentation.docc in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -337,6 +342,8 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DOCC_EXTRACT_OBJC_INFO_FOR_SWIFT_SYMBOLS = YES;
+				DOCC_EXTRACT_SWIFT_INFO_FOR_OBJC_SYMBOLS = YES;
 				ENABLE_ENHANCED_SECURITY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_POINTER_AUTHENTICATION = YES;
@@ -360,6 +367,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				RUN_DOCUMENTATION_COMPILER = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
@@ -404,6 +412,8 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DOCC_EXTRACT_OBJC_INFO_FOR_SWIFT_SYMBOLS = YES;
+				DOCC_EXTRACT_SWIFT_INFO_FOR_OBJC_SYMBOLS = YES;
 				ENABLE_ENHANCED_SECURITY = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -420,6 +430,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				RUN_DOCUMENTATION_COMPILER = YES;
 				SDKROOT = macosx;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -492,6 +503,7 @@
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -559,6 +571,7 @@
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
