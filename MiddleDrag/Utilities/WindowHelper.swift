@@ -3,7 +3,7 @@ import CoreGraphics
 import Foundation
 
 /// Information about a window at a specific screen location
-struct WindowInfo {
+struct WindowInfo: Sendable {
     let bounds: CGRect
     let ownerName: String?
     let bundleIdentifier: String?
@@ -14,6 +14,8 @@ struct WindowInfo {
 }
 
 /// Utility for detecting window information under the cursor
+/// All methods use AppKit APIs (NSEvent, NSScreen, NSRunningApplication) that require main thread
+@MainActor
 class WindowHelper {
 
     /// Get the window under the current cursor position
@@ -43,7 +45,35 @@ class WindowHelper {
             return nil
         }
 
-        return getWindowAt(point: point, windowList: windowList)
+        // Use nonisolated helper to find the window, then add bundle ID
+        guard let basicInfo = getWindowAt(point: point, windowList: windowList) else {
+            return nil
+        }
+        
+        // Look up bundle identifier (requires MainActor for NSRunningApplication)
+        // Re-iterate to find the PID for this window
+        for windowInfo in windowList {
+            guard let layer = windowInfo[kCGWindowLayer] as? Int, layer == 0,
+                  let boundsDict = windowInfo[kCGWindowBounds] as? [String: CGFloat],
+                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
+                  bounds.contains(point) else {
+                continue
+            }
+            
+            var bundleID: String?
+            if let ownerPID = windowInfo[kCGWindowOwnerPID] as? pid_t {
+                bundleID = getBundleIdentifier(for: ownerPID)
+            }
+            
+            return WindowInfo(
+                bounds: basicInfo.bounds,
+                ownerName: basicInfo.ownerName,
+                bundleIdentifier: bundleID,
+                windowID: basicInfo.windowID
+            )
+        }
+        
+        return basicInfo
     }
 
     /// Internal method for testing - allows injecting mock window data
@@ -51,7 +81,9 @@ class WindowHelper {
     ///   - point: Screen point to check
     ///   - windowList: Array of window info dictionaries (from CGWindowListCopyWindowInfo or mock)
     /// - Returns: WindowInfo for the topmost window at point, or nil if none found
-    static func getWindowAt(point: CGPoint, windowList: [[CFString: Any]]) -> WindowInfo? {
+    /// - Note: This nonisolated method does NOT look up bundle identifiers (which requires MainActor).
+    ///         Use `getWindowAt(point:)` for production code that needs bundle IDs.
+    nonisolated static func getWindowAt(point: CGPoint, windowList: [[CFString: Any]]) -> WindowInfo? {
         // Iterate through windows (front to back order)
         for windowInfo in windowList {
             // Only consider regular windows (layer 0)
@@ -71,16 +103,12 @@ class WindowHelper {
                 let ownerName = windowInfo[kCGWindowOwnerName] as? String
                 let windowID = windowInfo[kCGWindowNumber] as? CGWindowID ?? 0
 
-                // Try to get bundle identifier from the owning process
-                var bundleID: String?
-                if let ownerPID = windowInfo[kCGWindowOwnerPID] as? pid_t {
-                    bundleID = getBundleIdentifier(for: ownerPID)
-                }
-
+                // Note: Bundle ID lookup requires MainActor (NSRunningApplication)
+                // This nonisolated test-injection method skips it - use getWindowAt(point:) for production
                 return WindowInfo(
                     bounds: bounds,
                     ownerName: ownerName,
-                    bundleIdentifier: bundleID,
+                    bundleIdentifier: nil,
                     windowID: windowID
                 )
             }
@@ -119,7 +147,7 @@ class WindowHelper {
     ///   - point: Screen point in Quartz coordinates (origin top-left) to check
     ///   - windowList: Array of window info dictionaries (from CGWindowListCopyWindowInfo or mock)
     /// - Returns: true if no window found at point (over desktop), false if window exists
-    static func isCursorOverDesktop(at point: CGPoint, windowList: [[CFString: Any]]) -> Bool {
+    nonisolated static func isCursorOverDesktop(at point: CGPoint, windowList: [[CFString: Any]]) -> Bool {
         return getWindowAt(point: point, windowList: windowList) == nil
     }
 

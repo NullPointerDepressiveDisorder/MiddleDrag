@@ -3,12 +3,14 @@ import Cocoa
 // MARK: - Protocols for Dependency Injection
 
 /// Protocol for presenting alerts and opening URLs, enabling testability
+@MainActor
 protocol AlertPresenter {
     func runModal(_ alert: NSAlert) -> NSApplication.ModalResponse
     func openURL(_ url: URL)
 }
 
 /// Default implementation using NSAlert and NSWorkspace
+@MainActor
 class DefaultAlertPresenter: AlertPresenter {
     func runModal(_ alert: NSAlert) -> NSApplication.ModalResponse {
         return alert.runModal()
@@ -20,6 +22,7 @@ class DefaultAlertPresenter: AlertPresenter {
 }
 
 /// Helper for displaying alerts and dialogs
+@MainActor
 class AlertHelper {
 
     // MARK: - Dependency Injection
