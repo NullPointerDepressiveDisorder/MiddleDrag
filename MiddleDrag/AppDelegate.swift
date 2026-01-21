@@ -191,9 +191,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Delay slightly to ensure UI is ready
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            MainActor.assumeIsolated {
-                self?.showGestureConfigurationPromptOnFirstLaunch()
-            }
+            self?.showGestureConfigurationPromptOnFirstLaunch()
         }
     }
 
