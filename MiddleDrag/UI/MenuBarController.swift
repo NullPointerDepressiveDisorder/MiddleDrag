@@ -1,6 +1,7 @@
 import Cocoa
 
 /// Manages the menu bar UI and user interactions
+@MainActor
 class MenuBarController: NSObject {
 
     // MARK: - Properties
@@ -32,7 +33,7 @@ class MenuBarController: NSObject {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        if let button = statusItem.button {
+        if statusItem.button != nil {
             updateStatusIcon(enabled: multitouchManager?.isEnabled ?? false)
         }
 
@@ -46,13 +47,13 @@ class MenuBarController: NSObject {
         button.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "MiddleDrag")
         button.image?.isTemplate = true
 
-        // Animate the change
-        NSAnimationContext.runAnimationGroup { context in
+        // Animate the change and restore alpha when complete
+        NSAnimationContext.runAnimationGroup({ context in
             context.duration = 0.2
             button.animator().alphaValue = 0.7
-        } completionHandler: {
-            button.animator().alphaValue = 1.0
-        }
+        }, completionHandler: {
+            button.alphaValue = 1.0
+        })
     }
 
     // MARK: - Menu Building

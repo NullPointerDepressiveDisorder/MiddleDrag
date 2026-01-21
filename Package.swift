@@ -12,5 +12,14 @@ let package = Package(
         .package(url: "https://github.com/getsentry/sentry-cocoa.git", from: "9.1.0"),
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.8.1")
     ],
-    targets: []
+    targets: [
+        .target(
+            name: "MiddleDrag",
+            dependencies: [
+                .product(name: "Sentry", package: "sentry-cocoa"),
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
+            path: "MiddleDrag"
+        )
+    ]
 )

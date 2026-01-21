@@ -3,7 +3,8 @@ import CoreGraphics
 import Foundation
 
 /// Main manager that coordinates multitouch monitoring and gesture recognition
-class MultitouchManager {
+/// Thread-safety: Uses internal gestureQueue for synchronization of touch processing
+final class MultitouchManager: @unchecked Sendable {
 
     // MARK: - Constants
 
@@ -82,6 +83,7 @@ class MultitouchManager {
     // MARK: - Initialization
 
     /// Shared production instance
+    /// Note: Initialized once at app startup, accessed from main thread and gesture queue
     static let shared = MultitouchManager()
 
     /// Initialize with optional factories for dependency injection
@@ -487,11 +489,12 @@ class MultitouchManager {
     private func shouldSkipGestureForDesktop() -> Bool {
         guard configuration.ignoreDesktop else { return false }
 
-        let checkDesktop = { WindowHelper.isCursorOverDesktop() }
         if Thread.isMainThread {
-            return checkDesktop()
+            return MainActor.assumeIsolated { WindowHelper.isCursorOverDesktop() }
         } else {
-            return DispatchQueue.main.sync { checkDesktop() }
+            return DispatchQueue.main.sync {
+                MainActor.assumeIsolated { WindowHelper.isCursorOverDesktop() }
+            }
         }
     }
 }
@@ -517,9 +520,12 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
+        // Note: touches pointer is valid only during this callback, but processTouches
+        // copies the data it needs synchronously before returning
+        let touchesPtr = unsafe touches  // Capture in local to make intent clear
         gestureQueue.async { [weak self] in
             unsafe self?.gestureRecognizer.processTouches(
-                touches, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
+                touchesPtr, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
         }
     }
 }
@@ -571,17 +577,19 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // which must be called from the main thread
         let shouldPerformTap: Bool
         if configuration.minimumWindowSizeFilterEnabled {
-            let checkWindowSize = {
-                WindowHelper.windowAtCursorMeetsMinimumSize(
-                    minWidth: self.configuration.minimumWindowWidth,
-                    minHeight: self.configuration.minimumWindowHeight
-                )
-            }
+            let minWidth = configuration.minimumWindowWidth
+            let minHeight = configuration.minimumWindowHeight
             // Avoid deadlock: call directly if already on main thread, otherwise sync
             if Thread.isMainThread {
-                shouldPerformTap = checkWindowSize()
+                shouldPerformTap = MainActor.assumeIsolated {
+                    WindowHelper.windowAtCursorMeetsMinimumSize(minWidth: minWidth, minHeight: minHeight)
+                }
             } else {
-                shouldPerformTap = DispatchQueue.main.sync { checkWindowSize() }
+                shouldPerformTap = DispatchQueue.main.sync {
+                    MainActor.assumeIsolated {
+                        WindowHelper.windowAtCursorMeetsMinimumSize(minWidth: minWidth, minHeight: minHeight)
+                    }
+                }
             }
         } else {
             shouldPerformTap = true
@@ -635,18 +643,20 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
         // which must be called from the main thread
         if configuration.minimumWindowSizeFilterEnabled {
-            let checkWindowSize = {
-                WindowHelper.windowAtCursorMeetsMinimumSize(
-                    minWidth: self.configuration.minimumWindowWidth,
-                    minHeight: self.configuration.minimumWindowHeight
-                )
-            }
+            let minWidth = configuration.minimumWindowWidth
+            let minHeight = configuration.minimumWindowHeight
             // Avoid deadlock: call directly if already on main thread, otherwise sync
             let meetsMinimumSize: Bool
             if Thread.isMainThread {
-                meetsMinimumSize = checkWindowSize()
+                meetsMinimumSize = MainActor.assumeIsolated {
+                    WindowHelper.windowAtCursorMeetsMinimumSize(minWidth: minWidth, minHeight: minHeight)
+                }
             } else {
-                meetsMinimumSize = DispatchQueue.main.sync { checkWindowSize() }
+                meetsMinimumSize = DispatchQueue.main.sync {
+                    MainActor.assumeIsolated {
+                        WindowHelper.windowAtCursorMeetsMinimumSize(minWidth: minWidth, minHeight: minHeight)
+                    }
+                }
             }
             if !meetsMinimumSize {
                 // Window too small - skip drag

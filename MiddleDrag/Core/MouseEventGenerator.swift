@@ -2,10 +2,11 @@ import AppKit
 import CoreGraphics
 import Foundation
 import Sentry
-@preconcurrency import os.log
+@unsafe @preconcurrency import os.log
 
 /// Generates mouse events for middle-click and middle-drag operations
-class MouseEventGenerator {
+/// Thread-safety: Uses stateLock and positionLock for internal synchronization
+final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -15,8 +16,16 @@ class MouseEventGenerator {
     /// Minimum movement threshold in pixels to prevent jitter
     var minimumMovementThreshold: CGFloat = 0.5
 
-    // State tracking
-    private var isMiddleMouseDown = false
+    // State tracking - protected by stateLock for thread safety
+    // isMiddleMouseDown is read from multiple threads (updateDrag on gesture queue,
+    // written on eventQueue), so it needs synchronization
+    private let stateLock = NSLock()
+    private var _isMiddleMouseDown = false
+    private var isMiddleMouseDown: Bool {
+        get { stateLock.withLock { _isMiddleMouseDown } }
+        set { stateLock.withLock { _isMiddleMouseDown = newValue } }
+    }
+    
     private var eventSource: CGEventSource?
 
     // Event generation queue for thread safety

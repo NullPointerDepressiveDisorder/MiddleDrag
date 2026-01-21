@@ -1,6 +1,7 @@
 import Cocoa
 
 /// Main application delegate
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Properties
@@ -31,7 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func initializeApp() {
+    @MainActor private func initializeApp() {
         // Close any windows again (in case they appeared during init)
         closeAllWindows()
 
@@ -48,7 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Only show the system prompt if we don't already have permission
         if !hasAccessibilityPermission {
-            let options = unsafe [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            // Use string literal to avoid concurrency warning on kAXTrustedCheckOptionPrompt global
+            // The constanunsafe t value is "AXTrustedCheckOptionPrompt"
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
             hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
         }
 
@@ -193,6 +196,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Show gesture configuration prompt on first launch
+    @MainActor
     private func showGestureConfigurationPromptOnFirstLaunch() {
         // Mark as shown regardless of user action to avoid showing again
         PreferencesManager.shared.markGestureConfigurationPromptShown()

@@ -2,7 +2,8 @@ import AppKit
 import Foundation
 
 /// Manages accessibility permission polling and app handling
-class AccessibilityMonitor {
+/// Thread-safety: Timer runs on main thread, state changes are sequential
+final class AccessibilityMonitor: @unchecked Sendable {
 
     // MARK: - Properties
 

@@ -46,10 +46,12 @@ class SystemGestureHelper {
     // MARK: - Dependency Injection
 
     /// Injectable settings provider for testing
-    static var settingsProvider: TrackpadSettingsProvider = DefaultTrackpadSettingsProvider()
+    /// Note: Only mutated during test setup, not during concurrent execution
+    nonisolated(unsafe) static var settingsProvider: TrackpadSettingsProvider = DefaultTrackpadSettingsProvider()
 
     /// Injectable process runner for testing
-    static var processRunner: ProcessRunner = DefaultProcessRunner()
+    /// Note: Only mutated during test setup, not during concurrent execution
+    nonisolated(unsafe) static var processRunner: ProcessRunner = DefaultProcessRunner()
 
     // MARK: - Constants
 
@@ -85,7 +87,7 @@ class SystemGestureHelper {
     /// - Parameter key: The trackpad setting key to read
     /// - Returns: The integer value, or nil if not found
     static func getTrackpadSetting(_ key: TrackpadKey) -> Int? {
-        return settingsProvider.getSetting(forKey: key.rawValue, domain: trackpadDomain)
+        return unsafe settingsProvider.getSetting(forKey: key.rawValue, domain: trackpadDomain)
     }
 
     /// Returns a dictionary of all current trackpad gesture settings
@@ -139,7 +141,7 @@ class SystemGestureHelper {
     ///   - value: The integer value to set
     /// - Returns: true if the command succeeded
     private static func writeTrackpadSetting(_ key: TrackpadKey, value: Int) -> Bool {
-        return processRunner.run(
+        return unsafe processRunner.run(
             executable: "/usr/bin/defaults",
             arguments: ["write", trackpadDomain, key.rawValue, "-int", String(value)]
         )
@@ -147,7 +149,7 @@ class SystemGestureHelper {
 
     /// Restart the Dock process to apply trackpad setting changes
     static func restartDock() {
-        _ = processRunner.run(executable: "/usr/bin/killall", arguments: ["Dock"])
+        _ = unsafe processRunner.run(executable: "/usr/bin/killall", arguments: ["Dock"])
     }
 
     // MARK: - Description

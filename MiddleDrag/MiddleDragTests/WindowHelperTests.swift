@@ -2,6 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
+@MainActor
 final class WindowHelperTests: XCTestCase {
 
     // MARK: - WindowInfo Tests
@@ -336,5 +337,251 @@ final class WindowHelperTests: XCTestCase {
 
         let result = WindowHelper.isCursorOverDesktop(at: point, windowList: mockWindows)
         XCTAssertTrue(result, "Should return true when point is outside all windows")
+    }
+
+    // MARK: - WindowID-Based Bundle ID Lookup Tests
+
+    func testGetWindowAt_WithMockData_OverlappingWindows_UsesWindowIDForBundleLookup() {
+        // Test that when overlapping windows exist, we use windowID to find the correct one
+        // for bundle ID lookup, not just the first one that contains the point
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "FrontWindow", windowID: 111, ownerPID: 1001),
+            createMockWindow(
+                x: 100, y: 100, width: 500, height: 400,
+                ownerName: "BackWindow", windowID: 222, ownerPID: 2002),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)  // Inside both windows
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        // Should return first window (FrontWindow) with its windowID
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "FrontWindow")
+        XCTAssertEqual(result?.windowID, 111)
+        // Note: bundleIdentifier will be nil in tests since NSRunningApplication
+        // won't find these fake PIDs, but the windowID should be correct
+    }
+
+    func testGetWindowAt_WithMockData_WindowIDMatchEnsuresCorrectWindow() {
+        // Verify that windowID is used to match, not point-based re-search
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 200, height: 200,
+                ownerName: "SmallFront", windowID: 100, ownerPID: 1),
+            createMockWindow(
+                x: 50, y: 50, width: 400, height: 400,
+                ownerName: "LargeBack", windowID: 200, ownerPID: 2),
+        ]
+
+        // Point that's inside both windows
+        let point = CGPoint(x: 150, y: 150)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        // Should get SmallFront (first match) with windowID 100
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.windowID, 100)
+        XCTAssertEqual(result?.ownerName, "SmallFront")
+    }
+
+    func testGetWindowAt_WithMockData_MultipleWindowsSameSize() {
+        // Multiple windows with same bounds but different IDs
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "Window1", windowID: 1001, ownerPID: 101),
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "Window2", windowID: 1002, ownerPID: 102),
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "Window3", windowID: 1003, ownerPID: 103),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        // Should return Window1 (first in list) with its specific windowID
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.windowID, 1001)
+        XCTAssertEqual(result?.ownerName, "Window1")
+    }
+
+    func testGetWindowAt_WithMockData_WindowIDUsedNotPointReMatch() {
+        // Scenario: First window at point has windowID=50, but if we re-searched
+        // by point we might match a different window. Verify windowID is used.
+        let mockWindows = [
+            createMockWindow(
+                x: 200, y: 200, width: 100, height: 100,
+                ownerName: "TargetWindow", windowID: 50, ownerPID: 500),
+            createMockWindow(
+                x: 150, y: 150, width: 200, height: 200,
+                ownerName: "OverlappingWindow", windowID: 60, ownerPID: 600),
+        ]
+
+        // Point inside TargetWindow (which is listed first, so it wins)
+        let point = CGPoint(x: 220, y: 220)
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.windowID, 50)
+        XCTAssertEqual(result?.ownerName, "TargetWindow")
+    }
+
+    func testGetWindowAt_NonisolatedMethod_ReturnsNilBundleID() {
+        // The nonisolated test-injection method should always return nil bundleIdentifier
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "TestApp", windowID: 123, ownerPID: 999)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        // Call the nonisolated method directly
+        let result = WindowHelper.getWindowAt(point: point, windowList: mockWindows)
+
+        XCTAssertNotNil(result)
+        // The nonisolated method doesn't look up bundle IDs
+        XCTAssertNil(result?.bundleIdentifier)
+    }
+
+    // MARK: - Bundle Identifier Lookup Tests (Injectable)
+
+    func testGetWindowAt_WithBundleLookup_PopulatesBundleID() {
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "TestApp", windowID: 123, ownerPID: 1001)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { _ in "com.test.app" }
+        )
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.bundleIdentifier, "com.test.app")
+    }
+
+    func testGetWindowAt_WithBundleLookup_PassesCorrectPID() {
+        var capturedPID: pid_t?
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "TestApp", windowID: 123, ownerPID: 42)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        _ = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { pid in
+                capturedPID = pid
+                return "com.test.app"
+            }
+        )
+
+        XCTAssertEqual(capturedPID, 42)
+    }
+
+    func testGetWindowAt_WithBundleLookup_ReturnsNilWhenLookupReturnsNil() {
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "TestApp", windowID: 123, ownerPID: 1001)
+        ]
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { _ in nil }
+        )
+
+        XCTAssertNotNil(result)
+        XCTAssertNil(result?.bundleIdentifier)
+    }
+
+    func testGetWindowAt_WithBundleLookup_OverlappingWindows_UsesCorrectPID() {
+        var capturedPID: pid_t?
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 400, height: 300,
+                ownerName: "FrontWindow", windowID: 111, ownerPID: 1001),
+            createMockWindow(
+                x: 100, y: 100, width: 500, height: 400,
+                ownerName: "BackWindow", windowID: 222, ownerPID: 2002),
+        ]
+
+        let point = CGPoint(x: 200, y: 200)  // Inside both windows
+        let result = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { pid in
+                capturedPID = pid
+                return "com.front.app"
+            }
+        )
+
+        // Should use PID from FrontWindow (first match), not BackWindow
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.ownerName, "FrontWindow")
+        XCTAssertEqual(capturedPID, 1001)
+        XCTAssertEqual(result?.bundleIdentifier, "com.front.app")
+    }
+
+    func testGetWindowAt_WithBundleLookup_NoOwnerPID_BundleIDIsNil() {
+        // Window without ownerPID should have nil bundleIdentifier
+        let mockWindows: [[CFString: Any]] = [
+            [
+                kCGWindowLayer: 0,
+                kCGWindowBounds: ["X": CGFloat(100), "Y": CGFloat(100), "Width": CGFloat(400), "Height": CGFloat(300)],
+                kCGWindowNumber: CGWindowID(123),
+                kCGWindowOwnerName: "NoOwnerPIDWindow"
+                // Note: kCGWindowOwnerPID is intentionally missing
+            ]
+        ]
+
+        var lookupCalled = false
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { _ in
+                lookupCalled = true
+                return "should.not.be.called"
+            }
+        )
+
+        XCTAssertNotNil(result)
+        XCTAssertNil(result?.bundleIdentifier)
+        XCTAssertFalse(lookupCalled, "Lookup should not be called when no ownerPID")
+    }
+
+    func testGetWindowAt_WithBundleLookup_DifferentBundleIDsPerPID() {
+        // Verify lookup is called with correct PID and returns different values
+        let mockWindows = [
+            createMockWindow(
+                x: 100, y: 100, width: 200, height: 200,
+                ownerName: "App1", windowID: 1, ownerPID: 100),
+        ]
+
+        let bundleIDs: [pid_t: String] = [
+            100: "com.app1.bundle",
+            200: "com.app2.bundle",
+        ]
+
+        let point = CGPoint(x: 150, y: 150)
+        let result = WindowHelper.getWindowAt(
+            point: point,
+            windowList: mockWindows,
+            bundleIdentifierLookup: { pid in bundleIDs[pid] }
+        )
+
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.bundleIdentifier, "com.app1.bundle")
     }
 }

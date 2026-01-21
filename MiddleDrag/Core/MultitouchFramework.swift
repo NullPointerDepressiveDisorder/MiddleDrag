@@ -63,7 +63,8 @@ func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTConta
 // MARK: - Framework Helper
 
 /// Helper class to manage MultitouchSupport framework access
-class MultitouchFramework {
+/// Thread-safe: contains no mutable state, just wraps C function calls
+final class MultitouchFramework: @unchecked Sendable {
     
     /// Shared instance
     static let shared = MultitouchFramework()

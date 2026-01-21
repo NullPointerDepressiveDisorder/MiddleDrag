@@ -1,7 +1,8 @@
 import Foundation
 
 /// Manages user preferences persistence
-class PreferencesManager {
+/// Thread-safe: UserDefaults is internally synchronized
+final class PreferencesManager: @unchecked Sendable {
 
     static let shared = PreferencesManager()
 

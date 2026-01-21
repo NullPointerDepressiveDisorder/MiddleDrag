@@ -4,23 +4,23 @@ import Foundation
 // MARK: - Debug Touch Counter (Debug builds only)
 
 #if DEBUG
-    private var touchCount = 0
+    nonisolated(unsafe) private var touchCount = 0
 #endif
 
 // MARK: - Global Callback Storage
 
 // Required because C callbacks cannot capture Swift context
-@unsafe private var gDeviceMonitor: DeviceMonitor?
+@unsafe nonisolated(unsafe) private var gDeviceMonitor: DeviceMonitor?
 
 // MARK: - C Callback Function
 
 @unsafe private let deviceContactCallback: MTContactCallbackFunction = {
     device, touches, numTouches, timestamp, frame in
     #if DEBUG
-        touchCount += 1
+        unsafe touchCount += 1
         // Log sparingly to avoid performance impact
-        if touchCount <= 5 || touchCount % 500 == 0 {
-            Log.debug("Touch callback #\(touchCount): \(numTouches) touches", category: .device)
+        if unsafe touchCount <= 5 || touchCount % 500 == 0 {
+            Log.debug(unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
         }
     #endif
 

@@ -2,7 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
-@unsafe final class MenuBarControllerTests: XCTestCase {
+@MainActor @unsafe final class MenuBarControllerTests: XCTestCase {
 
     var mockDevice: MockDeviceMonitor!
     var manager: MultitouchManager!

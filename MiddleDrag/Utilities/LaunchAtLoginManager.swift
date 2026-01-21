@@ -2,7 +2,8 @@ import ServiceManagement
 import Cocoa
 
 /// Manages launch at login functionality
-class LaunchAtLoginManager {
+/// Thread-safety: Uses ServiceManagement APIs which are thread-safe
+final class LaunchAtLoginManager: @unchecked Sendable {
     
     static let shared = LaunchAtLoginManager()
     

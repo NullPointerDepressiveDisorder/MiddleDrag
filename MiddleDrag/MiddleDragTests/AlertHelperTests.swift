@@ -5,6 +5,7 @@ import XCTest
 // MARK: - Mock Alert Presenter
 
 /// Mock presenter for testing AlertHelper without displaying modals
+@MainActor
 class MockAlertPresenter: AlertPresenter {
     var presentedAlerts: [NSAlert] = []
     var openedURLs: [URL] = []
@@ -27,6 +28,7 @@ class MockAlertPresenter: AlertPresenter {
 }
 
 /// Tests for AlertHelper.
+@MainActor
 final class AlertHelperTests: XCTestCase {
 
     var mockPresenter: MockAlertPresenter!
