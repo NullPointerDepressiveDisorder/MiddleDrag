@@ -19,10 +19,7 @@ let package = Package(
                 .product(name: "Sentry", package: "sentry-cocoa"),
                 .product(name: "Sparkle", package: "Sparkle")
             ],
-            path: "MiddleDrag",
-            swiftSettings: [
-                .swiftLanguageMode(.v5)
-            ]
+            path: "MiddleDrag"
         )
     ]
 )
