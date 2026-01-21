@@ -2,6 +2,7 @@ import XCTest
 
 @testable import MiddleDrag
 
+@MainActor
 final class WindowHelperTests: XCTestCase {
 
     // MARK: - WindowInfo Tests
