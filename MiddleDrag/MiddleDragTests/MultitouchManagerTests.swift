@@ -1899,4 +1899,248 @@ final class MultitouchManagerTests: XCTestCase {
         // Should complete without crash
         XCTAssertFalse(manager.isMonitoring)
     }
+
+    // MARK: - Thread-Safety Tests for MainActor.assumeIsolated Calls
+
+    func testIgnoreDesktopCheckFromMainThread() {
+        // Test that ignoreDesktop check works from main thread without deadlock
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable ignoreDesktop feature
+        var config = GestureConfiguration()
+        config.ignoreDesktop = true
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from main thread - should complete without deadlock
+        let expectation = XCTestExpectation(description: "Main thread check completes")
+        DispatchQueue.main.async {
+            // This exercises shouldSkipGestureForDesktop from main thread
+            manager.gestureRecognizerDidBeginDragging(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testIgnoreDesktopCheckFromBackgroundThread() {
+        // Test that ignoreDesktop check works from background thread
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable ignoreDesktop feature
+        var config = GestureConfiguration()
+        config.ignoreDesktop = true
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from background thread - uses DispatchQueue.main.sync
+        let expectation = XCTestExpectation(description: "Background thread check completes")
+        DispatchQueue.global(qos: .userInitiated).async {
+            // This exercises shouldSkipGestureForDesktop from background thread
+            manager.gestureRecognizerDidBeginDragging(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testWindowSizeFilterCheckFromMainThread_Drag() {
+        // Test that window size filter check works from main thread for drag
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 100
+        config.minimumWindowHeight = 100
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from main thread - uses MainActor.assumeIsolated directly
+        let expectation = XCTestExpectation(description: "Main thread drag check completes")
+        DispatchQueue.main.async {
+            manager.gestureRecognizerDidBeginDragging(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testWindowSizeFilterCheckFromBackgroundThread_Drag() {
+        // Test that window size filter check works from background thread for drag
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 100
+        config.minimumWindowHeight = 100
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from background thread - uses DispatchQueue.main.sync
+        let expectation = XCTestExpectation(description: "Background thread drag check completes")
+        DispatchQueue.global(qos: .userInitiated).async {
+            manager.gestureRecognizerDidBeginDragging(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testWindowSizeFilterCheckFromMainThread_Tap() {
+        // Test that window size filter check works from main thread for tap
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter
+        var config = GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 100
+        config.minimumWindowHeight = 100
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from main thread
+        let expectation = XCTestExpectation(description: "Main thread tap check completes")
+        DispatchQueue.main.async {
+            manager.gestureRecognizerDidTap(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testWindowSizeFilterCheckFromBackgroundThread_Tap() {
+        // Test that window size filter check works from background thread for tap
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable window size filter
+        var config = GestureConfiguration()
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 100
+        config.minimumWindowHeight = 100
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from background thread - uses DispatchQueue.main.sync
+        let expectation = XCTestExpectation(description: "Background thread tap check completes")
+        DispatchQueue.global(qos: .userInitiated).async {
+            manager.gestureRecognizerDidTap(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testCombinedIgnoreDesktopAndWindowSizeFilterFromBackgroundThread() {
+        // Test both features enabled - exercises both code paths
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        // Enable both features
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        config.ignoreDesktop = true
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 100
+        config.minimumWindowHeight = 100
+        manager.updateConfiguration(config)
+
+        manager.start()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        // Call from background thread - exercises both MainActor.assumeIsolated paths
+        let expectation = XCTestExpectation(description: "Combined check completes")
+        DispatchQueue.global(qos: .userInitiated).async {
+            manager.gestureRecognizerDidBeginDragging(recognizer)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        manager.stop()
+    }
+
+    func testMainActorIsolatedCallsDoNotDeadlock() {
+        // Stress test to ensure no deadlock from rapid thread switches
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        config.ignoreDesktop = true
+        config.minimumWindowSizeFilterEnabled = true
+        config.minimumWindowWidth = 50
+        config.minimumWindowHeight = 50
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        let iterations = 10
+        let expectation = XCTestExpectation(description: "All iterations complete")
+        expectation.expectedFulfillmentCount = iterations * 2
+
+        for _ in 0..<iterations {
+            // Main thread call
+            DispatchQueue.main.async {
+                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                manager.gestureRecognizerDidBeginDragging(recognizer)
+                manager.gestureRecognizerDidEndDragging(recognizer)
+                expectation.fulfill()
+            }
+
+            // Background thread call
+            DispatchQueue.global(qos: .userInitiated).async {
+                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                manager.gestureRecognizerDidTap(recognizer)
+                expectation.fulfill()
+            }
+        }
+
+        wait(for: [expectation], timeout: 10.0)
+        manager.stop()
+    }
 }
