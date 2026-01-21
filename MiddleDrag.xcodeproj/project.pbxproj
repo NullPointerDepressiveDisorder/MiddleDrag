@@ -10,9 +10,6 @@
 		EC0E54092F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
 		EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
 		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
-		ECABF29E2F1C41D700912BC9 /* snippet-extract in Frameworks */ = {isa = PBXBuildFile; productRef = ECABF29D2F1C41D700912BC9 /* snippet-extract */; };
-		ECABF2A02F1C43B200912BC9 /* Documentation.docc in Sources */ = {isa = PBXBuildFile; fileRef = ECABF29F2F1C43B200912BC9 /* Documentation.docc */; };
-		ECABF2A12F1C43B200912BC9 /* Documentation.docc in Sources */ = {isa = PBXBuildFile; fileRef = ECABF29F2F1C43B200912BC9 /* Documentation.docc */; };
 		ECCE59182F16F72300962494 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECCE59172F16F72300962494 /* Sparkle */; settings = {ATTRIBUTES = (Required, ); }; };
 /* End PBXBuildFile section */
 
@@ -31,7 +28,6 @@
 		EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = "<group>"; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		ECABF29F2F1C43B200912BC9 /* Documentation.docc */ = {isa = PBXFileReference; lastKnownFileType = folder.documentationcatalog; path = Documentation.docc; sourceTree = "<group>"; };
 		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -102,7 +98,6 @@
 		1A0000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				ECABF29E2F1C41D700912BC9 /* snippet-extract in Frameworks */,
 				EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */,
 				ECCE59182F16F72300962494 /* Sparkle in Frameworks */,
 			);
@@ -118,7 +113,6 @@
 		1A0000008 = {
 			isa = PBXGroup;
 			children = (
-				ECABF29F2F1C43B200912BC9 /* Documentation.docc */,
 				EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 				1A0000010 /* Products */,
@@ -166,7 +160,6 @@
 			name = MiddleDrag;
 			packageProductDependencies = (
 				ECCE59172F16F72300962494 /* Sparkle */,
-				ECABF29D2F1C41D700912BC9 /* snippet-extract */,
 			);
 			productName = MiddleDrag;
 			productReference = 1A0000004 /* MiddleDrag.app */;
@@ -223,7 +216,6 @@
 			packageReferences = (
 				EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 				ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */,
-				ECABF29C2F1C41D700912BC9 /* XCRemoteSwiftPackageReference "swift-docc-plugin" */,
 			);
 			preferredProjectObjectVersion = 90;
 			productRefGroup = 1A0000010 /* Products */;
@@ -287,13 +279,11 @@
 		1A0000013 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				ECABF2A12F1C43B200912BC9 /* Documentation.docc in Sources */,
 			);
 		};
 		MDT00000009 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
-				ECABF2A02F1C43B200912BC9 /* Documentation.docc in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
@@ -664,14 +654,6 @@
 				minimumVersion = 9.0.0;
 			};
 		};
-		ECABF29C2F1C41D700912BC9 /* XCRemoteSwiftPackageReference "swift-docc-plugin" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/apple/swift-docc-plugin";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.4.5;
-			};
-		};
 		ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle";
@@ -687,11 +669,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
-		};
-		ECABF29D2F1C41D700912BC9 /* snippet-extract */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = ECABF29C2F1C41D700912BC9 /* XCRemoteSwiftPackageReference "swift-docc-plugin" */;
-			productName = "snippet-extract";
 		};
 		ECCE59172F16F72300962494 /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build:css": "tailwindcss -i ./src/input.css -o ./docs/style.css"
+    "build:css": "tailwindcss -i ./src/input.css -o ./docs/style.css",
+    "watch:css": "tailwindcss -i ./src/input.css -o ./docs/style.css --watch"
   },
   "repository": {
     "type": "git",

@@ -10,8 +10,7 @@ let package = Package(
     products: [],
     dependencies: [
         .package(url: "https://github.com/getsentry/sentry-cocoa.git", from: "9.1.0"),
-        .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.8.1"),
-        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.5")
+        .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.8.1")
     ],
     targets: [
         .target(
