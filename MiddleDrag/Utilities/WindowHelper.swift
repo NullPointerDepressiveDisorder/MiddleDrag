@@ -45,12 +45,26 @@ class WindowHelper {
             return nil
         }
 
+        return getWindowAt(point: point, windowList: windowList, bundleIdentifierLookup: getBundleIdentifier)
+    }
+
+    /// Internal method for testing - allows injecting mock window data and bundle ID lookup
+    /// - Parameters:
+    ///   - point: Screen point to check
+    ///   - windowList: Array of window info dictionaries (from CGWindowListCopyWindowInfo or mock)
+    ///   - bundleIdentifierLookup: Function to look up bundle ID from PID (injectable for testing)
+    /// - Returns: WindowInfo for the topmost window at point, or nil if none found
+    static func getWindowAt(
+        point: CGPoint,
+        windowList: [[CFString: Any]],
+        bundleIdentifierLookup: (pid_t) -> String?
+    ) -> WindowInfo? {
         // Use nonisolated helper to find the window
         guard let basicInfo = getWindowAt(point: point, windowList: windowList) else {
             return nil
         }
         
-        // Look up bundle identifier (requires MainActor for NSRunningApplication)
+        // Look up bundle identifier
         // Find the exact window by windowID to avoid issues with overlapping windows
         for windowInfo in windowList {
             guard let windowID = windowInfo[kCGWindowNumber] as? CGWindowID,
@@ -60,7 +74,7 @@ class WindowHelper {
             
             var bundleID: String?
             if let ownerPID = windowInfo[kCGWindowOwnerPID] as? pid_t {
-                bundleID = getBundleIdentifier(for: ownerPID)
+                bundleID = bundleIdentifierLookup(ownerPID)
             }
             
             return WindowInfo(
