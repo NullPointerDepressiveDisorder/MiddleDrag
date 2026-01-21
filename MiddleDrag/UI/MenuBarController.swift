@@ -33,7 +33,7 @@ class MenuBarController: NSObject {
     private func setupStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        if let button = statusItem.button {
+        if statusItem.button != nil {
             updateStatusIcon(enabled: multitouchManager?.isEnabled ?? false)
         }
 
