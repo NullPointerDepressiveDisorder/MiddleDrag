@@ -1,6 +1,7 @@
 import Cocoa
 
 /// Manages the menu bar UI and user interactions
+@MainActor
 class MenuBarController: NSObject {
 
     // MARK: - Properties
@@ -46,12 +47,15 @@ class MenuBarController: NSObject {
         button.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "MiddleDrag")
         button.image?.isTemplate = true
 
-        // Animate the change
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.2
-            button.animator().alphaValue = 0.7
-        } completionHandler: {
-            button.animator().alphaValue = 1.0
+        // Animate the change (avoid Sendable closures touching main-actor properties)
+        NSAnimationContext.beginGrouping()
+        NSAnimationContext.current.duration = 0.2
+        button.animator().alphaValue = 0.7
+        NSAnimationContext.endGrouping()
+
+        // Restore alpha on the next run loop tick
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            button.alphaValue = 1.0
         }
     }
 
