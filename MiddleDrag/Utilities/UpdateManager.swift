@@ -3,7 +3,8 @@ import Sparkle
 
 /// Manages app updates via Sparkle framework
 /// Offline by default - only checks for updates when explicitly enabled by user
-final class UpdateManager: NSObject {
+/// Thread-safety: Sparkle framework is designed to be accessed from main thread
+final class UpdateManager: NSObject, @unchecked Sendable {
 
     static let shared = UpdateManager()
 
@@ -77,7 +78,7 @@ final class UpdateManager: NSObject {
     // MARK: - Public Methods
 
     /// Manually check for updates (always available via menu)
-    func checkForUpdates() {
+    @MainActor func checkForUpdates() {
         guard let controller = updaterController else {
             Log.error("Cannot check for updates: updaterController is not initialized", category: .app)
             return

@@ -156,7 +156,7 @@ class MouseEventGenerator {
 
             // Only log to Sentry if telemetry is enabled (offline by default)
             // App must be offline by default - no network calls unless user opts in
-            if CrashReporter.shared.anyTelemetryEnabled {
+            if unsafe CrashReporter.shared.anyTelemetryEnabled {
                 let attributes: [String: Any] = unsafe [
                     "category": "gesture",
                     "drag_movement": "horizontal",

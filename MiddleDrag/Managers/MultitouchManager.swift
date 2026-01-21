@@ -3,7 +3,8 @@ import CoreGraphics
 import Foundation
 
 /// Main manager that coordinates multitouch monitoring and gesture recognition
-class MultitouchManager {
+/// Thread-safety: Uses internal gestureQueue for synchronization of touch processing
+final class MultitouchManager: @unchecked Sendable {
 
     // MARK: - Constants
 
@@ -82,7 +83,8 @@ class MultitouchManager {
     // MARK: - Initialization
 
     /// Shared production instance
-    static let shared = MultitouchManager()
+    /// Note: Initialized once at app startup, accessed from main thread and gesture queue
+    nonisolated(unsafe) static let shared = MultitouchManager()
 
     /// Initialize with optional factories for dependency injection
     /// - Parameters:

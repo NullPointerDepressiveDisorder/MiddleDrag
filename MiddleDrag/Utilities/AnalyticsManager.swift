@@ -125,7 +125,8 @@ enum Log {
 /// - Crash reporting ON only: Network call only when app crashes
 /// - Performance monitoring ON: Network calls during normal operation (sampled)
 
-final class CrashReporter {
+/// Thread-safety: Uses UserDefaults (internally synchronized) and Sentry SDK (thread-safe)
+final class CrashReporter: @unchecked Sendable {
     
     static let shared = CrashReporter()
     

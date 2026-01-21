@@ -498,7 +498,7 @@
 				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -566,7 +566,7 @@
 				SPARKLE_PUBLIC_KEY = "BB1vVeTG+kdlSScR/XgAMTwLD9NvCXg/sGrkIumIerc=";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};

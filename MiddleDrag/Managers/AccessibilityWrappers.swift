@@ -16,7 +16,7 @@ class SystemAccessibilityPermissionChecker: AccessibilityPermissionChecking {
 /// Protocol for app control (relaunching/termination) (for testing)
 protocol AppLifecycleControlling {
     func relaunch()
-    func terminate()
+    @MainActor func terminate()
 }
 
 /// Default implementation using NSWorkspace and NSApp
@@ -29,7 +29,10 @@ protocol AppLifecycleProcessRunner {
 
 extension Process: AppLifecycleProcessRunner {}
 
-class SystemAppLifecycleController: AppLifecycleControlling {
+/// Controller for app lifecycle operations (relaunch, terminate)
+/// Marked @unchecked Sendable as it's only used for simple fire-and-forget operations
+/// with no meaningful shared mutable state that could race
+class SystemAppLifecycleController: AppLifecycleControlling, @unchecked Sendable {
 
     // Factory for creating processes, can be overridden for testing
     internal var processFactory: () -> AppLifecycleProcessRunner = { Process() }
@@ -55,8 +58,10 @@ class SystemAppLifecycleController: AppLifecycleControlling {
             // Wait a moment to ensure the process has actually started
             // Note: run() is synchronous in starting the process, but the shell command runs async
             // To prevent race conditions where we terminate too early, we'll delay slightly
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.terminate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                MainActor.assumeIsolated {
+                    self?.terminate()
+                }
             }
         } catch {
             Log.error(
@@ -67,7 +72,7 @@ class SystemAppLifecycleController: AppLifecycleControlling {
 
     // Closure for opening applications, can be overridden for testing
     internal var workspaceAppOpener:
-        (URL, NSWorkspace.OpenConfiguration, @escaping (NSRunningApplication?, Error?) -> Void) ->
+        @Sendable (URL, NSWorkspace.OpenConfiguration, @escaping @Sendable (NSRunningApplication?, Error?) -> Void) ->
             Void = { url, config, completion in
                 NSWorkspace.shared.openApplication(
                     at: url, configuration: config, completionHandler: completion)
@@ -83,12 +88,15 @@ class SystemAppLifecycleController: AppLifecycleControlling {
                 Log.error("Failed to restart app: \(error.localizedDescription)", category: .app)
             } else {
                 DispatchQueue.main.async {
-                    self?.terminate()
+                    MainActor.assumeIsolated {
+                        self?.terminate()
+                    }
                 }
             }
         }
     }
 
+    @MainActor
     func terminate() {
         NSApp.terminate(nil)
     }

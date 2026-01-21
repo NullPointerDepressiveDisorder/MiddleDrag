@@ -6,7 +6,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Properties
 
-    private let multitouchManager = MultitouchManager.shared
+    private let multitouchManager = unsafe MultitouchManager.shared
     private var menuBarController: MenuBarController?
     private var preferences: UserPreferences!
 
@@ -16,7 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize crash reporting only if user has opted in (offline by default)
-        CrashReporter.shared.initializeIfEnabled()
+        unsafe CrashReporter.shared.initializeIfEnabled()
 
         Log.info("MiddleDrag starting... (Session: \(Log.sessionID))", category: .app)
 
@@ -49,7 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         // Only show the system prompt if we don't already have permission
         if !hasAccessibilityPermission {
-            let options = unsafe [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            // Use string literal to avoid concurrency warning on kAXTrustedCheckOptionPrompt global
+            // The constant value is "AXTrustedCheckOptionPrompt"
+            let options = ["AXTrustedCheckOptionPrompt": true] as CFDictionary
             hasAccessibilityPermission = AXIsProcessTrustedWithOptions(options)
         }
 
@@ -98,7 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Configure launch at login
         if preferences.launchAtLogin {
-            LaunchAtLoginManager.shared.setLaunchAtLogin(true)
+            unsafe LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
 
         // Initialize update manager (offline by default, respects user preference)
@@ -172,7 +174,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func launchAtLoginChanged(_ notification: Notification) {
         if let enabled = notification.object as? Bool {
-            LaunchAtLoginManager.shared.setLaunchAtLogin(enabled)
+            unsafe LaunchAtLoginManager.shared.setLaunchAtLogin(enabled)
         }
     }
 
