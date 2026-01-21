@@ -1,6 +1,7 @@
 import Cocoa
 
 /// Main application delegate
+@MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Properties
@@ -31,7 +32,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func initializeApp() {
+    @MainActor private func initializeApp() {
         // Close any windows again (in case they appeared during init)
         closeAllWindows()
 
@@ -188,11 +189,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Delay slightly to ensure UI is ready
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.showGestureConfigurationPromptOnFirstLaunch()
+            MainActor.assumeIsolated {
+                self?.showGestureConfigurationPromptOnFirstLaunch()
+            }
         }
     }
 
     /// Show gesture configuration prompt on first launch
+    @MainActor
     private func showGestureConfigurationPromptOnFirstLaunch() {
         // Mark as shown regardless of user action to avoid showing again
         PreferencesManager.shared.markGestureConfigurationPromptShown()
