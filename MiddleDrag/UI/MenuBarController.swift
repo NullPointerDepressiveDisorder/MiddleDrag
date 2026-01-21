@@ -47,16 +47,13 @@ class MenuBarController: NSObject {
         button.image = NSImage(systemSymbolName: iconName, accessibilityDescription: "MiddleDrag")
         button.image?.isTemplate = true
 
-        // Animate the change (avoid Sendable closures touching main-actor properties)
-        NSAnimationContext.beginGrouping()
-        NSAnimationContext.current.duration = 0.2
-        button.animator().alphaValue = 0.7
-        NSAnimationContext.endGrouping()
-
-        // Restore alpha on the next run loop tick
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+        // Animate the change and restore alpha when complete
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.2
+            button.animator().alphaValue = 0.7
+        }, completionHandler: {
             button.alphaValue = 1.0
-        }
+        })
     }
 
     // MARK: - Menu Building
