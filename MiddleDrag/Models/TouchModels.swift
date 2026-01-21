@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Touch Data Structures
 
 /// Represents a point in 2D space
-struct MTPoint {
+struct MTPoint: Sendable {
     var x: Float
     var y: Float
     
@@ -21,14 +21,14 @@ struct MTPoint {
 }
 
 /// Represents a vector with position and velocity components
-struct MTVector {
+struct MTVector: Sendable {
     var position: MTPoint
     var velocity: MTPoint
 }
 
 /// Raw touch data structure from MultitouchSupport framework
 /// This structure must match the memory layout expected by the framework
-struct MTTouch {
+struct MTTouch: Sendable {
     var frame: Int32
     var timestamp: Double
     var pathIndex: Int32
@@ -48,7 +48,7 @@ struct MTTouch {
 }
 
 /// Touch state values from MultitouchSupport framework
-enum TouchState: UInt32 {
+enum TouchState: UInt32, Sendable {
     case notTracking = 0
     case starting = 1
     case hovering = 2
@@ -70,7 +70,7 @@ enum TouchState: UInt32 {
 }
 
 /// Tracked finger with enhanced metadata
-struct TrackedFinger {
+struct TrackedFinger: Sendable {
     let id: Int32
     var position: MTPoint
     var velocity: MTPoint

@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Gesture State
 
 /// Represents the current state of gesture recognition
-enum GestureState {
+enum GestureState: Sendable {
     case idle
     case possibleTap
     case dragging
@@ -22,7 +22,7 @@ enum GestureState {
 // MARK: - Configuration
 
 /// Configuration for gesture detection and mouse behavior
-struct GestureConfiguration {
+struct GestureConfiguration: Sendable {
     // Sensitivity and smoothing
     var sensitivity: Float = 1.0
     var smoothingFactor: Float = 0.3
@@ -86,7 +86,7 @@ struct GestureConfiguration {
 // MARK: - Modifier Key Type
 
 /// Types of modifier keys that can be required for gesture activation
-enum ModifierKeyType: String, Codable, CaseIterable {
+enum ModifierKeyType: String, Codable, CaseIterable, Sendable {
     case shift
     case control
     case option
@@ -105,7 +105,7 @@ enum ModifierKeyType: String, Codable, CaseIterable {
 // MARK: - User Preferences
 
 /// User preferences that persist across app launches
-struct UserPreferences: Codable {
+struct UserPreferences: Codable, Sendable {
     var launchAtLogin: Bool = false
     var dragSensitivity: Double = 1.0
     var tapThreshold: Double = 0.15

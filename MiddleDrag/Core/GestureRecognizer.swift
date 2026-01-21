@@ -277,7 +277,7 @@ class GestureRecognizer {
 // MARK: - Gesture Data
 
 /// Data representing the current state of a gesture
-struct GestureData {
+struct GestureData: Sendable {
     let centroid: MTPoint
     let velocity: MTPoint
     let pressure: Float
