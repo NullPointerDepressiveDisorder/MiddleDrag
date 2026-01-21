@@ -45,18 +45,16 @@ class WindowHelper {
             return nil
         }
 
-        // Use nonisolated helper to find the window, then add bundle ID
+        // Use nonisolated helper to find the window
         guard let basicInfo = getWindowAt(point: point, windowList: windowList) else {
             return nil
         }
         
         // Look up bundle identifier (requires MainActor for NSRunningApplication)
-        // Re-iterate to find the PID for this window
+        // Find the exact window by windowID to avoid issues with overlapping windows
         for windowInfo in windowList {
-            guard let layer = windowInfo[kCGWindowLayer] as? Int, layer == 0,
-                  let boundsDict = windowInfo[kCGWindowBounds] as? [String: CGFloat],
-                  let bounds = CGRect(dictionaryRepresentation: boundsDict as CFDictionary),
-                  bounds.contains(point) else {
+            guard let windowID = windowInfo[kCGWindowNumber] as? CGWindowID,
+                  windowID == basicInfo.windowID else {
                 continue
             }
             
