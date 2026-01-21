@@ -84,7 +84,7 @@ final class MultitouchManager: @unchecked Sendable {
 
     /// Shared production instance
     /// Note: Initialized once at app startup, accessed from main thread and gesture queue
-    nonisolated(unsafe) static let shared = MultitouchManager()
+    static let shared = MultitouchManager()
 
     /// Initialize with optional factories for dependency injection
     /// - Parameters:
@@ -520,9 +520,12 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
+        // Note: touches pointer is valid only during this callback, but processTouches
+        // copies the data it needs synchronously before returning
+        let touchesPtr = unsafe touches  // Capture in local to make intent clear
         gestureQueue.async { [weak self] in
             unsafe self?.gestureRecognizer.processTouches(
-                touches, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
+                touchesPtr, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
         }
     }
 }

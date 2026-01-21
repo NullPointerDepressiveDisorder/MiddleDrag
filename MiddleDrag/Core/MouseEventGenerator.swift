@@ -5,7 +5,8 @@ import Sentry
 @unsafe @preconcurrency import os.log
 
 /// Generates mouse events for middle-click and middle-drag operations
-class MouseEventGenerator {
+/// Thread-safety: Uses stateLock and positionLock for internal synchronization
+final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -156,7 +157,7 @@ class MouseEventGenerator {
 
             // Only log to Sentry if telemetry is enabled (offline by default)
             // App must be offline by default - no network calls unless user opts in
-            if unsafe CrashReporter.shared.anyTelemetryEnabled {
+            if CrashReporter.shared.anyTelemetryEnabled {
                 let attributes: [String: Any] = unsafe [
                     "category": "gesture",
                     "drag_movement": "horizontal",
