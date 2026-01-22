@@ -63,10 +63,15 @@ final class MouseEventGenerator: @unchecked Sendable {
         previousDeltaX = 0
         previousDeltaY = 0
 
+        // CRITICAL: Set isMiddleMouseDown SYNCHRONOUSLY before dispatching
+        // This prevents a race condition where endDrag() could be called before
+        // the async block runs, causing endDrag() to see isMiddleMouseDown=false
+        // and skip sending the mouse up event, leaving the button stuck down.
+        isMiddleMouseDown = true
+
         // Now do the async part for sending the mouse down event
         eventQueue.async { [weak self] in
             guard let self = self else { return }
-            self.isMiddleMouseDown = true
             self.sendMiddleMouseDown(at: quartzPos)
         }
     }
@@ -211,10 +216,14 @@ final class MouseEventGenerator: @unchecked Sendable {
     func endDrag() {
         guard isMiddleMouseDown else { return }
 
+        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
+        // This prevents race conditions with rapid start/end cycles and ensures
+        // updateDrag() stops processing immediately
+        isMiddleMouseDown = false
+
         eventQueue.async { [weak self] in
             guard let self = self else { return }
 
-            self.isMiddleMouseDown = false
             // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
@@ -289,12 +298,16 @@ final class MouseEventGenerator: @unchecked Sendable {
     func cancelDrag() {
         guard isMiddleMouseDown else { return }
 
-        // Asynchronously end the drag - this won't block the event queue
+        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
+        // This prevents race conditions with rapid cancel/start cycles and ensures
+        // updateDrag() stops processing immediately
+        isMiddleMouseDown = false
+
+        // Asynchronously send the mouse up event and clean up state
         // The cleanup will happen on the event queue, ensuring proper sequencing
         // with other operations like performClick()
         eventQueue.async { [weak self] in
             guard let self = self else { return }
-            self.isMiddleMouseDown = false
             // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
