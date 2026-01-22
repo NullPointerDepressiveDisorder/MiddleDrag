@@ -91,7 +91,7 @@ sudo port install MiddleDrag
 Downloads are cryptographically attested via [GitHub Artifact Attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds).
 ```bash
 # Requires GitHub CLI: brew install gh
-gh attestation verify ~/Downloads/MiddleDrag.pkg --repo karanmohindroo/MiddleDrag
+gh attestation verify ~/Downloads/MiddleDrag.pkg --repo NullPointerDepressiveDisorder/MiddleDrag
 ```
 
 ## Usage
