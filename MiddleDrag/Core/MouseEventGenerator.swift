@@ -63,17 +63,15 @@ final class MouseEventGenerator: @unchecked Sendable {
         previousDeltaX = 0
         previousDeltaY = 0
 
-        // CRITICAL: Set isMiddleMouseDown SYNCHRONOUSLY before dispatching
-        // This prevents a race condition where endDrag() could be called before
-        // the async block runs, causing endDrag() to see isMiddleMouseDown=false
-        // and skip sending the mouse up event, leaving the button stuck down.
+        // CRITICAL: Both flag AND mouse-down event must be set/sent SYNCHRONOUSLY.
+        // This prevents two race conditions:
+        // 1. endDrag() seeing isMiddleMouseDown=false (original sticky bug)
+        // 2. updateDrag() sending drag events before mouse-down reaches macOS
+        //
+        // sendMiddleMouseDown() just creates and posts a CGEvent, which is thread-safe
+        // and takes microseconds. No need for async dispatch here.
         isMiddleMouseDown = true
-
-        // Now do the async part for sending the mouse down event
-        eventQueue.async { [weak self] in
-            guard let self = self else { return }
-            self.sendMiddleMouseDown(at: quartzPos)
-        }
+        sendMiddleMouseDown(at: quartzPos)
     }
 
     /// Magic number to identify our own events (0x4D44 = 'MD')
