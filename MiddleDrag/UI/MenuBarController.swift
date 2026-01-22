@@ -52,7 +52,10 @@ class MenuBarController: NSObject {
             context.duration = 0.2
             button.animator().alphaValue = 0.7
         }, completionHandler: {
-            button.alphaValue = 1.0
+            // Ensure mutation happens on the main actor
+            Task { @MainActor in
+                button.alphaValue = 1.0
+            }
         })
     }
 
@@ -642,3 +645,4 @@ extension Notification.Name {
     static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
     static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
 }
+

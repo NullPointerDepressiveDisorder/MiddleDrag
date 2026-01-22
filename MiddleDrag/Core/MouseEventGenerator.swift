@@ -63,12 +63,15 @@ final class MouseEventGenerator: @unchecked Sendable {
         previousDeltaX = 0
         previousDeltaY = 0
 
-        // Now do the async part for sending the mouse down event
-        eventQueue.async { [weak self] in
-            guard let self = self else { return }
-            self.isMiddleMouseDown = true
-            self.sendMiddleMouseDown(at: quartzPos)
-        }
+        // CRITICAL: Both flag AND mouse-down event must be set/sent SYNCHRONOUSLY.
+        // This prevents two race conditions:
+        // 1. endDrag() seeing isMiddleMouseDown=false (original sticky bug)
+        // 2. updateDrag() sending drag events before mouse-down reaches macOS
+        //
+        // sendMiddleMouseDown() just creates and posts a CGEvent, which is thread-safe
+        // and takes microseconds. No need for async dispatch here.
+        isMiddleMouseDown = true
+        sendMiddleMouseDown(at: quartzPos)
     }
 
     /// Magic number to identify our own events (0x4D44 = 'MD')
@@ -211,10 +214,14 @@ final class MouseEventGenerator: @unchecked Sendable {
     func endDrag() {
         guard isMiddleMouseDown else { return }
 
+        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
+        // This prevents race conditions with rapid start/end cycles and ensures
+        // updateDrag() stops processing immediately
+        isMiddleMouseDown = false
+
         eventQueue.async { [weak self] in
             guard let self = self else { return }
 
-            self.isMiddleMouseDown = false
             // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
@@ -289,12 +296,16 @@ final class MouseEventGenerator: @unchecked Sendable {
     func cancelDrag() {
         guard isMiddleMouseDown else { return }
 
-        // Asynchronously end the drag - this won't block the event queue
+        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
+        // This prevents race conditions with rapid cancel/start cycles and ensures
+        // updateDrag() stops processing immediately
+        isMiddleMouseDown = false
+
+        // Asynchronously send the mouse up event and clean up state
         // The cleanup will happen on the event queue, ensuring proper sequencing
         // with other operations like performClick()
         eventQueue.async { [weak self] in
             guard let self = self else { return }
-            self.isMiddleMouseDown = false
             // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
