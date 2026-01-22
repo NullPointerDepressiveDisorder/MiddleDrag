@@ -40,6 +40,11 @@ jobs:
     name: Package and Certify
     needs: [build, version]
     uses: ./.github/workflows/_package-and-certify.yml
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     with:
       version: ${{ needs.version.outputs.version }}
     secrets: inherit
