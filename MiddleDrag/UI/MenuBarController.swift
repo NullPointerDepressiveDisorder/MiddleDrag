@@ -260,6 +260,17 @@ class MenuBarController: NSObject {
             ))
 
         submenu.addItem(NSMenuItem.separator())
+        
+        // Emergency release for stuck drags
+        let forceReleaseItem = NSMenuItem(
+            title: "Force Release Stuck Drag",
+            action: #selector(forceReleaseStuckDrag),
+            keyEquivalent: ""
+        )
+        forceReleaseItem.target = self
+        submenu.addItem(forceReleaseItem)
+
+        submenu.addItem(NSMenuItem.separator())
 
         // Telemetry section header
         let telemetryHeader = NSMenuItem(
@@ -593,6 +604,10 @@ class MenuBarController: NSObject {
 
         buildMenu()
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+    
+    @objc func forceReleaseStuckDrag() {
+        multitouchManager?.forceReleaseStuckDrag()
     }
 
     @objc func toggleLaunchAtLogin() {
