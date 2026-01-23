@@ -608,6 +608,30 @@ class MenuBarController: NSObject {
     
     @objc func forceReleaseStuckDrag() {
         multitouchManager?.forceReleaseStuckDrag()
+        
+        // Provide visual feedback that the action was triggered
+        // Flash the status bar icon briefly
+        flashStatusBarIcon()
+    }
+    
+    /// Flash the status bar icon to provide visual feedback for actions
+    private func flashStatusBarIcon() {
+        guard let button = statusItem?.button else { return }
+        
+        // Store original image
+        let originalImage = button.image
+        
+        // Flash to a highlighted state (use template rendering)
+        if let image = originalImage {
+            let highlightedImage = image.copy() as? NSImage
+            highlightedImage?.isTemplate = false  // Make it appear "active"
+            button.image = highlightedImage
+        }
+        
+        // Restore after a brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            button.image = originalImage
+        }
     }
 
     @objc func toggleLaunchAtLogin() {
