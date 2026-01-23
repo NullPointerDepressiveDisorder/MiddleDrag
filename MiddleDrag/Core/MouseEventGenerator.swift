@@ -30,6 +30,10 @@ final class MouseEventGenerator: @unchecked Sendable {
         set { stateLock.withLock { _isMiddleMouseDown = newValue } }
     }
     
+    /// Drag session generation counter - protected by stateLock
+    /// Must be accessed atomically with isMiddleMouseDown to prevent race conditions
+    private var _dragGeneration: UInt64 = 0
+    
     private var eventSource: CGEventSource?
 
     // Event generation queue for thread safety
@@ -40,10 +44,6 @@ final class MouseEventGenerator: @unchecked Sendable {
     private let watchdogQueue = DispatchQueue(label: "com.middledrag.watchdog", qos: .utility)
     private var lastActivityTime: CFTimeInterval = 0
     private let activityLock = NSLock()
-    
-    /// Drag session generation counter to prevent async operations from affecting new drags
-    /// Incremented each time a new drag starts; async cleanup checks this to avoid interfering
-    private var dragGeneration: UInt64 = 0
 
     // Smoothing state for EMA (exponential moving average)
     private var previousDeltaX: CGFloat = 0
@@ -98,8 +98,13 @@ final class MouseEventGenerator: @unchecked Sendable {
         //
         // sendMiddleMouseDown() just creates and posts a CGEvent, which is thread-safe
         // and takes microseconds. No need for async dispatch here.
-        isMiddleMouseDown = true
-        dragGeneration &+= 1  // Increment generation for new drag session
+        //
+        // CRITICAL: isMiddleMouseDown and dragGeneration must be set ATOMICALLY
+        // to prevent race with forceReleaseDrag() on watchdogQueue
+        stateLock.withLock {
+            _isMiddleMouseDown = true
+            _dragGeneration &+= 1
+        }
         sendMiddleMouseDown(at: quartzPos)
         
         // Start watchdog timer to detect stuck drags
@@ -369,11 +374,11 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Stop watchdog if running
         stopWatchdog()
         
-        // Reset internal state unconditionally
-        isMiddleMouseDown = false
-        
-        // Capture generation to check in async block
-        let currentGeneration = dragGeneration
+        // Atomically reset state and capture generation
+        let currentGeneration: UInt64 = stateLock.withLock {
+            _isMiddleMouseDown = false
+            return _dragGeneration
+        }
         
         // Always send the UP event synchronously
         let pos = currentMouseLocationQuartz
@@ -384,7 +389,8 @@ final class MouseEventGenerator: @unchecked Sendable {
             guard let self = self else { return }
             
             // Only proceed if no new drag started
-            guard self.dragGeneration == currentGeneration else { return }
+            let newGeneration = self.stateLock.withLock { self._dragGeneration }
+            guard newGeneration == currentGeneration else { return }
             
             // Reset state and send another UP
             self.previousDeltaX = 0
@@ -574,12 +580,13 @@ final class MouseEventGenerator: @unchecked Sendable {
     private func forceReleaseDrag() {
         stopWatchdogLocked()
         
-        // Capture generation before releasing to prevent async block from
-        // interfering with a new drag that might start immediately after
-        let releasedGeneration = dragGeneration
-        
-        // Set flag to false immediately to stop any further processing
-        isMiddleMouseDown = false
+        // CRITICAL: Read generation AND clear flag atomically
+        // This prevents race with startDrag() on gesture thread
+        let releasedGeneration: UInt64 = stateLock.withLock {
+            let gen = _dragGeneration
+            _isMiddleMouseDown = false
+            return gen
+        }
         
         // Send mouse up event synchronously to ensure it gets through
         let currentPos = currentMouseLocationQuartz
@@ -591,7 +598,8 @@ final class MouseEventGenerator: @unchecked Sendable {
             guard let self = self else { return }
             
             // Check if a new drag started - don't interfere with it
-            guard self.dragGeneration == releasedGeneration else {
+            let currentGeneration = self.stateLock.withLock { self._dragGeneration }
+            guard currentGeneration == releasedGeneration else {
                 Log.info("Skipping async force-release cleanup - new drag session started", category: .gesture)
                 return
             }
