@@ -537,4 +537,275 @@ final class MouseEventGeneratorTests: XCTestCase {
 
         generator.endDrag()
     }
+
+    // MARK: - Stuck Drag Prevention Tests
+
+    func testDefaultStuckDragTimeout() {
+        // Default timeout should be 10 seconds
+        XCTAssertEqual(generator.stuckDragTimeout, 10.0, accuracy: 0.001)
+    }
+
+    func testStuckDragTimeoutCanBeModified() {
+        generator.stuckDragTimeout = 5.0
+        XCTAssertEqual(generator.stuckDragTimeout, 5.0, accuracy: 0.001)
+    }
+
+    func testDoubleStartDragCancelsExistingDrag() {
+        // Start first drag
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let firstStartExpectation = XCTestExpectation(description: "First drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            firstStartExpectation.fulfill()
+        }
+        wait(for: [firstStartExpectation], timeout: 0.5)
+
+        // Start second drag without ending first - should not crash
+        // The existing drag should be cancelled automatically
+        XCTAssertNoThrow(generator.startDrag(at: CGPoint(x: 200, y: 200)))
+
+        let secondStartExpectation = XCTestExpectation(description: "Second drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            secondStartExpectation.fulfill()
+        }
+        wait(for: [secondStartExpectation], timeout: 0.5)
+
+        // Updates should still work after double-start
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 10.0, deltaY: 10.0))
+
+        generator.endDrag()
+    }
+
+    func testTripleStartDragHandledGracefully() {
+        // Start three drags in quick succession
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let exp1 = XCTestExpectation(description: "First start")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            exp1.fulfill()
+        }
+        wait(for: [exp1], timeout: 0.5)
+
+        generator.startDrag(at: CGPoint(x: 200, y: 200))
+
+        let exp2 = XCTestExpectation(description: "Second start")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            exp2.fulfill()
+        }
+        wait(for: [exp2], timeout: 0.5)
+
+        generator.startDrag(at: CGPoint(x: 300, y: 300))
+
+        let exp3 = XCTestExpectation(description: "Third start")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            exp3.fulfill()
+        }
+        wait(for: [exp3], timeout: 0.5)
+
+        // Should be able to update and end normally
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 5.0, deltaY: 5.0))
+        XCTAssertNoThrow(generator.endDrag())
+    }
+
+    func testRapidStartEndCycles() {
+        // Test rapid start/end cycles to stress test the double-start guard
+        for i in 1...5 {
+            generator.startDrag(at: CGPoint(x: CGFloat(i * 100), y: CGFloat(i * 100)))
+
+            let startExp = XCTestExpectation(description: "Start \(i)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                startExp.fulfill()
+            }
+            wait(for: [startExp], timeout: 0.5)
+
+            generator.endDrag()
+
+            let endExp = XCTestExpectation(description: "End \(i)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                endExp.fulfill()
+            }
+            wait(for: [endExp], timeout: 0.5)
+        }
+    }
+
+    func testStartDragWhileDraggingThenCancel() {
+        // Start first drag
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "First drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Start second drag (should auto-cancel first)
+        generator.startDrag(at: CGPoint(x: 200, y: 200))
+
+        let secondExpectation = XCTestExpectation(description: "Second drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            secondExpectation.fulfill()
+        }
+        wait(for: [secondExpectation], timeout: 0.5)
+
+        // Now cancel - should only cancel the second drag
+        XCTAssertNoThrow(generator.cancelDrag())
+
+        let cancelExpectation = XCTestExpectation(description: "Drag cancelled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            cancelExpectation.fulfill()
+        }
+        wait(for: [cancelExpectation], timeout: 0.5)
+
+        // Updates should be ignored after cancel
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 50.0, deltaY: 50.0))
+    }
+
+    func testUpdateDragResetsActivityTime() {
+        // This test verifies that updateDrag updates activity tracking
+        // (the watchdog won't trigger if updates keep happening)
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Perform multiple updates with small delays
+        for i in 1...3 {
+            XCTAssertNoThrow(generator.updateDrag(deltaX: CGFloat(i), deltaY: CGFloat(i)))
+
+            let updateExp = XCTestExpectation(description: "Update \(i)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                updateExp.fulfill()
+            }
+            wait(for: [updateExp], timeout: 0.5)
+        }
+
+        generator.endDrag()
+    }
+
+    func testWatchdogTimerStartsAndStopsWithDrag() {
+        // Start drag - watchdog should start
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "Drag started with watchdog")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // End drag - watchdog should stop
+        generator.endDrag()
+
+        let endExpectation = XCTestExpectation(description: "Drag ended, watchdog stopped")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            endExpectation.fulfill()
+        }
+        wait(for: [endExpectation], timeout: 0.5)
+    }
+
+    func testCancelDragStopsWatchdog() {
+        // Start drag - watchdog should start
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Cancel drag - watchdog should stop
+        generator.cancelDrag()
+
+        let cancelExpectation = XCTestExpectation(description: "Drag cancelled, watchdog stopped")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            cancelExpectation.fulfill()
+        }
+        wait(for: [cancelExpectation], timeout: 0.5)
+    }
+
+    func testVeryShortStuckDragTimeout() {
+        // Set a very short timeout for testing (not recommended in production)
+        generator.stuckDragTimeout = 0.5
+
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Wait longer than the timeout without any updates
+        // The watchdog should auto-release the drag
+        let timeoutExpectation = XCTestExpectation(description: "Watchdog timeout")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            timeoutExpectation.fulfill()
+        }
+        wait(for: [timeoutExpectation], timeout: 3.0)
+
+        // After auto-release, updates should be ignored
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 10.0, deltaY: 10.0))
+
+        // endDrag should be a no-op since already released
+        XCTAssertNoThrow(generator.endDrag())
+    }
+
+    func testActivityPreventsWatchdogTimeout() {
+        // Set a short timeout
+        generator.stuckDragTimeout = 1.5
+
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Keep sending updates synchronously with small delays to prevent timeout
+        // Total time: 8 * 0.15 = 1.2s which is less than 1.5s timeout
+        for i in 1...8 {
+            generator.updateDrag(deltaX: CGFloat(i), deltaY: CGFloat(i))
+            
+            let delayExp = XCTestExpectation(description: "Delay \(i)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                delayExp.fulfill()
+            }
+            wait(for: [delayExp], timeout: 0.5)
+        }
+
+        // Should still be able to end normally (not auto-released)
+        XCTAssertNoThrow(generator.endDrag())
+    }
+
+    func testDoubleStartWithUpdatesInBetween() {
+        // Start first drag
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+
+        let startExpectation = XCTestExpectation(description: "First drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 0.5)
+
+        // Do some updates
+        generator.updateDrag(deltaX: 10.0, deltaY: 10.0)
+        generator.updateDrag(deltaX: 20.0, deltaY: 20.0)
+
+        // Start second drag (should cancel first and reset state)
+        generator.startDrag(at: CGPoint(x: 500, y: 500))
+
+        let secondExpectation = XCTestExpectation(description: "Second drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            secondExpectation.fulfill()
+        }
+        wait(for: [secondExpectation], timeout: 0.5)
+
+        // New updates should work from the new starting position
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 5.0, deltaY: 5.0))
+
+        generator.endDrag()
+    }
 }

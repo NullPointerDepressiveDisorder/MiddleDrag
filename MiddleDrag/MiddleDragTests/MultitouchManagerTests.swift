@@ -2143,4 +2143,214 @@ final class MultitouchManagerTests: XCTestCase {
         wait(for: [expectation], timeout: 10.0)
         manager.stop()
     }
+
+    // MARK: - Force Release Stuck Drag Tests
+
+    func testForceReleaseStuckDragResetsGestureState() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        manager.start()
+
+        // Enter gesture state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+
+        let startExpectation = XCTestExpectation(description: "Gesture started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Force release
+        manager.forceReleaseStuckDrag()
+
+        let releaseExpectation = XCTestExpectation(description: "Force release complete")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            releaseExpectation.fulfill()
+        }
+        wait(for: [releaseExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragResetsDraggingState() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        var config = GestureConfiguration()
+        config.middleDragEnabled = true
+        manager.updateConfiguration(config)
+
+        manager.start()
+
+        // Enter dragging state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let startExpectation = XCTestExpectation(description: "Dragging started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Force release
+        manager.forceReleaseStuckDrag()
+
+        let releaseExpectation = XCTestExpectation(description: "Force release complete")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            XCTAssertFalse(manager.isInThreeFingerGesture)
+            releaseExpectation.fulfill()
+        }
+        wait(for: [releaseExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragWhenNotDragging() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Force release when not in any gesture state - should not crash
+        XCTAssertFalse(manager.isInThreeFingerGesture)
+        XCTAssertFalse(manager.isActivelyDragging)
+
+        XCTAssertNoThrow(manager.forceReleaseStuckDrag())
+
+        // State should still be false
+        XCTAssertFalse(manager.isInThreeFingerGesture)
+        XCTAssertFalse(manager.isActivelyDragging)
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragMultipleTimes() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        manager.start()
+
+        // Enter gesture state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let setupExpectation = XCTestExpectation(description: "Setup complete")
+        DispatchQueue.main.async {
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 1.0)
+
+        // Force release multiple times - should not crash
+        for _ in 1...3 {
+            XCTAssertNoThrow(manager.forceReleaseStuckDrag())
+        }
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragResetsGestureRecognizer() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        manager.start()
+
+        // Enter gesture state
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let setupExpectation = XCTestExpectation(description: "Setup complete")
+        DispatchQueue.main.async {
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 1.0)
+
+        // Force release
+        manager.forceReleaseStuckDrag()
+
+        // Should be able to start a new gesture after force release
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.6, y: 0.6))
+
+        let newGestureExpectation = XCTestExpectation(description: "New gesture started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            newGestureExpectation.fulfill()
+        }
+        wait(for: [newGestureExpectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragWhileDisabled() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        manager.toggleEnabled()  // Disable
+
+        XCTAssertFalse(manager.isEnabled)
+
+        // Force release when disabled - should not crash
+        XCTAssertNoThrow(manager.forceReleaseStuckDrag())
+
+        manager.stop()
+    }
+
+    func testForceReleaseStuckDragWhenStopped() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        // Don't start the manager
+
+        // Force release when stopped - should not crash
+        XCTAssertNoThrow(manager.forceReleaseStuckDrag())
+    }
+
+    func testForceReleaseAfterNormalEndDrag() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+        let recognizer = GestureRecognizer()
+
+        manager.start()
+
+        // Start and end drag normally
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let setupExpectation = XCTestExpectation(description: "Setup")
+        DispatchQueue.main.async {
+            setupExpectation.fulfill()
+        }
+        wait(for: [setupExpectation], timeout: 1.0)
+
+        manager.gestureRecognizerDidEndDragging(recognizer)
+
+        let endExpectation = XCTestExpectation(description: "Normal end")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            endExpectation.fulfill()
+        }
+        wait(for: [endExpectation], timeout: 1.0)
+
+        // Force release after normal end - should be no-op but not crash
+        XCTAssertNoThrow(manager.forceReleaseStuckDrag())
+
+        manager.stop()
+    }
 }
