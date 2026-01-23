@@ -538,7 +538,13 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// Check if the drag has become stuck (no activity for too long)
     /// Called on watchdogQueue
     private func checkForStuckDrag() {
-        guard isMiddleMouseDown else {
+        // CRITICAL: Atomically read both isMiddleMouseDown AND generation
+        // This captures which drag session we're checking, preventing race with startDrag()
+        let (isDragging, capturedGeneration): (Bool, UInt64) = stateLock.withLock {
+            (_isMiddleMouseDown, _dragGeneration)
+        }
+        
+        guard isDragging else {
             // Drag already ended, stop checking
             stopWatchdogLocked()
             return
@@ -569,23 +575,35 @@ final class MouseEventGenerator: @unchecked Sendable {
                 unsafe SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)
             }
             
-            // Force release the stuck drag
-            forceReleaseDrag()
+            // Force release the stuck drag, passing the generation we captured
+            // This ensures we don't interfere with a new drag that started since our check
+            forceReleaseDrag(forGeneration: capturedGeneration)
         }
     }
     
     /// Force release a stuck drag without normal cleanup flow
     /// This is called by the watchdog when a drag appears stuck
     /// Called on watchdogQueue
-    private func forceReleaseDrag() {
+    /// - Parameter forGeneration: The generation that was captured when deciding to release.
+    ///                           If current generation doesn't match, a new drag has started and we abort.
+    private func forceReleaseDrag(forGeneration expectedGeneration: UInt64) {
         stopWatchdogLocked()
         
-        // CRITICAL: Read generation AND clear flag atomically
-        // This prevents race with startDrag() on gesture thread
-        let releasedGeneration: UInt64 = stateLock.withLock {
-            let gen = _dragGeneration
+        // CRITICAL: Verify generation still matches before clearing state
+        // This prevents race where a new drag started between checkForStuckDrag() and now
+        let releasedGeneration: UInt64? = stateLock.withLock {
+            guard _dragGeneration == expectedGeneration else {
+                // A new drag has started - don't interfere with it!
+                Log.info("forceReleaseDrag aborted - new drag session started (expected gen \(expectedGeneration), current \(_dragGeneration))", category: .gesture)
+                return nil
+            }
             _isMiddleMouseDown = false
-            return gen
+            return _dragGeneration
+        }
+        
+        // If generation didn't match, abort without sending any events
+        guard let releasedGeneration = releasedGeneration else {
+            return
         }
         
         // Send mouse up event synchronously to ensure it gets through
