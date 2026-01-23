@@ -311,20 +311,26 @@ final class MultitouchManager: @unchecked Sendable {
     /// This can be called manually by the user (e.g., from menu bar) if they notice
     /// the middle button is stuck. It sends a MIDDLE_UP event regardless of current state.
     func forceReleaseStuckDrag() {
-        Log.info("Force releasing stuck drag (user triggered)", category: .gesture)
-        
-        // Reset all internal state
-        isActivelyDragging = false
-        isInThreeFingerGesture = false
-        gestureEndTime = CACurrentMediaTime()
-        lastGestureWasActive = false
-        
-        // Cancel any active drag in the mouse generator
-        // This also sends a MIDDLE_UP event
-        mouseGenerator.cancelDrag()
-        
-        // Also reset the gesture recognizer to ensure clean state
-        gestureRecognizer.reset()
+        // Dispatch to main thread to avoid data races with gesture state updates
+        // which are also dispatched to main thread (see GestureRecognizerDelegate methods)
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            Log.info("Force releasing stuck drag (user triggered)", category: .gesture)
+            
+            // Reset all internal state
+            self.isActivelyDragging = false
+            self.isInThreeFingerGesture = false
+            self.gestureEndTime = CACurrentMediaTime()
+            self.lastGestureWasActive = false
+            
+            // Force send MIDDLE_UP unconditionally
+            // Unlike cancelDrag(), this always sends UP even if internal state is already false
+            self.mouseGenerator.forceMiddleMouseUp()
+            
+            // Also reset the gesture recognizer to ensure clean state
+            self.gestureRecognizer.reset()
+        }
     }
 
     // MARK: - Event Tap

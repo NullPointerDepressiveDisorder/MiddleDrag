@@ -40,6 +40,10 @@ final class MouseEventGenerator: @unchecked Sendable {
     private let watchdogQueue = DispatchQueue(label: "com.middledrag.watchdog", qos: .utility)
     private var lastActivityTime: CFTimeInterval = 0
     private let activityLock = NSLock()
+    
+    /// Drag session generation counter to prevent async operations from affecting new drags
+    /// Incremented each time a new drag starts; async cleanup checks this to avoid interfering
+    private var dragGeneration: UInt64 = 0
 
     // Smoothing state for EMA (exponential moving average)
     private var previousDeltaX: CGFloat = 0
@@ -95,6 +99,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         // sendMiddleMouseDown() just creates and posts a CGEvent, which is thread-safe
         // and takes microseconds. No need for async dispatch here.
         isMiddleMouseDown = true
+        dragGeneration &+= 1  // Increment generation for new drag session
         sendMiddleMouseDown(at: quartzPos)
         
         // Start watchdog timer to detect stuck drags
@@ -354,6 +359,44 @@ final class MouseEventGenerator: @unchecked Sendable {
             self.sendMiddleMouseUp(at: currentPos)
         }
     }
+    
+    /// Force send a MIDDLE_UP event regardless of internal state
+    /// Used for manual recovery when system state may be out of sync with our tracking
+    /// Unlike cancelDrag(), this ALWAYS sends an UP event even if isMiddleMouseDown is false
+    func forceMiddleMouseUp() {
+        Log.warning("Force sending MIDDLE_UP (unconditional)", category: .gesture)
+        
+        // Stop watchdog if running
+        stopWatchdog()
+        
+        // Reset internal state unconditionally
+        isMiddleMouseDown = false
+        
+        // Capture generation to check in async block
+        let currentGeneration = dragGeneration
+        
+        // Always send the UP event synchronously
+        let pos = currentMouseLocationQuartz
+        sendMiddleMouseUp(at: pos)
+        
+        // Also send async as fallback (in case sync was swallowed)
+        eventQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Only proceed if no new drag started
+            guard self.dragGeneration == currentGeneration else { return }
+            
+            // Reset state and send another UP
+            self.previousDeltaX = 0
+            self.previousDeltaY = 0
+            self.positionLock.lock()
+            self.lastSentPosition = nil
+            self.positionLock.unlock()
+            
+            let pos = self.currentMouseLocationQuartz
+            self.sendMiddleMouseUp(at: pos)
+        }
+    }
 
     // MARK: - Coordinate Conversion
 
@@ -453,31 +496,45 @@ final class MouseEventGenerator: @unchecked Sendable {
     // MARK: - Watchdog Timer
     
     /// Start the watchdog timer to detect stuck drags
+    /// All watchdogTimer access is synchronized on watchdogQueue to prevent data races
     private func startWatchdog() {
-        stopWatchdog()  // Cancel any existing timer
-        
-        let timer = DispatchSource.makeTimerSource(queue: watchdogQueue)
-        timer.schedule(deadline: .now() + 1.0, repeating: 1.0)  // Check every second
-        
-        timer.setEventHandler { [weak self] in
-            self?.checkForStuckDrag()
+        watchdogQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            // Cancel any existing timer first
+            self.stopWatchdogLocked()
+            
+            let timer = DispatchSource.makeTimerSource(queue: self.watchdogQueue)
+            timer.schedule(deadline: .now() + 1.0, repeating: 1.0)  // Check every second
+            
+            timer.setEventHandler { [weak self] in
+                self?.checkForStuckDrag()
+            }
+            
+            self.watchdogTimer = timer
+            timer.resume()
         }
-        
-        watchdogTimer = timer
-        timer.resume()
     }
     
-    /// Stop the watchdog timer
+    /// Stop the watchdog timer (thread-safe wrapper)
     private func stopWatchdog() {
+        watchdogQueue.async { [weak self] in
+            self?.stopWatchdogLocked()
+        }
+    }
+    
+    /// Stop the watchdog timer - must be called only on watchdogQueue
+    private func stopWatchdogLocked() {
         watchdogTimer?.cancel()
         watchdogTimer = nil
     }
     
     /// Check if the drag has become stuck (no activity for too long)
+    /// Called on watchdogQueue
     private func checkForStuckDrag() {
         guard isMiddleMouseDown else {
             // Drag already ended, stop checking
-            stopWatchdog()
+            stopWatchdogLocked()
             return
         }
         
@@ -496,14 +553,14 @@ final class MouseEventGenerator: @unchecked Sendable {
             
             // Log to Sentry if telemetry is enabled
             if CrashReporter.shared.anyTelemetryEnabled {
-                let attributes: [String: Any] = [
+                let attributes: [String: Any] = unsafe [
                     "category": "gesture",
                     "event": "stuck_drag_auto_release",
                     "time_since_activity": timeSinceActivity,
                     "timeout_threshold": stuckDragTimeout,
                     "session_id": Log.sessionID,
                 ]
-                SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)
+                unsafe SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)
             }
             
             // Force release the stuck drag
@@ -513,8 +570,13 @@ final class MouseEventGenerator: @unchecked Sendable {
     
     /// Force release a stuck drag without normal cleanup flow
     /// This is called by the watchdog when a drag appears stuck
+    /// Called on watchdogQueue
     private func forceReleaseDrag() {
-        stopWatchdog()
+        stopWatchdogLocked()
+        
+        // Capture generation before releasing to prevent async block from
+        // interfering with a new drag that might start immediately after
+        let releasedGeneration = dragGeneration
         
         // Set flag to false immediately to stop any further processing
         isMiddleMouseDown = false
@@ -524,8 +586,16 @@ final class MouseEventGenerator: @unchecked Sendable {
         sendMiddleMouseUp(at: currentPos)
         
         // Also try sending via async queue in case the sync one gets swallowed
+        // Only proceeds if no new drag has started (same generation)
         eventQueue.async { [weak self] in
             guard let self = self else { return }
+            
+            // Check if a new drag started - don't interfere with it
+            guard self.dragGeneration == releasedGeneration else {
+                Log.info("Skipping async force-release cleanup - new drag session started", category: .gesture)
+                return
+            }
+            
             // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
