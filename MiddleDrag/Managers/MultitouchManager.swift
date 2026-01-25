@@ -523,6 +523,23 @@ final class MultitouchManager: @unchecked Sendable {
             }
         }
     }
+
+    /// Thread-safe check if cursor is over a window's title bar
+    /// - Returns: true if cursor is in title bar, false otherwise
+    /// - Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
+    ///         which must be called from the main thread
+    private func shouldSkipGestureForTitleBar() -> Bool {
+        guard configuration.passThroughTitleBar else { return false }
+
+        let titleBarHeight = configuration.titleBarHeight
+        if Thread.isMainThread {
+            return MainActor.assumeIsolated { WindowHelper.isCursorInTitleBar(titleBarHeight: titleBarHeight) }
+        } else {
+            return DispatchQueue.main.sync {
+                MainActor.assumeIsolated { WindowHelper.isCursorInTitleBar(titleBarHeight: titleBarHeight) }
+            }
+        }
+    }
 }
 
 // MARK: - DeviceMonitorDelegate
@@ -598,6 +615,18 @@ extension MultitouchManager: GestureRecognizerDelegate {
             return
         }
 
+        // Check if cursor is in title bar when passThroughTitleBar is enabled
+        // This allows macOS native three-finger drag to handle window dragging
+        if shouldSkipGestureForTitleBar() {
+            // Cursor is in title bar - skip tap to allow system gesture
+            DispatchQueue.main.async { [weak self] in
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = false
+            }
+            return
+        }
+
         // Check window size filter before performing tap
         // Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
         // which must be called from the main thread
@@ -657,6 +686,18 @@ extension MultitouchManager: GestureRecognizerDelegate {
         //       windowAtCursorMeetsMinimumSize would return true for desktop (no window found).
         if shouldSkipGestureForDesktop() {
             // Cursor is over desktop - skip drag
+            DispatchQueue.main.async { [weak self] in
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = false
+            }
+            return
+        }
+
+        // Check if cursor is in title bar when passThroughTitleBar is enabled
+        // This allows macOS native three-finger drag to handle window dragging
+        if shouldSkipGestureForTitleBar() {
+            // Cursor is in title bar - skip drag to allow system gesture
             DispatchQueue.main.async { [weak self] in
                 self?.isInThreeFingerGesture = false
                 self?.gestureEndTime = CACurrentMediaTime()
