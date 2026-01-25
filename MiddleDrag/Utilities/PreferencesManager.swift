@@ -30,6 +30,11 @@ final class PreferencesManager: @unchecked Sendable {
         static let minimumWindowHeight = "minimumWindowHeight"
         // Desktop filter key
         static let ignoreDesktop = "ignoreDesktop"
+        // Title bar passthrough keys
+        static let passThroughTitleBar = "passThroughTitleBar"
+        static let titleBarHeight = "titleBarHeight"
+        // Relift during drag key
+        static let allowReliftDuringDrag = "allowReliftDuringDrag"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
     }
@@ -69,6 +74,11 @@ final class PreferencesManager: @unchecked Sendable {
             Keys.minimumWindowHeight: 100.0,
             // Desktop filter default
             Keys.ignoreDesktop: false,
+            // Title bar passthrough defaults
+            Keys.passThroughTitleBar: false,
+            Keys.titleBarHeight: 28.0,
+            // Relift during drag default
+            Keys.allowReliftDuringDrag: false,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
         ])
@@ -102,6 +112,9 @@ final class PreferencesManager: @unchecked Sendable {
         prefs.minimumWindowWidth = userDefaults.double(forKey: Keys.minimumWindowWidth)
         prefs.minimumWindowHeight = userDefaults.double(forKey: Keys.minimumWindowHeight)
         prefs.ignoreDesktop = userDefaults.bool(forKey: Keys.ignoreDesktop)
+        prefs.passThroughTitleBar = userDefaults.bool(forKey: Keys.passThroughTitleBar)
+        prefs.titleBarHeight = userDefaults.double(forKey: Keys.titleBarHeight)
+        prefs.allowReliftDuringDrag = userDefaults.bool(forKey: Keys.allowReliftDuringDrag)
 
         return prefs
     }
@@ -130,6 +143,11 @@ final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.minimumWindowHeight, forKey: Keys.minimumWindowHeight)
         // Desktop filter
         userDefaults.set(preferences.ignoreDesktop, forKey: Keys.ignoreDesktop)
+        // Title bar passthrough
+        userDefaults.set(preferences.passThroughTitleBar, forKey: Keys.passThroughTitleBar)
+        userDefaults.set(preferences.titleBarHeight, forKey: Keys.titleBarHeight)
+        // Relift during drag
+        userDefaults.set(preferences.allowReliftDuringDrag, forKey: Keys.allowReliftDuringDrag)
     }
 
     // MARK: - Gesture Configuration Prompt Tracking
