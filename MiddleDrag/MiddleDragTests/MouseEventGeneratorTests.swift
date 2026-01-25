@@ -808,4 +808,153 @@ final class MouseEventGeneratorTests: XCTestCase {
 
         generator.endDrag()
     }
+    
+    // MARK: - Thread Safety Tests
+    
+    func testConcurrentStartDragDoesNotCrash() {
+        // Test that rapid concurrent startDrag calls don't cause crashes
+        // This exercises the atomic dragGeneration increment
+        let concurrentQueue = DispatchQueue(label: "test.concurrent", attributes: .concurrent)
+        let group = DispatchGroup()
+        
+        for i in 0..<10 {
+            group.enter()
+            concurrentQueue.async {
+                self.generator.startDrag(at: CGPoint(x: CGFloat(i * 10), y: CGFloat(i * 10)))
+                group.leave()
+            }
+        }
+        
+        let waitResult = group.wait(timeout: .now() + 2.0)
+        XCTAssertEqual(waitResult, .success, "Concurrent startDrag calls should complete without deadlock")
+        
+        // Clean up
+        generator.cancelDrag()
+    }
+    
+    func testConcurrentStartAndCancelDoesNotCrash() {
+        // Test thread safety of start/cancel interleaving
+        let concurrentQueue = DispatchQueue(label: "test.concurrent", attributes: .concurrent)
+        let group = DispatchGroup()
+        
+        for i in 0..<20 {
+            group.enter()
+            concurrentQueue.async {
+                if i % 2 == 0 {
+                    self.generator.startDrag(at: CGPoint(x: CGFloat(i), y: CGFloat(i)))
+                } else {
+                    self.generator.cancelDrag()
+                }
+                group.leave()
+            }
+        }
+        
+        let waitResult = group.wait(timeout: .now() + 2.0)
+        XCTAssertEqual(waitResult, .success, "Concurrent start/cancel should complete without deadlock")
+        
+        // Clean up
+        generator.cancelDrag()
+    }
+    
+    func testStartDragDuringWatchdogTimeoutWindow() {
+        // Test that starting a new drag during the watchdog timeout window
+        // doesn't cause the old watchdog to interfere with the new drag
+        generator.stuckDragTimeout = 0.3  // Very short timeout
+        
+        // Start first drag
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        // Wait until just before timeout would trigger
+        let nearTimeoutExpectation = XCTestExpectation(description: "Near timeout")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            nearTimeoutExpectation.fulfill()
+        }
+        wait(for: [nearTimeoutExpectation], timeout: 0.5)
+        
+        // Start second drag right before timeout - this should increment generation
+        // and cause any pending watchdog release to abort
+        generator.startDrag(at: CGPoint(x: 200, y: 200))
+        
+        // Wait past the original timeout
+        let pastTimeoutExpectation = XCTestExpectation(description: "Past original timeout")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            pastTimeoutExpectation.fulfill()
+        }
+        wait(for: [pastTimeoutExpectation], timeout: 0.5)
+        
+        // The new drag should still be active (updates should work)
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 10.0, deltaY: 10.0))
+        
+        // Clean up
+        generator.endDrag()
+    }
+    
+    func testRapidDragCyclesWithWatchdog() {
+        // Test rapid start/end cycles with watchdog enabled
+        generator.stuckDragTimeout = 0.5
+        
+        for i in 0..<5 {
+            generator.startDrag(at: CGPoint(x: CGFloat(i * 100), y: CGFloat(i * 100)))
+            generator.updateDrag(deltaX: 10.0, deltaY: 10.0)
+            generator.endDrag()
+            
+            // Small delay between cycles
+            let delayExp = XCTestExpectation(description: "Delay \(i)")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                delayExp.fulfill()
+            }
+            wait(for: [delayExp], timeout: 0.2)
+        }
+        
+        // All cycles should complete without crashes or stuck state
+        XCTAssertNoThrow(generator.cancelDrag())
+    }
+    
+    func testForceMiddleMouseUpDoesNotCrash() {
+        // Test that forceMiddleMouseUp can be called safely
+        XCTAssertNoThrow(generator.forceMiddleMouseUp())
+        
+        // Also test during active drag
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        let startExp = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExp.fulfill()
+        }
+        wait(for: [startExp], timeout: 0.5)
+        
+        XCTAssertNoThrow(generator.forceMiddleMouseUp())
+        
+        // After force release, updates should be ignored
+        XCTAssertNoThrow(generator.updateDrag(deltaX: 10.0, deltaY: 10.0))
+    }
+    
+    func testForceMiddleMouseUpMultipleTimes() {
+        // Test that calling forceMiddleMouseUp multiple times rapidly is safe
+        for _ in 0..<5 {
+            XCTAssertNoThrow(generator.forceMiddleMouseUp())
+        }
+    }
+    
+    func testForceMiddleMouseUpAfterNormalEnd() {
+        // Start and end a drag normally
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        let startExp = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExp.fulfill()
+        }
+        wait(for: [startExp], timeout: 0.5)
+        
+        generator.endDrag()
+        
+        let endExp = XCTestExpectation(description: "Drag ended")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            endExp.fulfill()
+        }
+        wait(for: [endExp], timeout: 0.5)
+        
+        // Force release after normal end should still be safe
+        XCTAssertNoThrow(generator.forceMiddleMouseUp())
+    }
 }

@@ -578,4 +578,36 @@ import XCTest
 
         unsafe manager.stop()
     }
+    
+    // MARK: - Force Release Stuck Drag Tests
+    
+    func testForceReleaseStuckDragDoesNotCrash() {
+        unsafe manager.start()
+        
+        // Calling force release when not dragging should be safe
+        unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
+        
+        unsafe manager.stop()
+    }
+    
+    func testForceReleaseStuckDragMultipleTimes() {
+        unsafe manager.start()
+        
+        // Calling force release multiple times rapidly should be safe
+        for _ in 0..<5 {
+            unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
+        }
+        
+        unsafe manager.stop()
+    }
+    
+    func testForceReleaseStuckDragWhenStopped() {
+        // Controller should handle force release even when manager is stopped
+        unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
+    }
+    
+    func testForceReleaseStuckDragSelectorExists() {
+        let selector = #selector(MenuBarController.forceReleaseStuckDrag)
+        unsafe XCTAssertTrue(controller.responds(to: selector))
+    }
 }
