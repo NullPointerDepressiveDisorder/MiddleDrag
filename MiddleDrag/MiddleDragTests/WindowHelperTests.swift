@@ -584,4 +584,124 @@ final class WindowHelperTests: XCTestCase {
         XCTAssertNotNil(result)
         XCTAssertEqual(result?.bundleIdentifier, "com.app1.bundle")
     }
+
+    // MARK: - Title Bar Detection Tests
+
+    func testIsCursorInTitleBar_DoesNotCrash() {
+        // Calling isCursorInTitleBar should never crash
+        let result = WindowHelper.isCursorInTitleBar()
+        XCTAssertNotNil(result)
+    }
+
+    func testIsCursorInTitleBar_WithMockData_CursorInTitleBar_ReturnsTrue() {
+        // Window at y=100 with height=300, title bar is top 28 pixels (y=100 to y=128)
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        // Point in title bar region (y=110, which is within 100-128)
+        let pointInTitleBar = CGPoint(x: 200, y: 110)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointInTitleBar, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertTrue(result, "Should return true when cursor is in title bar region")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_CursorBelowTitleBar_ReturnsFalse() {
+        // Window at y=100 with height=300, title bar is top 28 pixels (y=100 to y=128)
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        // Point below title bar region (y=200, which is well below 128)
+        let pointBelowTitleBar = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointBelowTitleBar, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertFalse(result, "Should return false when cursor is below title bar")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_CursorAtTitleBarBoundary_ReturnsTrue() {
+        // Test cursor exactly at the window top edge
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        let pointAtTop = CGPoint(x: 200, y: 100)  // Exactly at window top
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointAtTop, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertTrue(result, "Should return true when cursor is at window top edge")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_CursorJustBelowTitleBar_ReturnsFalse() {
+        // Test cursor exactly at the title bar bottom boundary
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        // Point exactly at title bar boundary (y=128, which is >= 128 so NOT in title bar)
+        let pointAtBoundary = CGPoint(x: 200, y: 128)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointAtBoundary, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertFalse(result, "Should return false when cursor is at title bar bottom boundary")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_NoWindow_ReturnsFalse() {
+        // When no window exists at cursor position
+        let mockWindows: [[CFString: Any]] = []
+
+        let point = CGPoint(x: 200, y: 200)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: point, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertFalse(result, "Should return false when no window at cursor")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_CustomTitleBarHeight() {
+        // Test with a custom title bar height (e.g., 50 pixels for apps with toolbars)
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        // Point at y=140, which is in title bar with height=50 (100-150) but not with height=28
+        let point = CGPoint(x: 200, y: 140)
+
+        let resultWith50 = WindowHelper.isCursorInTitleBar(
+            at: point, titleBarHeight: 50, windowList: mockWindows)
+        XCTAssertTrue(resultWith50, "Should be in title bar with height 50")
+
+        let resultWith28 = WindowHelper.isCursorInTitleBar(
+            at: point, titleBarHeight: 28, windowList: mockWindows)
+        XCTAssertFalse(resultWith28, "Should NOT be in title bar with height 28")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_PointOutsideWindow_ReturnsFalse() {
+        let mockWindows = [
+            createMockWindow(x: 100, y: 100, width: 400, height: 300, ownerName: "TestApp")
+        ]
+
+        // Point outside the window entirely
+        let pointOutside = CGPoint(x: 50, y: 50)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointOutside, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertFalse(result, "Should return false when cursor is outside window")
+    }
+
+    func testIsCursorInTitleBar_WithMockData_OverlappingWindows_UsesTopWindow() {
+        // Front window has title bar at y=200, back window has title bar at y=100
+        let mockWindows = [
+            createMockWindow(x: 150, y: 200, width: 300, height: 250, ownerName: "FrontWindow"),
+            createMockWindow(x: 100, y: 100, width: 400, height: 400, ownerName: "BackWindow"),
+        ]
+
+        // Point at y=210, which is in front window's title bar (200-228)
+        let pointInFrontTitleBar = CGPoint(x: 200, y: 210)
+        let result = WindowHelper.isCursorInTitleBar(
+            at: pointInFrontTitleBar, titleBarHeight: 28, windowList: mockWindows)
+
+        XCTAssertTrue(result, "Should detect title bar of front window")
+    }
 }
