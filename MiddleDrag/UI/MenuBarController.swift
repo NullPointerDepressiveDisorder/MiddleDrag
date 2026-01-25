@@ -249,6 +249,15 @@ class MenuBarController: NSObject {
         )
         submenu.addItem(ignoreDesktopItem)
 
+        // Window Bar Drag - pass through gestures when cursor is over title bar
+        // Allows macOS native three-finger drag to work for window dragging
+        let windowBarDragItem = createAdvancedMenuItem(
+            title: "Window Bar Drag",
+            isOn: preferences.passThroughTitleBar,
+            action: #selector(toggleWindowBarDrag)
+        )
+        submenu.addItem(windowBarDragItem)
+
         submenu.addItem(NSMenuItem.separator())
 
         // Relift during drag - Linux-style text selection
@@ -589,6 +598,18 @@ class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.ignoreDesktop = preferences.ignoreDesktop
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func toggleWindowBarDrag() {
+        preferences.passThroughTitleBar.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.passThroughTitleBar = preferences.passThroughTitleBar
+        config.titleBarHeight = CGFloat(preferences.titleBarHeight)
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()
