@@ -73,6 +73,11 @@ struct GestureConfiguration: Sendable {
     // Relift during drag - allow continuing drag with 2 fingers after lifting one
     var allowReliftDuringDrag: Bool = false
 
+    // Title bar passthrough - pass gesture to system when cursor is over window title bar
+    // This allows macOS native three-finger drag to work for window dragging
+    var passThroughTitleBar: Bool = false
+    var titleBarHeight: CGFloat = 28  // Height of title bar region in pixels (accounts for toolbar)
+
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
         guard enableVelocityBoost else { return sensitivity }
@@ -142,6 +147,10 @@ struct UserPreferences: Codable, Sendable {
     // Relift during drag - allow continuing drag with 2 fingers after lifting one
     var allowReliftDuringDrag: Bool = false
 
+    // Title bar passthrough - pass gesture to system when cursor is over window title bar
+    var passThroughTitleBar: Bool = false
+    var titleBarHeight: Double = 28  // Height of title bar region in pixels
+
     /// Convert to GestureConfiguration
     var gestureConfig: GestureConfiguration {
         return GestureConfiguration(
@@ -163,7 +172,9 @@ struct UserPreferences: Codable, Sendable {
             minimumWindowWidth: CGFloat(minimumWindowWidth),
             minimumWindowHeight: CGFloat(minimumWindowHeight),
             ignoreDesktop: ignoreDesktop,
-            allowReliftDuringDrag: allowReliftDuringDrag
+            allowReliftDuringDrag: allowReliftDuringDrag,
+            passThroughTitleBar: passThroughTitleBar,
+            titleBarHeight: CGFloat(titleBarHeight)
         )
     }
 }
