@@ -154,6 +154,56 @@ class WindowHelper {
         return getWindowAtCursor() == nil
     }
 
+    /// Check if the cursor is currently over a window's title bar region
+    /// - Parameter titleBarHeight: Height of the title bar region in pixels (default 28 accounts for toolbar)
+    /// - Returns: true if cursor is in a window's title bar region, false otherwise
+    static func isCursorInTitleBar(titleBarHeight: CGFloat = 28) -> Bool {
+        let mouseLocation = NSEvent.mouseLocation
+
+        // Convert from Cocoa coordinates (origin bottom-left) to Quartz (origin top-left)
+        guard let screenHeight = NSScreen.main?.frame.height else { return false }
+        let quartzY = screenHeight - mouseLocation.y
+        let cursorPoint = CGPoint(x: mouseLocation.x, y: quartzY)
+
+        return isCursorInTitleBar(at: cursorPoint, titleBarHeight: titleBarHeight)
+    }
+
+    /// Internal method for testing - check if a point is in a window's title bar region
+    /// - Parameters:
+    ///   - point: Screen point in Quartz coordinates (origin top-left)
+    ///   - titleBarHeight: Height of the title bar region in pixels
+    ///   - windowList: Optional mock window list for testing
+    /// - Returns: true if point is in a window's title bar region, false otherwise
+    nonisolated static func isCursorInTitleBar(
+        at point: CGPoint,
+        titleBarHeight: CGFloat = 28,
+        windowList: [[CFString: Any]]? = nil
+    ) -> Bool {
+        // Get window list (use provided mock or fetch real data)
+        let windows: [[CFString: Any]]
+        if let mockList = windowList {
+            windows = mockList
+        } else {
+            let options: CGWindowListOption = [.excludeDesktopElements, .optionOnScreenOnly]
+            guard let realList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[CFString: Any]] else {
+                return false
+            }
+            windows = realList
+        }
+
+        // Find window at point
+        guard let windowInfo = getWindowAt(point: point, windowList: windows) else {
+            return false  // No window at point
+        }
+
+        // Check if cursor is within title bar region (top of window)
+        // Title bar is at the TOP of the window in Quartz coordinates
+        let windowTop = windowInfo.bounds.origin.y
+        let titleBarBottom = windowTop + titleBarHeight
+
+        return point.y >= windowTop && point.y < titleBarBottom
+    }
+
     /// Internal method for testing - allows injecting mock window data and point
     /// - Parameters:
     ///   - point: Screen point in Quartz coordinates (origin top-left) to check
