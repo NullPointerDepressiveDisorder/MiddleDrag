@@ -168,6 +168,21 @@ class WindowHelper {
         return isCursorInTitleBar(at: cursorPoint, titleBarHeight: titleBarHeight)
     }
 
+    /// Thread-safe check if cursor is in a window's title bar region
+    /// Uses CGEvent APIs which are safe to call from any thread
+    /// - Parameter titleBarHeight: Height of the title bar region in pixels (default 28 accounts for toolbar)
+    /// - Returns: true if cursor is in a window's title bar region, false otherwise
+    nonisolated static func isCursorInTitleBarThreadSafe(titleBarHeight: CGFloat = 28) -> Bool {
+        // CGEvent location is already in Quartz coordinates (origin top-left)
+        // and is thread-safe unlike NSEvent.mouseLocation
+        guard let event = CGEvent(source: nil) else { 
+            return false 
+        }
+        let cursorPoint = event.location
+        
+        return isCursorInTitleBar(at: cursorPoint, titleBarHeight: titleBarHeight)
+    }
+
     /// Internal method for testing - check if a point is in a window's title bar region
     /// - Parameters:
     ///   - point: Screen point in Quartz coordinates (origin top-left)
@@ -201,7 +216,14 @@ class WindowHelper {
         let windowTop = windowInfo.bounds.origin.y
         let titleBarBottom = windowTop + titleBarHeight
 
-        return point.y >= windowTop && point.y < titleBarBottom
+        let result = point.y >= windowTop && point.y < titleBarBottom
+        
+        // Only log when we detect title bar (to reduce spam)
+        if result {
+            Log.debug("Title bar detected: window=\(windowInfo.ownerName ?? "?") bounds=(\(Int(windowInfo.bounds.origin.x)),\(Int(windowInfo.bounds.origin.y)),\(Int(windowInfo.bounds.width))x\(Int(windowInfo.bounds.height))) cursor.y=\(Int(point.y)) titleBarRegion=[\(Int(windowTop)),\(Int(titleBarBottom)))", category: .gesture)
+        }
+        
+        return result
     }
 
     /// Internal method for testing - allows injecting mock window data and point
