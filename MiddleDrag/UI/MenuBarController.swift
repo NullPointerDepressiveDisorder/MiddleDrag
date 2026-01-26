@@ -629,6 +629,26 @@ class MenuBarController: NSObject {
     
     @objc func forceReleaseStuckDrag() {
         multitouchManager?.forceReleaseStuckDrag()
+        
+        // Provide visual feedback that the action was triggered
+        flashStatusBarIcon()
+    }
+    
+    /// Flash the status bar icon to provide visual feedback for actions
+    /// Uses alpha animation consistent with updateStatusIcon pattern
+    private func flashStatusBarIcon() {
+        guard let button = statusItem?.button else { return }
+        
+        // Use alpha animation for visual feedback (consistent with updateStatusIcon)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.1
+            button.animator().alphaValue = 0.3
+        } completionHandler: {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.1
+                button.animator().alphaValue = 1.0
+            }
+        }
     }
 
     @objc func toggleLaunchAtLogin() {
