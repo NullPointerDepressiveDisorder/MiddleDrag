@@ -178,6 +178,27 @@ final class PreferencesManagerTests: XCTestCase {
         XCTAssertTrue(loaded.ignoreDesktop)
     }
 
+    // MARK: - Title Bar Passthrough Tests
+
+    func testLoadPreferencesTitleBarPassthroughDefaults() {
+        let prefs = preferencesManager.loadPreferences()
+
+        XCTAssertFalse(prefs.passThroughTitleBar)
+        XCTAssertEqual(prefs.titleBarHeight, 28.0, accuracy: 0.001)
+    }
+
+    func testSaveAndLoadTitleBarPassthroughPreferences() {
+        var prefs = UserPreferences()
+        prefs.passThroughTitleBar = true
+        prefs.titleBarHeight = 50.0
+
+        preferencesManager.savePreferences(prefs)
+        let loaded = preferencesManager.loadPreferences()
+
+        XCTAssertTrue(loaded.passThroughTitleBar)
+        XCTAssertEqual(loaded.titleBarHeight, 50.0, accuracy: 0.001)
+    }
+
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {

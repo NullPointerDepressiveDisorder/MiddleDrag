@@ -260,4 +260,31 @@ final class GestureModelsTests: XCTestCase {
 
         XCTAssertTrue(config.ignoreDesktop)
     }
+
+    // MARK: - Title Bar Passthrough Tests
+
+    func testDefaultGestureConfigurationTitleBarPassthroughFields() {
+        let config = GestureConfiguration()
+
+        XCTAssertFalse(config.passThroughTitleBar)
+        XCTAssertEqual(config.titleBarHeight, 28)
+    }
+
+    func testDefaultUserPreferencesTitleBarPassthroughFields() {
+        let prefs = UserPreferences()
+
+        XCTAssertFalse(prefs.passThroughTitleBar)
+        XCTAssertEqual(prefs.titleBarHeight, 28)
+    }
+
+    func testUserPreferencesToGestureConfigTitleBarPassthroughMapping() {
+        var prefs = UserPreferences()
+        prefs.passThroughTitleBar = true
+        prefs.titleBarHeight = 50
+
+        let config = prefs.gestureConfig
+
+        XCTAssertTrue(config.passThroughTitleBar)
+        XCTAssertEqual(config.titleBarHeight, 50)
+    }
 }
