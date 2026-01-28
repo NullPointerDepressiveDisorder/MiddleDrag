@@ -21,7 +21,27 @@ class ScreenHelper {
     /// Height of the primary screen
     @MainActor
     static var primaryScreenHeight: CGFloat {
-        return primaryScreen?.frame.height ?? 0
+        // Prefer the primary screen height when available
+        if let screen = primaryScreen {
+            let height = screen.frame.height
+            if height > 0 {
+                return height
+            }
+        }
+        
+        // Fallback to NSScreen.main if primary screen is unavailable or invalid
+        if let mainScreen = NSScreen.main {
+            let height = mainScreen.frame.height
+            if height > 0 {
+                NSLog("ScreenHelper: primaryScreen height unavailable; using NSScreen.main height: \(height)")
+                return height
+            }
+        }
+        
+        // Final fallback: use a reasonable default height to avoid incorrect coordinate conversions
+        let fallbackHeight: CGFloat = 1080
+        NSLog("ScreenHelper: No available screens; using fallback height: \(fallbackHeight)")
+        return fallbackHeight
     }
     
     /// Height of the primary screen (thread-safe)
