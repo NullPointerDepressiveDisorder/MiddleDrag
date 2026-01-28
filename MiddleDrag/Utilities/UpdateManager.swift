@@ -3,9 +3,9 @@ import Sparkle
 
 /// Manages app updates via Sparkle framework
 /// Offline by default - only checks for updates when explicitly enabled by user
-/// Thread-safety: Sparkle framework is designed to be accessed from main thread,
-/// but we defer heavy initialization to avoid blocking the main thread during app launch
-final class UpdateManager: NSObject, @unchecked Sendable {
+/// Thread-safety: All mutable state is isolated to @MainActor to prevent data races
+@MainActor
+final class UpdateManager: NSObject {
 
     static let shared = UpdateManager()
 
@@ -16,6 +16,9 @@ final class UpdateManager: NSObject, @unchecked Sendable {
     
     /// Flag to track if initialization is complete
     private var isInitialized = false
+    
+    /// Flag to track if an update check was requested before initialization completed
+    private var pendingUpdateCheck = false
 
     // MARK: - Preferences Keys
 
@@ -36,14 +39,11 @@ final class UpdateManager: NSObject, @unchecked Sendable {
 
             UserDefaults.standard.set(newValue, forKey: Keys.automaticallyChecksForUpdates)
             
-            // Dispatch to main thread for Sparkle operations
-            DispatchQueue.main.async { [weak self] in
-                self?.updaterController?.updater.automaticallyChecksForUpdates = newValue
+            updaterController?.updater.automaticallyChecksForUpdates = newValue
 
-                // Start updater when enabling automatic checks
-                if newValue && !previousValue {
-                    self?.updaterController?.startUpdater()
-                }
+            // Start updater when enabling automatic checks
+            if newValue && !previousValue {
+                updaterController?.startUpdater()
             }
 
             Log.info("Auto-update checks \(newValue ? "enabled" : "disabled")", category: .app)
@@ -75,14 +75,15 @@ final class UpdateManager: NSObject, @unchecked Sendable {
         // Defer Sparkle initialization to avoid blocking the main thread during app launch
         // This prevents the 2+ second hang that occurs when Sparkle performs synchronous
         // operations on the main thread
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        Task { @MainActor [weak self] in
+            // Small delay to let the app UI settle first
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
             self?.performInitialization()
         }
     }
     
-    /// Perform the actual Sparkle initialization on the main thread
+    /// Perform the actual Sparkle initialization
     /// This is called after a short delay to let the app UI settle first
-    @MainActor
     private func performInitialization() {
         guard isInitializing && !isInitialized else { return }
         
@@ -100,9 +101,10 @@ final class UpdateManager: NSObject, @unchecked Sendable {
 
             // Only start the updater if user has opted in to automatic checks
             // Otherwise, it will only check when user manually triggers it
-            // Defer the start to avoid blocking
             if automaticallyChecksForUpdates {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                // Defer the start slightly to avoid blocking
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
                     self?.updaterController?.startUpdater()
                 }
             }
@@ -112,22 +114,30 @@ final class UpdateManager: NSObject, @unchecked Sendable {
         isInitializing = false
 
         Log.info("UpdateManager initialized (auto-check: \(automaticallyChecksForUpdates))", category: .app)
+        
+        // If user requested an update check before initialization completed, perform it now
+        if pendingUpdateCheck {
+            pendingUpdateCheck = false
+            performUpdateCheck()
+        }
     }
 
     // MARK: - Public Methods
 
     /// Manually check for updates (always available via menu)
-    /// This method dispatches to the main thread asynchronously to avoid blocking
+    /// If called before initialization completes, the check will be queued
     func checkForUpdates() {
-        // Dispatch to main thread asynchronously to avoid blocking the caller
-        DispatchQueue.main.async { [weak self] in
-            self?.performUpdateCheck()
+        // If not yet initialized, queue the request
+        if !isInitialized {
+            Log.info("Update check requested before initialization - queuing", category: .app)
+            pendingUpdateCheck = true
+            return
         }
+        
+        performUpdateCheck()
     }
     
-    /// Perform the actual update check on the main thread
-    /// This is separated to ensure non-blocking behavior
-    @MainActor
+    /// Perform the actual update check
     private func performUpdateCheck() {
         guard let controller = updaterController else {
             Log.error("Cannot check for updates: updaterController is not initialized", category: .app)
@@ -137,7 +147,6 @@ final class UpdateManager: NSObject, @unchecked Sendable {
         let updater = controller.updater
 
         // Ensure updater is started for manual check
-        // Using async dispatch to prevent blocking
         if !updater.sessionInProgress {
             controller.startUpdater()
         }
@@ -148,15 +157,10 @@ final class UpdateManager: NSObject, @unchecked Sendable {
             return
         }
 
-        // Log first, then trigger the check
-        // The check itself runs asynchronously within Sparkle
         Log.info("Manual update check triggered", category: .app)
         
-        // Defer the actual check to the next run loop iteration
-        // This allows the UI to remain responsive during update processing
-        DispatchQueue.main.async {
-            controller.checkForUpdates(nil)
-        }
+        // Trigger the check; Sparkle performs the work asynchronously internally
+        controller.checkForUpdates(nil)
     }
 }
 
@@ -164,21 +168,29 @@ final class UpdateManager: NSObject, @unchecked Sendable {
 
 extension UpdateManager: SPUUpdaterDelegate {
 
-    func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+    nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         // Only stable channel for now
         // Could add "beta" channel later if needed
         return Set()
     }
 
-    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
-        Log.info("Update available: \(item.displayVersionString)", category: .app)
+    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        let version = item.displayVersionString
+        Task { @MainActor in
+            Log.info("Update available: \(version)", category: .app)
+        }
     }
 
-    func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
-        Log.info("No updates available", category: .app)
+    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+        Task { @MainActor in
+            Log.info("No updates available", category: .app)
+        }
     }
 
-    func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
-        Log.error("Update check failed: \(error.localizedDescription)", category: .app)
+    nonisolated func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
+        let errorMessage = error.localizedDescription
+        Task { @MainActor in
+            Log.error("Update check failed: \(errorMessage)", category: .app)
+        }
     }
 }

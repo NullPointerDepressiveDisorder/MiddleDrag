@@ -107,7 +107,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // The UpdateManager handles its own internal deferral, but we add additional
         // delay here to ensure the app is fully ready and responsive first
         // This prevents the 2+ second hang caused by Sparkle's synchronous operations
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
             UpdateManager.shared.initialize()
         }
 
