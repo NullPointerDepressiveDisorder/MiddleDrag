@@ -5,7 +5,7 @@ import Sentry
 @unsafe @preconcurrency import os.log
 
 /// Generates mouse events for middle-click and middle-drag operations
-/// Thread-safety: Uses stateLock and positionLock for internal synchronization
+/// Thread-safety: Uses stateLock for internal synchronization
 final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Properties
@@ -49,16 +49,6 @@ final class MouseEventGenerator: @unchecked Sendable {
     private var previousDeltaX: CGFloat = 0
     private var previousDeltaY: CGFloat = 0
 
-    // Track the last sent mouse position to build relative movements correctly
-    // This prevents jumps from reading stale current mouse positions
-    // Using a lock for thread-safe position updates
-    private var lastSentPosition: CGPoint?
-    private let positionLock = NSLock()
-    
-    // Counter for periodic resync with actual cursor position
-    // Prevents drift while avoiding snap-back from reading stale positions
-    private var resyncCounter: Int = 0
-
     // MARK: - Initialization
 
     init() {
@@ -80,16 +70,11 @@ final class MouseEventGenerator: @unchecked Sendable {
             sendMiddleMouseUp(at: currentPos)
         }
         
-        // Initialize position synchronously to prevent race conditions with updateDrag
         let quartzPos = currentMouseLocationQuartz
-        positionLock.lock()
-        lastSentPosition = quartzPos
-        positionLock.unlock()
 
         // Reset smoothing state
         previousDeltaX = 0
         previousDeltaY = 0
-        resyncCounter = 0
         
         // Record activity time for watchdog
         activityLock.lock()
@@ -184,12 +169,8 @@ final class MouseEventGenerator: @unchecked Sendable {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
 
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             let currentPos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: currentPos)
         }
@@ -271,12 +252,8 @@ final class MouseEventGenerator: @unchecked Sendable {
         // with other operations like performClick()
         eventQueue.async { [weak self] in
             guard let self = self else { return }
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             let currentPos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: currentPos)
         }
@@ -309,12 +286,8 @@ final class MouseEventGenerator: @unchecked Sendable {
             let newGeneration = self.stateLock.withLock { self._dragGeneration }
             guard newGeneration == currentGeneration else { return }
             
-            // Reset state and send another UP
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             
             let pos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: pos)
@@ -369,43 +342,6 @@ final class MouseEventGenerator: @unchecked Sendable {
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseUp,
                 mouseCursorPosition: location,
-                mouseButton: .center
-            )
-        else { return }
-
-        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
-        event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
-        event.post(tap: .cghidEventTap)
-    }
-
-    private func sendRelativeMouseMove(deltaX: CGFloat, deltaY: CGFloat) {
-        // Use the last sent position to build relative movements correctly
-        // This prevents jumps from reading stale current mouse positions
-        // Note: This function appears to be unused but kept for potential future use
-        positionLock.lock()
-        let basePosition: CGPoint
-        if let lastPos = lastSentPosition {
-            basePosition = lastPos
-        } else {
-            // Fallback to current position if we don't have a last position
-            basePosition = currentMouseLocationQuartz
-        }
-
-        let newLocation = CGPoint(
-            x: basePosition.x + deltaX,
-            y: basePosition.y + deltaY
-        )
-
-        // Update last sent position
-        lastSentPosition = newLocation
-        positionLock.unlock()
-
-        guard
-            let event = CGEvent(
-                mouseEventSource: eventSource,
-                mouseType: .otherMouseDragged,
-                mouseCursorPosition: newLocation,
                 mouseButton: .center
             )
         else { return }
@@ -539,14 +475,9 @@ final class MouseEventGenerator: @unchecked Sendable {
                 return
             }
             
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             
-            // Send another mouse up as a fallback
             let pos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: pos)
         }
