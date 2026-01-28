@@ -54,6 +54,10 @@ final class MouseEventGenerator: @unchecked Sendable {
     // Using a lock for thread-safe position updates
     private var lastSentPosition: CGPoint?
     private let positionLock = NSLock()
+    
+    // Counter for periodic resync with actual cursor position
+    // Prevents drift while avoiding snap-back from reading stale positions
+    private var resyncCounter: Int = 0
 
     // MARK: - Initialization
 
@@ -85,6 +89,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Reset smoothing state
         previousDeltaX = 0
         previousDeltaY = 0
+        resyncCounter = 0
         
         // Record activity time for watchdog
         activityLock.lock()
@@ -116,18 +121,16 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     /// Update drag position with delta movement
     /// - Parameters:
-    ///   - deltaX: Horizontal movement delta
-    ///   - deltaY: Vertical movement delta
+    ///   - deltaX: Horizontal movement delta (in pixels)
+    ///   - deltaY: Vertical movement delta (in pixels)
     func updateDrag(deltaX: CGFloat, deltaY: CGFloat) {
         guard isMiddleMouseDown else { return }
         
-        // Record activity time for watchdog (drag is still active)
         activityLock.lock()
         lastActivityTime = CACurrentMediaTime()
         activityLock.unlock()
 
-        // Apply consistent smoothing to both horizontal and vertical movement
-        // Uses the user's configured smoothing factor for both axes
+        // Apply EMA smoothing
         let factor = CGFloat(smoothingFactor)
         var smoothedDeltaX = deltaX
         var smoothedDeltaY = deltaY
@@ -136,37 +139,30 @@ final class MouseEventGenerator: @unchecked Sendable {
             smoothedDeltaY = previousDeltaY * factor + deltaY * (1 - factor)
         }
 
-        // Store for next frame's smoothing
         previousDeltaX = smoothedDeltaX
         previousDeltaY = smoothedDeltaY
 
-        // Skip if movement is too small (but be very lenient for horizontal)
         let horizontalMagnitude = abs(smoothedDeltaX)
         let verticalMagnitude = abs(smoothedDeltaY)
         if horizontalMagnitude < 0.001 && verticalMagnitude < minimumMovementThreshold {
             return
         }
 
-        // Use ACTUAL cursor position directly instead of tracking our own position
-        // This avoids drift from accumulated rounding errors or macOS edge clamping
-        // The previous approach of tracking lastSentPosition caused drift on large screens
         let currentPos = currentMouseLocationQuartz
         
-        let newLocation = CGPoint(
-            x: currentPos.x + smoothedDeltaX,
-            y: currentPos.y + smoothedDeltaY
-        )
-
-        // Send the mouse event immediately (on current thread) for maximum responsiveness
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseDragged,
-                mouseCursorPosition: newLocation,
+                mouseCursorPosition: currentPos,
                 mouseButton: .center
             )
         else { return }
 
+        // Use relative deltas instead of absolute positioning
+        event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
+        event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
+        
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
@@ -327,36 +323,23 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Coordinate Conversion
 
-    /// Get current mouse position in Quartz coordinates (origin at top-left)
-    /// 
-    /// - Note: CGEvent.location is already in Quartz coordinates and works correctly
-    ///         across all monitors. The fallback uses ScreenHelper for proper multi-monitor
-    ///         coordinate conversion when CGEvent is unavailable.
+    /// Get current mouse position in Quartz coordinates
     private var currentMouseLocationQuartz: CGPoint {
-        // CGEvent.location is already in Quartz coordinates and is thread-safe
-        // This is the fast path and should always work
         if let event = CGEvent(source: nil) {
             return event.location
         }
-
-        // Fallback: convert from Cocoa coordinates using PRIMARY screen height
-        // This path is rarely hit but must use correct multi-monitor conversion
+        
+        // Fallback: use primary screen height for multi-monitor support
         let cocoaLocation = NSEvent.mouseLocation
-        // Use screens.first (primary) not .main (focused window's screen)
         let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
 
-    /// Get current mouse location in Quartz coordinates (public access)
-    /// 
-    /// - Note: CGEvent.location is already in Quartz coordinates and works correctly
-    ///         across all monitors.
+    /// Get current mouse location in Quartz coordinates (public)
     static var currentMouseLocation: CGPoint {
-        // CGEvent.location is already in Quartz coordinates and is thread-safe
         if let event = CGEvent(source: nil) {
             return event.location
         }
-        // Fallback with correct multi-monitor conversion
         let cocoaLocation = NSEvent.mouseLocation
         let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)

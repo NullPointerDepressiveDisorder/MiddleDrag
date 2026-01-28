@@ -22,11 +22,7 @@ class WindowHelper {
     /// - Returns: WindowInfo for the topmost window at cursor, or nil if none found
     static func getWindowAtCursor() -> WindowInfo? {
         let mouseLocation = NSEvent.mouseLocation
-
-        // Convert from Cocoa coordinates (origin bottom-left) to Quartz (origin top-left)
-        // CRITICAL: Use primary screen height for multi-monitor support, NOT NSScreen.main
         let cursorPoint = ScreenHelper.cocoaToQuartz(mouseLocation)
-
         return getWindowAt(point: cursorPoint)
     }
 
@@ -158,11 +154,7 @@ class WindowHelper {
     /// - Returns: true if cursor is in a window's title bar region, false otherwise
     static func isCursorInTitleBar(titleBarHeight: CGFloat = 28) -> Bool {
         let mouseLocation = NSEvent.mouseLocation
-
-        // Convert from Cocoa coordinates (origin bottom-left) to Quartz (origin top-left)
-        // CRITICAL: Use primary screen height for multi-monitor support, NOT NSScreen.main
         let cursorPoint = ScreenHelper.cocoaToQuartz(mouseLocation)
-
         return isCursorInTitleBar(at: cursorPoint, titleBarHeight: titleBarHeight)
     }
 

@@ -159,18 +159,14 @@ class GestureRecognizer {
     // MARK: - Private Methods
 
     private func handleValidGesture(fingers: [MTPoint], timestamp: Double) {
-        stableFrameCount = 0  // Reset since we have valid fingers
+        stableFrameCount = 0
 
         let centroid = calculateCentroid(fingers: fingers)
 
-        // Check for large centroid jumps (finger added/removed causing position shift)
-        // This detects artificial jumps from finger changes, NOT fast user movement
-        // Threshold: 0.15 = 15% of trackpad, allows fast swipes while catching finger changes
-        // A finger add/remove typically causes a 20-50% jump in centroid position
+        // Filter large centroid jumps from finger add/remove (not fast movement)
         if let last = lastCentroid {
             let jump = centroid.distance(to: last)
             if jump > 0.15 {
-                // Large jump detected - reset reference point
                 lastCentroid = centroid
                 lastFingerPositions = fingers
                 return
@@ -202,15 +198,11 @@ class GestureRecognizer {
             }
 
         case .dragging:
-            // Calculate delta from last frame
             if let last = lastCentroid {
                 let deltaX = centroid.x - last.x
                 let deltaY = centroid.y - last.y
 
-                // Filter out only truly enormous jumps that indicate finger changes
-                // Threshold: 0.15 = 15% of trackpad per frame
-                // Normal fast swipes rarely exceed 10% per frame at 60fps
-                // Finger add/remove causes 20-50% centroid shift
+                // Filter jumps from finger changes
                 let maxDelta: Float = 0.15
                 if abs(deltaX) < maxDelta && abs(deltaY) < maxDelta {
                     if abs(deltaX) > 0.0001 || abs(deltaY) > 0.0001 {
@@ -297,9 +289,7 @@ struct GestureData: Sendable {
         let deltaX = CGFloat(centroid.x - lastPosition.x)
         let deltaY = CGFloat(centroid.y - lastPosition.y)
 
-        // Reject only enormous deltas (likely jumps from finger changes)
-        // Threshold: 0.15 = 15% of trackpad per frame
-        // Normal fast swipes rarely exceed 10% per frame at 60fps
+        // Filter jumps from finger changes
         if abs(deltaX) > 0.15 || abs(deltaY) > 0.15 {
             return (0, 0)
         }
