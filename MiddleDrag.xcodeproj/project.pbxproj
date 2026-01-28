@@ -66,6 +66,7 @@
 				MiddleDragTests/MultitouchFrameworkTests.swift,
 				MiddleDragTests/MultitouchManagerTests.swift,
 				MiddleDragTests/PreferencesManagerTests.swift,
+				MiddleDragTests/ScreenHelperTests.swift,
 				MiddleDragTests/SystemGestureHelperTests.swift,
 				MiddleDragTests/TouchModelsTests.swift,
 				MiddleDragTests/WindowHelperTests.swift,
