@@ -24,9 +24,8 @@ class WindowHelper {
         let mouseLocation = NSEvent.mouseLocation
 
         // Convert from Cocoa coordinates (origin bottom-left) to Quartz (origin top-left)
-        guard let screenHeight = NSScreen.main?.frame.height else { return nil }
-        let quartzY = screenHeight - mouseLocation.y
-        let cursorPoint = CGPoint(x: mouseLocation.x, y: quartzY)
+        // CRITICAL: Use primary screen height for multi-monitor support, NOT NSScreen.main
+        let cursorPoint = ScreenHelper.cocoaToQuartz(mouseLocation)
 
         return getWindowAt(point: cursorPoint)
     }
@@ -161,9 +160,8 @@ class WindowHelper {
         let mouseLocation = NSEvent.mouseLocation
 
         // Convert from Cocoa coordinates (origin bottom-left) to Quartz (origin top-left)
-        guard let screenHeight = NSScreen.main?.frame.height else { return false }
-        let quartzY = screenHeight - mouseLocation.y
-        let cursorPoint = CGPoint(x: mouseLocation.x, y: quartzY)
+        // CRITICAL: Use primary screen height for multi-monitor support, NOT NSScreen.main
+        let cursorPoint = ScreenHelper.cocoaToQuartz(mouseLocation)
 
         return isCursorInTitleBar(at: cursorPoint, titleBarHeight: titleBarHeight)
     }

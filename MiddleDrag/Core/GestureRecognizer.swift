@@ -164,9 +164,12 @@ class GestureRecognizer {
         let centroid = calculateCentroid(fingers: fingers)
 
         // Check for large centroid jumps (finger added/removed causing position shift)
+        // This detects artificial jumps from finger changes, NOT fast user movement
+        // Threshold: 0.15 = 15% of trackpad, allows fast swipes while catching finger changes
+        // A finger add/remove typically causes a 20-50% jump in centroid position
         if let last = lastCentroid {
             let jump = centroid.distance(to: last)
-            if jump > 0.03 {
+            if jump > 0.15 {
                 // Large jump detected - reset reference point
                 lastCentroid = centroid
                 lastFingerPositions = fingers
@@ -204,8 +207,12 @@ class GestureRecognizer {
                 let deltaX = centroid.x - last.x
                 let deltaY = centroid.y - last.y
 
-                // Only process small deltas (real movement, not jumps)
-                if abs(deltaX) < 0.03 && abs(deltaY) < 0.03 {
+                // Filter out only truly enormous jumps that indicate finger changes
+                // Threshold: 0.15 = 15% of trackpad per frame
+                // Normal fast swipes rarely exceed 10% per frame at 60fps
+                // Finger add/remove causes 20-50% centroid shift
+                let maxDelta: Float = 0.15
+                if abs(deltaX) < maxDelta && abs(deltaY) < maxDelta {
                     if abs(deltaX) > 0.0001 || abs(deltaY) > 0.0001 {
                         let gestureData = GestureData(
                             centroid: centroid,
@@ -290,8 +297,10 @@ struct GestureData: Sendable {
         let deltaX = CGFloat(centroid.x - lastPosition.x)
         let deltaY = CGFloat(centroid.y - lastPosition.y)
 
-        // Reject large deltas (likely jumps from finger changes)
-        if abs(deltaX) > 0.03 || abs(deltaY) > 0.03 {
+        // Reject only enormous deltas (likely jumps from finger changes)
+        // Threshold: 0.15 = 15% of trackpad per frame
+        // Normal fast swipes rarely exceed 10% per frame at 60fps
+        if abs(deltaX) > 0.15 || abs(deltaY) > 0.15 {
             return (0, 0)
         }
 

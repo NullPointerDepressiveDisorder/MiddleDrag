@@ -147,96 +147,17 @@ final class MouseEventGenerator: @unchecked Sendable {
             return
         }
 
-        // CRITICAL: Use tracked position, NOT current system position
-        // Reading currentMouseLocationQuartz causes snap-back because:
-        // 1. We send an event to move cursor
-        // 2. Before macOS processes it, we read current position (still old)
-        // 3. We add delta to old position = snap-back effect
-        // Solution: Track our own position and build from it sequentially
+        // Use ACTUAL cursor position directly instead of tracking our own position
+        // This avoids drift from accumulated rounding errors or macOS edge clamping
+        // The previous approach of tracking lastSentPosition caused drift on large screens
+        let currentPos = currentMouseLocationQuartz
         
-        // Read current position before acquiring lock to avoid blocking other threads
-        // This is only used as fallback if lastSentPosition is nil
-        let fallbackPosition = currentMouseLocationQuartz
-        
-        positionLock.lock()
-        let basePosition: CGPoint
-        if let lastPos = lastSentPosition {
-            basePosition = lastPos
-        } else {
-            // First update - initialize from current position
-            basePosition = fallbackPosition
-        }
-
         let newLocation = CGPoint(
-            x: basePosition.x + smoothedDeltaX,
-            y: basePosition.y + smoothedDeltaY
+            x: currentPos.x + smoothedDeltaX,
+            y: currentPos.y + smoothedDeltaY
         )
 
-        // Update tracked position immediately
-        lastSentPosition = newLocation
-        positionLock.unlock()
-
-        // Track horizontal movement for debugging snap-back issues
-        // Log to console and Sentry breadcrumbs when enabled
-        let horizontalChange = abs(smoothedDeltaX)
-        let positionChange = abs(newLocation.x - basePosition.x)
-
-        // Detect potential snap-back: large delta but small position change, or vice versa
-        let potentialSnapBack =
-            (horizontalChange > 5.0 && positionChange < horizontalChange * 0.5)
-            || (horizontalChange < 1.0 && positionChange > horizontalChange * 2.0)
-
-        // Log all significant horizontal movements
-        // Use os_log for local logging (always works) and Sentry if enabled
-        if abs(deltaX) > 1.0 || potentialSnapBack {
-            let subsystem = Bundle.main.bundleIdentifier ?? "com.middledrag"
-            let log = OSLog(subsystem: subsystem, category: "gesture")
-            let message =
-                unsafe potentialSnapBack
-                ? "Horizontal drag snap-back detected"
-                : String(
-                    format: "Horizontal drag: delta=%.2f posChange=%.2f", deltaX, positionChange)
-
-            // Log locally first (always works)
-            unsafe os_log(.info, log: log, "%{public}@", message)
-
-            // Only log to Sentry if telemetry is enabled (offline by default)
-            // App must be offline by default - no network calls unless user opts in
-            if CrashReporter.shared.anyTelemetryEnabled {
-                let attributes: [String: Any] = unsafe [
-                    "category": "gesture",
-                    "drag_movement": "horizontal",
-                    "axis": "horizontal",
-                    "movement_type": potentialSnapBack ? "snap_back" : "normal",
-                    "deltaX_magnitude": String(format: "%.0f", abs(deltaX)),
-                    "rawDeltaX": deltaX,
-                    "smoothedDeltaX": smoothedDeltaX,
-                    "rawDeltaY": deltaY,
-                    "smoothedDeltaY": smoothedDeltaY,
-                    "baseX": basePosition.x,
-                    "baseY": basePosition.y,
-                    "newX": newLocation.x,
-                    "newY": newLocation.y,
-                    "positionChangeX": positionChange,
-                    "positionChangeY": abs(newLocation.y - basePosition.y),
-                    "horizontalChange": horizontalChange,
-                    "potentialSnapBack": potentialSnapBack,
-                    "smoothingFactor": smoothingFactor,
-                    "minMovementThreshold": minimumMovementThreshold,
-                    "timestamp": Date().timeIntervalSince1970,
-                    "session_id": Log.sessionID,
-                ]
-
-                if potentialSnapBack {
-                    SentrySDK.logger.warn(message, attributes: attributes)
-                } else {
-                    SentrySDK.logger.info(message, attributes: attributes)
-                }
-            }
-        }
-
         // Send the mouse event immediately (on current thread) for maximum responsiveness
-        // Position is already locked and updated above, so this is safe
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
@@ -407,24 +328,37 @@ final class MouseEventGenerator: @unchecked Sendable {
     // MARK: - Coordinate Conversion
 
     /// Get current mouse position in Quartz coordinates (origin at top-left)
+    /// 
+    /// - Note: CGEvent.location is already in Quartz coordinates and works correctly
+    ///         across all monitors. The fallback uses ScreenHelper for proper multi-monitor
+    ///         coordinate conversion when CGEvent is unavailable.
     private var currentMouseLocationQuartz: CGPoint {
+        // CGEvent.location is already in Quartz coordinates and is thread-safe
+        // This is the fast path and should always work
         if let event = CGEvent(source: nil) {
             return event.location
         }
 
-        // Fallback: convert from Cocoa coordinates (origin at bottom-left)
+        // Fallback: convert from Cocoa coordinates using PRIMARY screen height
+        // This path is rarely hit but must use correct multi-monitor conversion
         let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.main?.frame.height ?? 0
+        // Use screens.first (primary) not .main (focused window's screen)
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
 
     /// Get current mouse location in Quartz coordinates (public access)
+    /// 
+    /// - Note: CGEvent.location is already in Quartz coordinates and works correctly
+    ///         across all monitors.
     static var currentMouseLocation: CGPoint {
+        // CGEvent.location is already in Quartz coordinates and is thread-safe
         if let event = CGEvent(source: nil) {
             return event.location
         }
+        // Fallback with correct multi-monitor conversion
         let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.main?.frame.height ?? 0
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
 
