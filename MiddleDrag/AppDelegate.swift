@@ -103,14 +103,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             LaunchAtLoginManager.shared.setLaunchAtLogin(true)
         }
 
-        // Initialize update manager with a delay to avoid blocking the main thread
-        // The UpdateManager handles its own internal deferral, but we add additional
-        // delay here to ensure the app is fully ready and responsive first
-        // This prevents the 2+ second hang caused by Sparkle's synchronous operations
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-            UpdateManager.shared.initialize()
-        }
+        // Initialize update manager (it handles its own internal deferral to avoid
+        // blocking the main thread during Sparkle's synchronous operations)
+        UpdateManager.shared.initialize()
 
         // Check for gesture conflicts and show prompt on first launch if needed
         checkAndPromptForGestureConfiguration()

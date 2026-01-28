@@ -76,8 +76,8 @@ final class UpdateManager: NSObject {
         // This prevents the 2+ second hang that occurs when Sparkle performs synchronous
         // operations on the main thread
         Task { @MainActor [weak self] in
-            // Small delay to let the app UI settle first
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // Delay to let the app fully initialize and UI settle before Sparkle setup
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
             self?.performInitialization()
         }
     }
@@ -118,7 +118,11 @@ final class UpdateManager: NSObject {
         // If user requested an update check before initialization completed, perform it now
         if pendingUpdateCheck {
             pendingUpdateCheck = false
-            performUpdateCheck()
+            // Yield to let UI settle before potentially blocking Sparkle work
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                self?.performUpdateCheck()
+            }
         }
     }
 
@@ -134,10 +138,16 @@ final class UpdateManager: NSObject {
             return
         }
         
-        performUpdateCheck()
+        // Dispatch to next runloop turn so the menu can close and UI remains responsive
+        // before any potentially blocking Sparkle work begins
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            self?.performUpdateCheck()
+        }
     }
     
     /// Perform the actual update check
+    /// Note: This should be called after yielding to let the UI process events first
     private func performUpdateCheck() {
         guard let controller = updaterController else {
             Log.error("Cannot check for updates: updaterController is not initialized", category: .app)
