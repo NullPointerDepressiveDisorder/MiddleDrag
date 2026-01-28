@@ -6,6 +6,74 @@
     <description>Most recent updates to MiddleDrag</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.1</title>
+      <pubDate>Wed, 28 Jan 2026 06:27:06 +0000</pubDate>
+      <sparkle:version>1.4.1</sparkle:version>
+      <sparkle:shortVersionString>1.4.1</sparkle:shortVersionString>
+      <description><![CDATA[Multimonitor Support (#85)
+
+* fix(gesture): improve title bar passthrough reliability
+
+Key fixes:
+- Check title bar at gesture START and cache decision for entire gesture
+- Add shouldPassThroughCurrentGesture flag to track pass-through state
+- Fix force click bug: skip middle-click conversion when passing through
+- Reset pass-through flag in all gesture end/cancel callbacks
+- Guard all delegate methods with pass-through flag check
+
+This ensures when cursor is in title bar:
+1. We don&apos;t set isInThreeFingerGesture (allows system events)
+2. We don&apos;t convert left clicks to middle clicks
+3. We don&apos;t generate any drag events
+4. System&apos;s native three-finger drag can handle the gesture
+
+Also adds debug logging for title bar detection (only logs hits).
+
+* refactor(gesture): enhance centroid jump detection and delta filtering
+
+- Increased centroid jump threshold from 0.03 to 0.15 to better differentiate between finger changes and fast user movements.
+- Updated delta filtering logic to reject only significant jumps, improving gesture recognition accuracy.
+- Added comments to clarify the rationale behind the new thresholds for better maintainability.
+
+* refactor(gesture): streamline gesture handling and improve comments
+
+- Removed redundant comments and clarified existing ones in GestureRecognizer to enhance code readability.
+- Simplified centroid jump detection logic to focus on significant changes, improving gesture recognition accuracy.
+- Updated MouseEventGenerator to use relative deltas for mouse movement, reducing drift and improving responsiveness.
+- Enhanced ScreenHelper documentation for better understanding of coordinate systems and multi-monitor support.
+- Cleaned up WindowHelper methods to ensure consistent coordinate conversion and improve clarity.
+
+* refactor(mouse): simplify MouseEventGenerator by removing unused locks and comments
+
+- Removed positionLock and related properties to streamline mouse event handling.
+- Updated comments for clarity regarding thread-safety and internal synchronization.
+- Cleaned up unused code related to lastSentPosition and resyncCounter, enhancing overall readability and maintainability.
+
+* refactor(touch): improve touch callback handling and enhance gesture tests
+
+- Updated touch callback in DeviceMonitor to remove unsafe keyword for better safety.
+- Enhanced TestableSystemAppLifecycleController to conform to Sendable for improved concurrency support.
+- Revised comments in GestureRecognizerTests to clarify movement thresholds and added new tests for fast movement detection within thresholds.
+- Introduced comprehensive tests in ScreenHelperTests for screen detection, coordinate conversion, and multi-monitor handling, ensuring robust functionality across various scenarios.
+
+* Update MiddleDrag/Utilities/ScreenHelper.swift
+
+Co-authored-by: Copilot &lt;175728472+Copilot@users.noreply.github.com&gt;
+Signed-off-by: Karan Mohindroo &lt;96403086+NullPointerDepressiveDisorder@users.noreply.github.com&gt;
+
+---------
+
+Signed-off-by: Karan Mohindroo &lt;96403086+NullPointerDepressiveDisorder@users.noreply.github.com&gt;
+Co-authored-by: Copilot &lt;175728472+Copilot@users.noreply.github.com&gt;
+---
+**SHA256:** `9fff486edb99d65b82042bc6dcf20fce3d5ebf436bc6b2e4af5b7afadc23f368`
+
+
+[![Download MiddleDrag](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/middledrag.mirror/files/v1.4.1/MiddleDrag-1.4.1.pkg/download)]]></description>
+      <enclosure url="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/download/v1.4.1/MiddleDrag-1.4.1.pkg" sparkle:edSignature="MET6a6Q5yH8hHL8Y8FIV426FyjwOB+/y0AjqynArqptI0q3J1RcDQz3Lv9rAI/YArtN/2KZIUwpv9VlGPnSEBA==" length="3478153" type="application/octet-stream" />
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
       <title>Version 1.4.0</title>
       <pubDate>Fri, 23 Jan 2026 10:26:34 +0000</pubDate>
       <sparkle:version>1.4.0</sparkle:version>
