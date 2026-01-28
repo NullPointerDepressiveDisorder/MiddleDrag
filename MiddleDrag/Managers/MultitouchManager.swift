@@ -37,6 +37,9 @@ final class MultitouchManager: @unchecked Sendable {
     private var gestureEndTime: Double = 0
     // Whether the last gesture that ended was actually active (not cancelled)
     private var lastGestureWasActive: Bool = false
+    // Whether current gesture should pass through to system (e.g., title bar drag)
+    // Set at gesture start and checked in all delegate methods
+    private var shouldPassThroughCurrentGesture: Bool = false
 
     // Core components
     private let gestureRecognizer = GestureRecognizer()
@@ -476,8 +479,9 @@ final class MultitouchManager: @unchecked Sendable {
         // This works based on raw finger count, not gesture activation state, so force clicks
         // work even when gestures are cancelled (e.g., modifier key not held)
         // However, don't perform force clicks during an active drag to avoid interference
+        // Also skip if we're passing through to system (e.g., title bar drag)
         let hasThreeOrMoreFingers = currentFingerCount >= 3
-        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging {
+        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging && !shouldPassThroughCurrentGesture {
             // Check event type - we want to handle both down and up
             if type == .leftMouseDown || type == .leftMouseUp {
                 // Perform middle click instead
@@ -526,19 +530,13 @@ final class MultitouchManager: @unchecked Sendable {
 
     /// Thread-safe check if cursor is over a window's title bar
     /// - Returns: true if cursor is in title bar, false otherwise
-    /// - Note: WindowHelper uses AppKit APIs (NSEvent.mouseLocation, NSScreen.main)
-    ///         which must be called from the main thread
+    /// - Note: Uses thread-safe CGEvent APIs, can be called from any thread
     private func shouldSkipGestureForTitleBar() -> Bool {
         guard configuration.passThroughTitleBar else { return false }
 
         let titleBarHeight = configuration.titleBarHeight
-        if Thread.isMainThread {
-            return MainActor.assumeIsolated { WindowHelper.isCursorInTitleBar(titleBarHeight: titleBarHeight) }
-        } else {
-            return DispatchQueue.main.sync {
-                MainActor.assumeIsolated { WindowHelper.isCursorInTitleBar(titleBarHeight: titleBarHeight) }
-            }
-        }
+        // Use thread-safe version that doesn't require main thread
+        return WindowHelper.isCursorInTitleBarThreadSafe(titleBarHeight: titleBarHeight)
     }
 }
 
@@ -583,12 +581,29 @@ extension MultitouchManager: GestureRecognizerDelegate {
     // approach trades minimal event leakage for responsiveness.
 
     func gestureRecognizerDidStart(_ recognizer: GestureRecognizer, at position: MTPoint) {
+        // Check title bar passthrough at gesture START to decide if we should handle this gesture
+        // This must happen before setting isInThreeFingerGesture to allow system to handle it
+        if shouldSkipGestureForTitleBar() {
+            Log.debug("gestureRecognizerDidStart: Title bar detected - passing through to system", category: .gesture)
+            shouldPassThroughCurrentGesture = true
+            // Don't set isInThreeFingerGesture - let system handle the gesture
+            return
+        }
+        
+        shouldPassThroughCurrentGesture = false
+        Log.debug("gestureRecognizerDidStart: Normal gesture - handling ourselves", category: .gesture)
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = true
         }
     }
 
     func gestureRecognizerDidTap(_ recognizer: GestureRecognizer) {
+        // Skip if this gesture is being passed through to system (e.g., title bar drag)
+        if shouldPassThroughCurrentGesture {
+            shouldPassThroughCurrentGesture = false
+            return
+        }
+        
         // Check if tap to click is enabled
         guard configuration.tapToClickEnabled else {
             // Reset state even if tap is disabled
@@ -607,18 +622,6 @@ extension MultitouchManager: GestureRecognizerDelegate {
         //       windowAtCursorMeetsMinimumSize would return true for desktop (no window found).
         if shouldSkipGestureForDesktop() {
             // Cursor is over desktop - skip tap
-            DispatchQueue.main.async { [weak self] in
-                self?.isInThreeFingerGesture = false
-                self?.gestureEndTime = CACurrentMediaTime()
-                self?.lastGestureWasActive = false
-            }
-            return
-        }
-
-        // Check if cursor is in title bar when passThroughTitleBar is enabled
-        // This allows macOS native three-finger drag to handle window dragging
-        if shouldSkipGestureForTitleBar() {
-            // Cursor is in title bar - skip tap to allow system gesture
             DispatchQueue.main.async { [weak self] in
                 self?.isInThreeFingerGesture = false
                 self?.gestureEndTime = CACurrentMediaTime()
@@ -669,6 +672,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidBeginDragging(_ recognizer: GestureRecognizer) {
+        // Skip if this gesture is being passed through to system (e.g., title bar drag)
+        if shouldPassThroughCurrentGesture {
+            return  // Don't reset flag here - will be reset when gesture ends
+        }
+        
         guard configuration.middleDragEnabled else {
             // Reset state even if drag is disabled
             DispatchQueue.main.async { [weak self] in
@@ -686,18 +694,6 @@ extension MultitouchManager: GestureRecognizerDelegate {
         //       windowAtCursorMeetsMinimumSize would return true for desktop (no window found).
         if shouldSkipGestureForDesktop() {
             // Cursor is over desktop - skip drag
-            DispatchQueue.main.async { [weak self] in
-                self?.isInThreeFingerGesture = false
-                self?.gestureEndTime = CACurrentMediaTime()
-                self?.lastGestureWasActive = false
-            }
-            return
-        }
-
-        // Check if cursor is in title bar when passThroughTitleBar is enabled
-        // This allows macOS native three-finger drag to handle window dragging
-        if shouldSkipGestureForTitleBar() {
-            // Cursor is in title bar - skip drag to allow system gesture
             DispatchQueue.main.async { [weak self] in
                 self?.isInThreeFingerGesture = false
                 self?.gestureEndTime = CACurrentMediaTime()
@@ -747,6 +743,8 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidUpdateDragging(_ recognizer: GestureRecognizer, with data: GestureData)
     {
+        // Skip if this gesture is being passed through to system
+        guard !shouldPassThroughCurrentGesture else { return }
         guard configuration.middleDragEnabled else { return }
         let delta = data.frameDelta(from: configuration)
 
@@ -762,6 +760,15 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidEndDragging(_ recognizer: GestureRecognizer) {
+        // Reset pass-through flag
+        let wasPassingThrough = shouldPassThroughCurrentGesture
+        shouldPassThroughCurrentGesture = false
+        
+        // If we were passing through, don't update our state or send events
+        if wasPassingThrough {
+            return
+        }
+        
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
@@ -775,6 +782,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidCancel(_ recognizer: GestureRecognizer) {
         // Cancel from early state (e.g., possibleTap) - reset state
+        shouldPassThroughCurrentGesture = false
         DispatchQueue.main.async { [weak self] in
             self?.isInThreeFingerGesture = false
             self?.gestureEndTime = CACurrentMediaTime()
@@ -784,6 +792,7 @@ extension MultitouchManager: GestureRecognizerDelegate {
 
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
         // Cancel drag immediately - user added 4th finger for Mission Control
+        shouldPassThroughCurrentGesture = false
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false

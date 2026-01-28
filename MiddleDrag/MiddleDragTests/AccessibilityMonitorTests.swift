@@ -165,7 +165,7 @@ class MockAppLifecycleProcessRunner: AppLifecycleProcessRunner {
     }
 }
 
-class TestableSystemAppLifecycleController: SystemAppLifecycleController {
+class TestableSystemAppLifecycleController: SystemAppLifecycleController, @unchecked Sendable {
     var terminateCalled = false
     var terminateExpectation: XCTestExpectation?
 

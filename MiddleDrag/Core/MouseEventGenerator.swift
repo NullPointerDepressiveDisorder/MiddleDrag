@@ -5,7 +5,7 @@ import Sentry
 @unsafe @preconcurrency import os.log
 
 /// Generates mouse events for middle-click and middle-drag operations
-/// Thread-safety: Uses stateLock and positionLock for internal synchronization
+/// Thread-safety: Uses stateLock for internal synchronization
 final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Properties
@@ -49,12 +49,6 @@ final class MouseEventGenerator: @unchecked Sendable {
     private var previousDeltaX: CGFloat = 0
     private var previousDeltaY: CGFloat = 0
 
-    // Track the last sent mouse position to build relative movements correctly
-    // This prevents jumps from reading stale current mouse positions
-    // Using a lock for thread-safe position updates
-    private var lastSentPosition: CGPoint?
-    private let positionLock = NSLock()
-
     // MARK: - Initialization
 
     init() {
@@ -76,11 +70,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             sendMiddleMouseUp(at: currentPos)
         }
         
-        // Initialize position synchronously to prevent race conditions with updateDrag
         let quartzPos = currentMouseLocationQuartz
-        positionLock.lock()
-        lastSentPosition = quartzPos
-        positionLock.unlock()
 
         // Reset smoothing state
         previousDeltaX = 0
@@ -116,18 +106,16 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     /// Update drag position with delta movement
     /// - Parameters:
-    ///   - deltaX: Horizontal movement delta
-    ///   - deltaY: Vertical movement delta
+    ///   - deltaX: Horizontal movement delta (in pixels)
+    ///   - deltaY: Vertical movement delta (in pixels)
     func updateDrag(deltaX: CGFloat, deltaY: CGFloat) {
         guard isMiddleMouseDown else { return }
         
-        // Record activity time for watchdog (drag is still active)
         activityLock.lock()
         lastActivityTime = CACurrentMediaTime()
         activityLock.unlock()
 
-        // Apply consistent smoothing to both horizontal and vertical movement
-        // Uses the user's configured smoothing factor for both axes
+        // Apply EMA smoothing
         let factor = CGFloat(smoothingFactor)
         var smoothedDeltaX = deltaX
         var smoothedDeltaY = deltaY
@@ -136,116 +124,30 @@ final class MouseEventGenerator: @unchecked Sendable {
             smoothedDeltaY = previousDeltaY * factor + deltaY * (1 - factor)
         }
 
-        // Store for next frame's smoothing
         previousDeltaX = smoothedDeltaX
         previousDeltaY = smoothedDeltaY
 
-        // Skip if movement is too small (but be very lenient for horizontal)
         let horizontalMagnitude = abs(smoothedDeltaX)
         let verticalMagnitude = abs(smoothedDeltaY)
         if horizontalMagnitude < 0.001 && verticalMagnitude < minimumMovementThreshold {
             return
         }
 
-        // CRITICAL: Use tracked position, NOT current system position
-        // Reading currentMouseLocationQuartz causes snap-back because:
-        // 1. We send an event to move cursor
-        // 2. Before macOS processes it, we read current position (still old)
-        // 3. We add delta to old position = snap-back effect
-        // Solution: Track our own position and build from it sequentially
+        let currentPos = currentMouseLocationQuartz
         
-        // Read current position before acquiring lock to avoid blocking other threads
-        // This is only used as fallback if lastSentPosition is nil
-        let fallbackPosition = currentMouseLocationQuartz
-        
-        positionLock.lock()
-        let basePosition: CGPoint
-        if let lastPos = lastSentPosition {
-            basePosition = lastPos
-        } else {
-            // First update - initialize from current position
-            basePosition = fallbackPosition
-        }
-
-        let newLocation = CGPoint(
-            x: basePosition.x + smoothedDeltaX,
-            y: basePosition.y + smoothedDeltaY
-        )
-
-        // Update tracked position immediately
-        lastSentPosition = newLocation
-        positionLock.unlock()
-
-        // Track horizontal movement for debugging snap-back issues
-        // Log to console and Sentry breadcrumbs when enabled
-        let horizontalChange = abs(smoothedDeltaX)
-        let positionChange = abs(newLocation.x - basePosition.x)
-
-        // Detect potential snap-back: large delta but small position change, or vice versa
-        let potentialSnapBack =
-            (horizontalChange > 5.0 && positionChange < horizontalChange * 0.5)
-            || (horizontalChange < 1.0 && positionChange > horizontalChange * 2.0)
-
-        // Log all significant horizontal movements
-        // Use os_log for local logging (always works) and Sentry if enabled
-        if abs(deltaX) > 1.0 || potentialSnapBack {
-            let subsystem = Bundle.main.bundleIdentifier ?? "com.middledrag"
-            let log = OSLog(subsystem: subsystem, category: "gesture")
-            let message =
-                unsafe potentialSnapBack
-                ? "Horizontal drag snap-back detected"
-                : String(
-                    format: "Horizontal drag: delta=%.2f posChange=%.2f", deltaX, positionChange)
-
-            // Log locally first (always works)
-            unsafe os_log(.info, log: log, "%{public}@", message)
-
-            // Only log to Sentry if telemetry is enabled (offline by default)
-            // App must be offline by default - no network calls unless user opts in
-            if CrashReporter.shared.anyTelemetryEnabled {
-                let attributes: [String: Any] = unsafe [
-                    "category": "gesture",
-                    "drag_movement": "horizontal",
-                    "axis": "horizontal",
-                    "movement_type": potentialSnapBack ? "snap_back" : "normal",
-                    "deltaX_magnitude": String(format: "%.0f", abs(deltaX)),
-                    "rawDeltaX": deltaX,
-                    "smoothedDeltaX": smoothedDeltaX,
-                    "rawDeltaY": deltaY,
-                    "smoothedDeltaY": smoothedDeltaY,
-                    "baseX": basePosition.x,
-                    "baseY": basePosition.y,
-                    "newX": newLocation.x,
-                    "newY": newLocation.y,
-                    "positionChangeX": positionChange,
-                    "positionChangeY": abs(newLocation.y - basePosition.y),
-                    "horizontalChange": horizontalChange,
-                    "potentialSnapBack": potentialSnapBack,
-                    "smoothingFactor": smoothingFactor,
-                    "minMovementThreshold": minimumMovementThreshold,
-                    "timestamp": Date().timeIntervalSince1970,
-                    "session_id": Log.sessionID,
-                ]
-
-                if potentialSnapBack {
-                    SentrySDK.logger.warn(message, attributes: attributes)
-                } else {
-                    SentrySDK.logger.info(message, attributes: attributes)
-                }
-            }
-        }
-
-        // Send the mouse event immediately (on current thread) for maximum responsiveness
-        // Position is already locked and updated above, so this is safe
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseDragged,
-                mouseCursorPosition: newLocation,
+                mouseCursorPosition: currentPos,
                 mouseButton: .center
             )
         else { return }
 
+        // Use relative deltas instead of absolute positioning
+        event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
+        event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
+        
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
@@ -267,12 +169,8 @@ final class MouseEventGenerator: @unchecked Sendable {
         eventQueue.async { [weak self] in
             guard let self = self else { return }
 
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             let currentPos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: currentPos)
         }
@@ -354,12 +252,8 @@ final class MouseEventGenerator: @unchecked Sendable {
         // with other operations like performClick()
         eventQueue.async { [weak self] in
             guard let self = self else { return }
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             let currentPos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: currentPos)
         }
@@ -392,12 +286,8 @@ final class MouseEventGenerator: @unchecked Sendable {
             let newGeneration = self.stateLock.withLock { self._dragGeneration }
             guard newGeneration == currentGeneration else { return }
             
-            // Reset state and send another UP
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             
             let pos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: pos)
@@ -406,25 +296,25 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Coordinate Conversion
 
-    /// Get current mouse position in Quartz coordinates (origin at top-left)
+    /// Get current mouse position in Quartz coordinates
     private var currentMouseLocationQuartz: CGPoint {
         if let event = CGEvent(source: nil) {
             return event.location
         }
-
-        // Fallback: convert from Cocoa coordinates (origin at bottom-left)
+        
+        // Fallback: use primary screen height for multi-monitor support
         let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.main?.frame.height ?? 0
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
 
-    /// Get current mouse location in Quartz coordinates (public access)
+    /// Get current mouse location in Quartz coordinates (public)
     static var currentMouseLocation: CGPoint {
         if let event = CGEvent(source: nil) {
             return event.location
         }
         let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.main?.frame.height ?? 0
+        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
         return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
     }
 
@@ -452,43 +342,6 @@ final class MouseEventGenerator: @unchecked Sendable {
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseUp,
                 mouseCursorPosition: location,
-                mouseButton: .center
-            )
-        else { return }
-
-        event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
-        event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
-        event.post(tap: .cghidEventTap)
-    }
-
-    private func sendRelativeMouseMove(deltaX: CGFloat, deltaY: CGFloat) {
-        // Use the last sent position to build relative movements correctly
-        // This prevents jumps from reading stale current mouse positions
-        // Note: This function appears to be unused but kept for potential future use
-        positionLock.lock()
-        let basePosition: CGPoint
-        if let lastPos = lastSentPosition {
-            basePosition = lastPos
-        } else {
-            // Fallback to current position if we don't have a last position
-            basePosition = currentMouseLocationQuartz
-        }
-
-        let newLocation = CGPoint(
-            x: basePosition.x + deltaX,
-            y: basePosition.y + deltaY
-        )
-
-        // Update last sent position
-        lastSentPosition = newLocation
-        positionLock.unlock()
-
-        guard
-            let event = CGEvent(
-                mouseEventSource: eventSource,
-                mouseType: .otherMouseDragged,
-                mouseCursorPosition: newLocation,
                 mouseButton: .center
             )
         else { return }
@@ -622,14 +475,9 @@ final class MouseEventGenerator: @unchecked Sendable {
                 return
             }
             
-            // Reset smoothing state
             self.previousDeltaX = 0
             self.previousDeltaY = 0
-            self.positionLock.lock()
-            self.lastSentPosition = nil
-            self.positionLock.unlock()
             
-            // Send another mouse up as a fallback
             let pos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: pos)
         }

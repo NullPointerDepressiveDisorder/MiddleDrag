@@ -448,7 +448,7 @@ final class GestureRecognizerTests: XCTestCase {
         unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .possibleTap)
 
-        // Move fingers (small delta to avoid centroid jump rejection > 0.03)
+        // Move fingers (small delta, well within 0.15 jump threshold)
         let touches2 = [
             createTouch(x: 0.32, y: 0.52),
             createTouch(x: 0.52, y: 0.52),
@@ -477,7 +477,7 @@ final class GestureRecognizerTests: XCTestCase {
 
         unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
-        // Move to trigger drag (small delta to avoid centroid jump rejection > 0.03)
+        // Move to trigger drag (small delta, well within 0.15 jump threshold)
         let touches2 = [
             createTouch(x: 0.32, y: 0.52),
             createTouch(x: 0.52, y: 0.52),
@@ -627,8 +627,8 @@ final class GestureRecognizerTests: XCTestCase {
         // Start gesture
         unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
 
-        // Move with small delta (exceeds move threshold of 0.01 but avoids centroid jump > 0.03)
-        // Centroid move: from 0.5 to 0.52 = 0.02 (below 0.03 jump threshold)
+        // Move with small delta (exceeds move threshold of 0.01, well within 0.15 jump threshold)
+        // Centroid move: from 0.5 to 0.52 = 0.02
         let touches2 = [
             createTouch(x: 0.32, y: 0.52),
             createTouch(x: 0.52, y: 0.52),
@@ -1069,7 +1069,7 @@ final class GestureRecognizerTests: XCTestCase {
 
         mockDelegate.reset()
 
-        // Large jump (simulating finger replacement) - centroid jumps > 0.03
+        // Large jump (simulating finger replacement) - centroid jumps > 0.15
         let touches3 = [
             createTouch(x: 0.1, y: 0.1),
             createTouch(x: 0.2, y: 0.1),
@@ -1153,7 +1153,7 @@ final class GestureRecognizerTests: XCTestCase {
     // MARK: - GestureData Tests
 
     func testGestureDataFrameDelta() {
-        // Use small delta that's below the 0.03 large jump rejection threshold
+        // Use small delta that's below the 0.15 large jump rejection threshold
         let centroid = MTPoint(x: 0.52, y: 0.52)  // Delta of 0.02 from lastPosition
         let lastPosition = MTPoint(x: 0.5, y: 0.5)
 
@@ -1438,6 +1438,198 @@ final class GestureRecognizerTests: XCTestCase {
         XCTAssertEqual(
             recognizer.state, .idle,
             "possibleTap should end with 2 fingers even with relift enabled")
+    }
+
+    // MARK: - Fast Movement Threshold Tests (0.15)
+
+    func testFastMovementWithinThresholdIsAccepted() {
+        recognizer.configuration.moveThreshold = 0.01
+
+        // Start gesture
+        let touches1 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
+        defer { cleanup1() }
+
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+
+        // Trigger drag state
+        let touches2 = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+        mockDelegate.reset()
+
+        // Fast movement: 0.10 delta (within 0.15 threshold)
+        let touches3 = [
+            createTouch(x: 0.42, y: 0.52),
+            createTouch(x: 0.62, y: 0.52),
+            createTouch(x: 0.82, y: 0.52),
+        ]
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.1, modifierFlags: [])
+
+        XCTAssertTrue(mockDelegate.didUpdateDraggingCalled, "Fast movement within 0.15 threshold should trigger update")
+    }
+
+    func testVeryFastMovementAtThresholdBoundary() {
+        recognizer.configuration.moveThreshold = 0.01
+
+        // Start gesture
+        let touches1 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
+        defer { cleanup1() }
+
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+
+        // Trigger drag state
+        let touches2 = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+        mockDelegate.reset()
+
+        // Movement at 0.14 (just under 0.15 threshold)
+        let touches3 = [
+            createTouch(x: 0.46, y: 0.52),
+            createTouch(x: 0.66, y: 0.52),
+            createTouch(x: 0.86, y: 0.52),
+        ]
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.1, modifierFlags: [])
+
+        XCTAssertTrue(mockDelegate.didUpdateDraggingCalled, "Movement at 0.14 should be accepted")
+    }
+
+    func testJumpExceedingThresholdIsFiltered() {
+        recognizer.configuration.moveThreshold = 0.01
+
+        // Start gesture
+        let touches1 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
+        defer { cleanup1() }
+
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+
+        // Trigger drag state
+        let touches2 = [
+            createTouch(x: 0.32, y: 0.52),
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+        ]
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .dragging)
+        mockDelegate.reset()
+
+        // Large jump: 0.20 delta (exceeds 0.15 threshold - likely finger change)
+        let touches3 = [
+            createTouch(x: 0.52, y: 0.52),
+            createTouch(x: 0.72, y: 0.52),
+            createTouch(x: 0.92, y: 0.52),
+        ]
+        let (pointer3, count3, cleanup3) = unsafe createTouchData(touches: touches3)
+        defer { cleanup3() }
+
+        unsafe recognizer.processTouches(pointer3, count: count3, timestamp: 0.1, modifierFlags: [])
+
+        XCTAssertFalse(mockDelegate.didUpdateDraggingCalled, "Jump exceeding 0.15 threshold should be filtered")
+    }
+
+    func testLargeCentroidJumpResetsReferencePoint() {
+        // Start gesture
+        let touches1 = [
+            createTouch(x: 0.3, y: 0.5),
+            createTouch(x: 0.5, y: 0.5),
+            createTouch(x: 0.7, y: 0.5),
+        ]
+        let (pointer1, count1, cleanup1) = unsafe createTouchData(touches: touches1)
+        defer { cleanup1() }
+
+        unsafe recognizer.processTouches(pointer1, count: count1, timestamp: 0.0, modifierFlags: [])
+        XCTAssertEqual(recognizer.state, .possibleTap)
+
+        // Large jump (> 0.15) - simulates finger add/remove
+        let touches2 = [
+            createTouch(x: 0.1, y: 0.3),
+            createTouch(x: 0.3, y: 0.3),
+            createTouch(x: 0.5, y: 0.3),
+        ]
+        let (pointer2, count2, cleanup2) = unsafe createTouchData(touches: touches2)
+        defer { cleanup2() }
+
+        unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.05, modifierFlags: [])
+
+        // State should still be possibleTap (jump filtered, not converted to drag)
+        XCTAssertEqual(recognizer.state, .possibleTap, "Large jump should reset reference, not trigger drag")
+    }
+
+    func testFrameDeltaFiltersLargeJumps() {
+        let config = GestureConfiguration()
+        
+        // Create gesture data with large delta (> 0.15)
+        let gestureData = GestureData(
+            centroid: MTPoint(x: 0.7, y: 0.5),
+            velocity: MTPoint(x: 0, y: 0),
+            pressure: 0,
+            fingerCount: 3,
+            startPosition: MTPoint(x: 0.5, y: 0.5),
+            lastPosition: MTPoint(x: 0.5, y: 0.5)  // Delta of 0.2 in X
+        )
+        
+        let delta = gestureData.frameDelta(from: config)
+        
+        XCTAssertEqual(delta.x, 0, "Large X delta should be filtered to 0")
+        XCTAssertEqual(delta.y, 0, "Large Y delta should be filtered to 0")
+    }
+
+    func testFrameDeltaAcceptsNormalMovement() {
+        var config = GestureConfiguration()
+        config.sensitivity = 1.0
+        
+        // Create gesture data with normal delta (< 0.15)
+        let gestureData = GestureData(
+            centroid: MTPoint(x: 0.55, y: 0.52),
+            velocity: MTPoint(x: 0, y: 0),
+            pressure: 0,
+            fingerCount: 3,
+            startPosition: MTPoint(x: 0.5, y: 0.5),
+            lastPosition: MTPoint(x: 0.5, y: 0.5)  // Delta of 0.05 in X, 0.02 in Y
+        )
+        
+        let delta = gestureData.frameDelta(from: config)
+        
+        XCTAssertNotEqual(delta.x, 0, "Normal X delta should not be filtered")
+        XCTAssertNotEqual(delta.y, 0, "Normal Y delta should not be filtered")
     }
 }
 

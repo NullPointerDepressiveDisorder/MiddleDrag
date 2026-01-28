@@ -159,15 +159,14 @@ class GestureRecognizer {
     // MARK: - Private Methods
 
     private func handleValidGesture(fingers: [MTPoint], timestamp: Double) {
-        stableFrameCount = 0  // Reset since we have valid fingers
+        stableFrameCount = 0
 
         let centroid = calculateCentroid(fingers: fingers)
 
-        // Check for large centroid jumps (finger added/removed causing position shift)
+        // Filter large centroid jumps from finger add/remove (not fast movement)
         if let last = lastCentroid {
             let jump = centroid.distance(to: last)
-            if jump > 0.03 {
-                // Large jump detected - reset reference point
+            if jump > 0.15 {
                 lastCentroid = centroid
                 lastFingerPositions = fingers
                 return
@@ -199,13 +198,13 @@ class GestureRecognizer {
             }
 
         case .dragging:
-            // Calculate delta from last frame
             if let last = lastCentroid {
                 let deltaX = centroid.x - last.x
                 let deltaY = centroid.y - last.y
 
-                // Only process small deltas (real movement, not jumps)
-                if abs(deltaX) < 0.03 && abs(deltaY) < 0.03 {
+                // Filter jumps from finger changes
+                let maxDelta: Float = 0.15
+                if abs(deltaX) < maxDelta && abs(deltaY) < maxDelta {
                     if abs(deltaX) > 0.0001 || abs(deltaY) > 0.0001 {
                         let gestureData = GestureData(
                             centroid: centroid,
@@ -290,8 +289,8 @@ struct GestureData: Sendable {
         let deltaX = CGFloat(centroid.x - lastPosition.x)
         let deltaY = CGFloat(centroid.y - lastPosition.y)
 
-        // Reject large deltas (likely jumps from finger changes)
-        if abs(deltaX) > 0.03 || abs(deltaY) > 0.03 {
+        // Filter jumps from finger changes
+        if abs(deltaX) > 0.15 || abs(deltaY) > 0.15 {
             return (0, 0)
         }
 
