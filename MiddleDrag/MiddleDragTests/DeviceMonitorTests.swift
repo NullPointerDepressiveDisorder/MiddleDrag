@@ -254,30 +254,40 @@ import XCTest
         // Simulates the exact scenario from the bug report:
         // Rapid restart cycles during connectivity changes causing
         // gDeviceMonitor to become nil while callbacks are still in-flight.
+        // 
+        // This test verifies crash-safety of the synchronization mechanism.
+        // A crash here would indicate a race condition in the callback/stop logic.
+        var cyclesCompleted = 0
         for i in 0..<10 {
             unsafe monitor.start()
             // Simulate some activity
             Thread.sleep(forTimeInterval: 0.005)
             unsafe monitor.stop()
+            cyclesCompleted += 1
             
             // Create a new monitor to simulate restart
             if i < 9 {  // Don't create on last iteration
                 unsafe monitor = unsafe DeviceMonitor()
             }
         }
-        // Test passes if no crash occurred
-        XCTAssertTrue(true)
+        // Verify all cycles completed without crash
+        XCTAssertEqual(cyclesCompleted, 10, "All restart cycles should complete without crash")
     }
 
     func testConcurrentStartStopDoesNotCrash() {
-        // Test that concurrent start/stop operations don't crash
-        // due to the new locking mechanism
+        // Test that concurrent start/stop operations on the same instance don't crash.
+        // NOTE: Concurrent start/stop on the same instance may leave it in an inconsistent
+        // state, but it should NOT crash due to the locking mechanism protecting global state.
+        // This tests crash-safety of the synchronization, not correctness of final state.
         let expectation = XCTestExpectation(description: "Concurrent operations complete")
         expectation.expectedFulfillmentCount = 2
+        var startCount = 0
+        var stopCount = 0
         
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.start()
+                startCount += 1
                 Thread.sleep(forTimeInterval: 0.01)
             }
             expectation.fulfill()
@@ -286,12 +296,16 @@ import XCTest
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.stop()
+                stopCount += 1
                 Thread.sleep(forTimeInterval: 0.01)
             }
             expectation.fulfill()
         }
         
         unsafe wait(for: [expectation], timeout: 5.0)
+        // Verify operations completed (crash-safety check)
+        XCTAssertEqual(startCount, 5, "All start operations should complete")
+        XCTAssertEqual(stopCount, 5, "All stop operations should complete")
     }
 
     func testMultipleMonitorCreationDuringCleanup() {
@@ -300,15 +314,20 @@ import XCTest
         unsafe monitor.start()
         unsafe monitor.stop()
         
-        // Immediately create new monitors without waiting for cleanup
-        for _ in 0..<5 {
-            let newMonitor = unsafe DeviceMonitor()
-            unsafe newMonitor.start()
-            unsafe newMonitor.stop()
+        // Immediately create new monitors without waiting for cleanup.
+        // Each monitor is properly stopped before creating the next one.
+        var monitorsCreated = 0
+        autoreleasepool {
+            for _ in 0..<5 {
+                let newMonitor = unsafe DeviceMonitor()
+                unsafe newMonitor.start()
+                unsafe newMonitor.stop()
+                monitorsCreated += 1
+            }
         }
         
-        // Test passes if no crash occurred
-        XCTAssertTrue(true)
+        // Verify all monitors were created and cleaned up without crash
+        XCTAssertEqual(monitorsCreated, 5, "All monitors should be created and stopped without crash")
     }
 
     // MARK: - Delegate Callback Tests

@@ -13,10 +13,11 @@ import os
 // Required because C callbacks cannot capture Swift context
 @unsafe nonisolated(unsafe) private var gDeviceMonitor: DeviceMonitor?
 
-/// Atomic flag to control whether callbacks should be processed.
-/// This is checked FIRST in the callback, before accessing gDeviceMonitor,
-/// to prevent race conditions during teardown where gDeviceMonitor might
-/// be nil or pointing to a deallocated object.
+/// Flag to control whether callbacks should be processed.
+/// Access to this flag must be synchronized using `gCallbackLock`; it is *not* atomic by itself.
+/// This is checked FIRST in the callback, while holding the lock, before accessing gDeviceMonitor,
+/// to prevent race conditions during teardown where gDeviceMonitor might be nil or pointing to
+/// a deallocated object.
 @unsafe nonisolated(unsafe) private var gCallbackEnabled: Bool = false
 
 /// Lock to synchronize callback processing with stop/deinit operations.
@@ -126,25 +127,10 @@ class DeviceMonitor: TouchDeviceProviding {
     }
 
     deinit {
-        // stop() already disables callbacks and unregisters with the framework
+        // Ensure we've fully stopped monitoring and unregistered callbacks.
+        // All global cleanup (gDeviceMonitor, gPendingCleanup, etc.) is handled
+        // inside stop() under gCallbackLock to avoid taking locks in deinit.
         unsafe stop()
-        
-        // Acquire lock to safely update global state
-        unsafe os_unfair_lock_lock(&gCallbackLock)
-        
-        // Only clear the global reference if this instance owns it
-        if unsafe ownsGlobalReference && gDeviceMonitor === self {
-            // CRITICAL: Instead of setting gDeviceMonitor to nil immediately,
-            // we keep 'self' alive via gPendingCleanup until the next DeviceMonitor
-            // is created. This prevents EXC_BAD_ACCESS if the framework's internal
-            // thread still has a reference to this callback and tries to invoke it.
-            // The next init() will clear gPendingCleanup, releasing this instance.
-            // Note: We can't assign self in deinit, but gDeviceMonitor still points
-            // to us and stop() has already disabled callbacks, so we're safe.
-            unsafe gDeviceMonitor = nil
-        }
-        
-        unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
     // MARK: - Public Interface
@@ -224,7 +210,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // Safe to call when not running - just return early
         guard unsafe isRunning else { return }
 
-        // CRITICAL: Disable callbacks FIRST, before ANY cleanup.
+        // CRITICAL: Disable callbacks and handle global cleanup under lock.
         // This must happen BEFORE unregistering callbacks with the framework,
         // because the framework's internal thread (mt_ThreadedMTEntry) may still
         // have in-flight callbacks that could access gDeviceMonitor.
@@ -232,6 +218,16 @@ class DeviceMonitor: TouchDeviceProviding {
         // accessing gDeviceMonitor while we're tearing down.
         unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = false
+        
+        // Handle global cleanup: if this instance owns the global reference,
+        // move it to gPendingCleanup to keep it alive until the next DeviceMonitor
+        // is created. This prevents EXC_BAD_ACCESS if the framework's internal
+        // thread still has a reference to this callback and tries to invoke it.
+        if unsafe ownsGlobalReference && gDeviceMonitor === self {
+            unsafe gPendingCleanup = gDeviceMonitor
+            unsafe gDeviceMonitor = nil
+            unsafe ownsGlobalReference = false
+        }
         unsafe os_unfair_lock_unlock(&gCallbackLock)
 
         // IMPORTANT: Unregister callbacks FIRST, before stopping devices
