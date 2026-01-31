@@ -169,6 +169,7 @@ final class MultitouchManager: @unchecked Sendable {
         // Clear restart state to prevent interference with future starts
         restartLock.lock()
         isRestartInProgress = false
+        lastRestartCompletedTime = 0
         restartLock.unlock()
 
         // If not monitoring AND no wake observer (normal stopped state), just return
