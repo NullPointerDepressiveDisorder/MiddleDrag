@@ -82,17 +82,6 @@ jobs:
             **SHA256:** `${{ steps.sha.outputs.SHA256 }}`
           files: ${{ inputs.artifact-name }}.pkg
 
-      - name: Trigger Homebrew Update
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          curl -f -X POST \
-            -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/${{ github.repository }}/dispatches \
-            -d "{\"event_type\":\"homebrew_release\",\"client_payload\":{\"version\":\"${{ inputs.version }}\"}}"
-          echo "✓ Triggered Homebrew update workflow"
-
       - name: Trigger MacPorts Update
         env:
           GH_TOKEN: ${{ github.token }}

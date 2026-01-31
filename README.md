@@ -4,15 +4,19 @@
 
 The middle mouse button your Mac trackpad is missing.
 
-[![macOS 15+](https://img.shields.io/badge/macOS-15.0+-blue?logo=apple)](https://www.apple.com/macos/)
-[![Swift 6.2+](https://img.shields.io/badge/Swift-6.2+-orange?logo=swift)](https://swift.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Homebrew](https://img.shields.io/badge/Homebrew-tap-brown?logo=homebrew)](https://github.com/NullPointerDepressiveDisorder/homebrew-tap)
-[![MacPorts Version](https://img.shields.io/badge/dynamic/json?logo=macports&label=macports&query=%24.version&url=https%3A%2F%2Fports.macports.org%2Fapi%2Fv1%2Fports%2Fmiddledrag%2F)](https://ports.macports.org/port/middledrag/)
-[![GitHub release](https://img.shields.io/github/v/release/NullPointerDepressiveDisorder/MiddleDrag)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
-[![Downloads](https://img.shields.io/github/downloads/NullPointerDepressiveDisorder/MiddleDrag/total?color=brightgreen)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_shield&issueType=license)
-[![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
+<div align="center">
+
+  [![macOS 15+](https://img.shields.io/badge/macOS-15.0+-blue?logo=apple)](https://www.apple.com/macos/)
+  [![Swift 6.2+](https://img.shields.io/badge/Swift-6.2+-orange?logo=swift)](https://swift.org)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+  [![Homebrew Cask Version](https://img.shields.io/homebrew/cask/v/middledrag?style=flat&logo=homebrew&color=%23FBB040&link=https%3A%2F%2Fformulae.brew.sh%2Fcask%2Fmiddledrag)](https://formulae.brew.sh/cask/middledrag)
+  [![MacPorts Version](https://img.shields.io/badge/dynamic/json?logo=macports&label=macports&query=%24.version&url=https%3A%2F%2Fports.macports.org%2Fapi%2Fv1%2Fports%2Fmiddledrag%2F)](https://ports.macports.org/port/middledrag/)
+  [![GitHub release](https://img.shields.io/github/v/release/NullPointerDepressiveDisorder/MiddleDrag)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
+  [![Downloads](https://img.shields.io/github/downloads/NullPointerDepressiveDisorder/MiddleDrag/total?color=brightgreen)](https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases)
+  [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_shield&issueType=license)
+  [![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
+
+<div>
 
 <p align="center">
   <img src="docs/assets/demo.gif" alt="MiddleDrag Demo" width="600">
@@ -69,7 +73,6 @@ Mac trackpads don't have a middle mouse button. Many apps expect one.
 ### Homebrew (Recommended)
 
 ```bash
-brew tap nullpointerdepressivedisorder/tap
 brew install --cask middledrag
 ```
 
