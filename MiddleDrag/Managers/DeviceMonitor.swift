@@ -1,5 +1,6 @@
 import CoreFoundation
 import Foundation
+import os
 
 // MARK: - Debug Touch Counter (Debug builds only)
 
@@ -12,10 +13,47 @@ import Foundation
 // Required because C callbacks cannot capture Swift context
 @unsafe nonisolated(unsafe) private var gDeviceMonitor: DeviceMonitor?
 
+/// Flag to control whether callbacks should be processed.
+/// Access to this flag must be synchronized using `gCallbackLock`; it is *not* atomic by itself.
+/// This is checked FIRST in the callback, while holding the lock, before accessing gDeviceMonitor,
+/// to prevent race conditions during teardown where gDeviceMonitor might be nil or pointing to
+/// a deallocated object.
+@unsafe nonisolated(unsafe) private var gCallbackEnabled: Bool = false
+
+/// Lock to synchronize callback processing with stop/deinit operations.
+/// Uses os_unfair_lock for minimal overhead in high-frequency C callbacks.
+/// This is Apple's recommended lock for performance-critical short critical sections.
+/// Note: os_unfair_lock must not be moved in memory after initialization - safe here as a global.
+@unsafe nonisolated(unsafe) private var gCallbackLock = os_unfair_lock()
+
+/// Reference to a DeviceMonitor pending cleanup.
+/// When a DeviceMonitor is stopped, it's moved here to keep it alive until
+/// the framework's internal thread has completed any in-flight callbacks.
+/// This prevents EXC_BAD_ACCESS from accessing a deallocated object.
+@unsafe nonisolated(unsafe) private var gPendingCleanup: DeviceMonitor?
+
 // MARK: - C Callback Function
 
 @unsafe private let deviceContactCallback: MTContactCallbackFunction = {
     device, touches, numTouches, timestamp, frame in
+    
+    // CRITICAL: Check the enabled flag FIRST, before accessing gDeviceMonitor.
+    // This prevents accessing a nil or dangling pointer during teardown.
+    // We use the lock to synchronize with stop() which sets the flag to false.
+    unsafe os_unfair_lock_lock(&gCallbackLock)
+    guard unsafe gCallbackEnabled else {
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
+        return 0
+    }
+    // Copy the monitor reference while holding the lock
+    guard let monitor = unsafe gDeviceMonitor,
+          let touches = unsafe touches
+    else {
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
+        return 0
+    }
+    unsafe os_unfair_lock_unlock(&gCallbackLock)
+    
     #if DEBUG
         touchCount += 1
         // Log sparingly to avoid performance impact
@@ -23,10 +61,6 @@ import Foundation
             Log.debug(unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
         }
     #endif
-
-    guard let monitor = unsafe gDeviceMonitor,
-          let touches = unsafe touches
-    else { return 0 }
 
     let shouldConsume = unsafe monitor.handleContact(
         device: device,
@@ -79,20 +113,28 @@ class DeviceMonitor: TouchDeviceProviding {
     // MARK: - Lifecycle
 
     init() {
+        // Acquire lock to safely update global state
+        unsafe os_unfair_lock_lock(&gCallbackLock)
+        
+        // Release any previous pending cleanup reference
+        // The old instance has had time to complete cleanup by now
+        unsafe gPendingCleanup = nil
+        
         // Only take ownership of the global reference if no other instance owns it
         // This prevents test interference when multiple DeviceMonitor instances are created
         if unsafe gDeviceMonitor == nil {
             unsafe gDeviceMonitor = unsafe self
             unsafe ownsGlobalReference = true
         }
+        
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
     deinit {
+        // Ensure we've fully stopped monitoring and unregistered callbacks.
+        // All global cleanup (gDeviceMonitor, gPendingCleanup, etc.) is handled
+        // inside stop() under gCallbackLock to avoid taking locks in deinit.
         unsafe stop()
-        // Only clear the global reference if this instance owns it
-        if unsafe ownsGlobalReference && gDeviceMonitor === self {
-            unsafe gDeviceMonitor = nil
-        }
     }
 
     // MARK: - Public Interface
@@ -159,6 +201,13 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
 
         unsafe isRunning = true
+        
+        // Enable callbacks AFTER all devices are registered.
+        // This ensures gDeviceMonitor is fully set up before callbacks can access it.
+        unsafe os_unfair_lock_lock(&gCallbackLock)
+        unsafe gCallbackEnabled = true
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
+        
         return true
     }
 
@@ -183,18 +232,37 @@ class DeviceMonitor: TouchDeviceProviding {
 
         stateLock.unlock()
 
+        // CRITICAL: Disable callbacks and handle global cleanup under lock.
+        // This must happen BEFORE unregistering callbacks with the framework,
+        // because the framework's internal thread (mt_ThreadedMTEntry) may still
+        // have in-flight callbacks that could access gDeviceMonitor.
+        // The lock synchronizes with the callback to ensure no callback is
+        // accessing gDeviceMonitor while we're tearing down.
+        unsafe os_unfair_lock_lock(&gCallbackLock)
+        unsafe gCallbackEnabled = false
+        
+        // Handle global cleanup: if this instance owns the global reference,
+        // move it to gPendingCleanup to keep it alive until the next DeviceMonitor
+        // is created. This prevents EXC_BAD_ACCESS if the framework's internal
+        // thread still has a reference to this callback and tries to invoke it.
+        if unsafe ownsGlobalReference && gDeviceMonitor === self {
+            unsafe gPendingCleanup = gDeviceMonitor
+            unsafe gDeviceMonitor = nil
+            unsafe ownsGlobalReference = false
+        }
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
+
         // IMPORTANT: Unregister callbacks FIRST, before stopping devices
         // This prevents the framework's internal thread (mt_ThreadedMTEntry)
-        // from receiving callbacks while we're stopping devices, which causes
-        // a race condition crash (CFRelease called with NULL / invalid address)
+        // from receiving NEW callbacks while we're stopping devices.
         for unsafe deviceRef in devicesToStop {
             unsafe MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
         }
 
-        // Brief pause to allow the framework's internal thread to see the
-        // unregistered callbacks and complete any in-flight operations.
-        // Without this, the framework thread may still be processing a callback
-        // when we call MTDeviceStop, causing a race condition.
+        // Brief pause to allow the framework's internal thread to complete
+        // any in-flight operations AFTER we've disabled callbacks and unregistered.
+        // Even with callbacks disabled, we still need to wait for any callback
+        // that was already dispatched but hasn't checked the flag yet.
         // This sleep is intentionally done with lock unlocked to avoid blocking other threads.
         unsafe Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
 
