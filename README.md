@@ -16,7 +16,7 @@ The middle mouse button your Mac trackpad is missing.
   [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag.svg?type=shield&issueType=license)](https://app.fossa.com/projects/custom%2B59309%2Fgithub.com%2FNullPointerDepressiveDisorder%2FMiddleDrag?ref=badge_shield&issueType=license)
   [![codecov](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag/graph/badge.svg?token=8PR656FVXE)](https://codecov.io/github/NullPointerDepressiveDisorder/MiddleDrag)
 
-<div>
+</div>
 
 <p align="center">
   <img src="docs/assets/demo.gif" alt="MiddleDrag Demo" width="600">
