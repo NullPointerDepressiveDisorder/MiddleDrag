@@ -11,9 +11,15 @@ final class MultitouchManager: @unchecked Sendable {
     /// Delay after stopping before restarting devices during wake-from-sleep.
     /// This allows the MultitouchSupport framework's internal thread (mt_ThreadedMTEntry)
     /// to fully complete cleanup before we start new devices.
-    /// Value determined empirically: 100ms is sufficient to avoid CFRelease(NULL) crashes
-    /// caused by the framework accessing deallocated resources.
-    static let restartCleanupDelay: TimeInterval = 0.1
+    /// Value determined empirically: 250ms is sufficient to avoid CFRelease(NULL) crashes
+    /// caused by the framework accessing deallocated resources. Increased from 100ms to
+    /// handle rapid foreground/background toggling that can trigger multiple restart cycles.
+    static let restartCleanupDelay: TimeInterval = 0.25
+
+    /// Minimum delay between restart operations to prevent race conditions.
+    /// When multiple restart triggers occur in rapid succession, we debounce them
+    /// by waiting at least this long after the last restart completed.
+    static let minimumRestartInterval: TimeInterval = 0.3
 
     // MARK: - Properties
 
@@ -63,6 +69,11 @@ final class MultitouchManager: @unchecked Sendable {
 
     // Work item for debouncing restarts
     private var restartWorkItem: DispatchWorkItem?
+
+    // Restart synchronization to prevent race conditions from rapid foreground/background toggling
+    private let restartLock = NSLock()
+    private var isRestartInProgress = false
+    private var lastRestartCompletedTime: TimeInterval = 0
 
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
@@ -155,6 +166,11 @@ final class MultitouchManager: @unchecked Sendable {
         restartWorkItem?.cancel()
         restartWorkItem = nil
 
+        // Clear restart state to prevent interference with future starts
+        restartLock.lock()
+        isRestartInProgress = false
+        restartLock.unlock()
+
         // If not monitoring AND no wake observer (normal stopped state), just return
         // We must proceed if either isMonitoring OR wakeObserver exists (meaning we might be in restart delay)
         guard isMonitoring || wakeObserver != nil else { return }
@@ -173,6 +189,40 @@ final class MultitouchManager: @unchecked Sendable {
         // Using wakeObserver allows retry after failed restart (when isMonitoring=false)
         // because internalStop() sets isMonitoring=false before setupEventTap() runs
         guard wakeObserver != nil || isMonitoring else { return }
+
+        // Prevent concurrent restart operations - this is critical to avoid race conditions
+        // when rapid foreground/background toggling triggers multiple restart() calls.
+        // The MultitouchSupport framework's internal thread can crash (EXC_BREAKPOINT) if
+        // we attempt overlapping stop/start cycles.
+        restartLock.lock()
+
+        // If a restart is already in progress, just let it complete
+        if isRestartInProgress {
+            Log.debug("Restart already in progress, skipping duplicate request", category: .device)
+            restartLock.unlock()
+            return
+        }
+
+        // Check if we're restarting too quickly after a previous restart
+        let now = CACurrentMediaTime()
+        let timeSinceLastRestart = now - lastRestartCompletedTime
+        if lastRestartCompletedTime > 0 && timeSinceLastRestart < Self.minimumRestartInterval {
+            Log.debug("Restart throttled: \(String(format: "%.3f", timeSinceLastRestart))s since last restart", category: .device)
+            // Schedule a delayed restart instead
+            restartWorkItem?.cancel()
+            let remainingDelay = Self.minimumRestartInterval - timeSinceLastRestart
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.restart()
+            }
+            restartWorkItem = workItem
+            restartLock.unlock()
+            DispatchQueue.main.asyncAfter(deadline: .now() + remainingDelay, execute: workItem)
+            return
+        }
+
+        isRestartInProgress = true
+        restartLock.unlock()
+
         Log.info("Restarting multitouch monitoring", category: .device)
 
         // Store current state
@@ -185,7 +235,7 @@ final class MultitouchManager: @unchecked Sendable {
         // framework's internal thread (mt_ThreadedMTEntry) to fully complete cleanup.
         // Without this delay, there's a race condition where the framework thread
         // may still be releasing resources when we try to start new devices,
-        // causing CFRelease(NULL) crashes.
+        // causing CFRelease(NULL) crashes or EXC_BREAKPOINT exceptions.
 
         // Cancel any pending restart to prevent race conditions with multiple rapid restarts
         restartWorkItem?.cancel()
@@ -204,7 +254,10 @@ final class MultitouchManager: @unchecked Sendable {
     /// Performs the actual restart after the cleanup delay
     private func performRestart(wasEnabled: Bool) {
         // Verify we should still restart (manager may have been stopped during delay)
-        guard wakeObserver != nil else { return }
+        guard wakeObserver != nil else {
+            markRestartComplete()
+            return
+        }
 
         applyConfiguration()
         let eventTapSuccess = eventTapSetupFactory()
@@ -214,6 +267,7 @@ final class MultitouchManager: @unchecked Sendable {
             isMonitoring = false
             isEnabled = false
             removeSleepWakeObservers()
+            markRestartComplete()
             return
         }
 
@@ -230,11 +284,22 @@ final class MultitouchManager: @unchecked Sendable {
             isMonitoring = false
             isEnabled = false
             removeSleepWakeObservers()
+            markRestartComplete()
             return
         }
 
         isMonitoring = true
         isEnabled = wasEnabled
+        markRestartComplete()
+        Log.info("Multitouch monitoring restarted successfully", category: .device)
+    }
+
+    /// Mark the restart operation as complete and record the completion time
+    private func markRestartComplete() {
+        restartLock.lock()
+        isRestartInProgress = false
+        lastRestartCompletedTime = CACurrentMediaTime()
+        restartLock.unlock()
     }
 
     /// Internal stop without removing sleep/wake observers
