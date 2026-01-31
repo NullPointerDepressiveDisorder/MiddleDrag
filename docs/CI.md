@@ -1,6 +1,6 @@
 # CI/CD Workflow Architecture
 
-This document describes the GitHub Actions CI/CD pipeline structure.
+This document describes the GitHub Actions CI/CD pipeline structure (Outdated, needs fixing).
 
 ## Overview
 
@@ -13,7 +13,6 @@ This document describes the GitHub Actions CI/CD pipeline structure.
     ├── BuildAndTest.yml      # PR/push builds + coverage
     ├── codeql.yml            # Security scanning
     ├── close-on-release.yml  # Issue automation
-    ├── update-homebrew.yml   # Homebrew tap updates
     ├── release.yml           # Release orchestrator
     ├── _get-version.yml      # Reusable: version detection
     ├── _build-release.yml    # Reusable: build + artifact
@@ -44,11 +43,6 @@ This document describes the GitHub Actions CI/CD pipeline structure.
 - **Triggers:** Push/PR to `main`, weekly schedule
 - **Purpose:** Security analysis
 
-### update-homebrew.yml
-
-- **Triggers:** Repository dispatch (from release.yml), manual
-- **Purpose:** Update Homebrew cask in the tap repository
-
 ### close-on-release.yml
 
 - **Triggers:** Release published
@@ -74,7 +68,6 @@ Used by: `BuildAndTest.yml`, `codeql.yml`, `_build-release.yml`
 | `SENTRY_AUTH_TOKEN` | _sentry-upload.yml |
 | `SENTRY_ORG` | _sentry-upload.yml |
 | `SENTRY_PROJECT` | _sentry-upload.yml |
-| `HOMEBREW_TAP_TOKEN` | update-homebrew.yml |
 | `RELEASER_APP_KEY` | _get-version.yml,_build-release.yml |
 
 ## Variables Required
