@@ -185,49 +185,55 @@ final class ScreenHelperTests: XCTestCase {
 
     // MARK: - Thread Safety Tests
 
+    // Helper class for thread-safe capture in async tests
+    private final class ValueCapture<T>: @unchecked Sendable {
+        var value: T
+        init(_ initial: T) { self.value = initial }
+    }
+
     func testGetPrimaryScreenHeightSyncFromBackgroundThread() {
         let expectation = expectation(description: "Background thread completion")
-        var backgroundHeight: CGFloat = 0
+        let backgroundHeight = ValueCapture<CGFloat>(0)
         let mainThreadHeight = ScreenHelper.primaryScreenHeight
         
         DispatchQueue.global(qos: .userInitiated).async {
-            backgroundHeight = ScreenHelper.getPrimaryScreenHeightSync()
+            backgroundHeight.value = ScreenHelper.getPrimaryScreenHeightSync()
             expectation.fulfill()
         }
         
         waitForExpectations(timeout: 5.0)
         
-        XCTAssertEqual(backgroundHeight, mainThreadHeight)
+        XCTAssertEqual(backgroundHeight.value, mainThreadHeight)
     }
 
     func testCocoaYToQuartzYSyncFromBackgroundThread() {
         let expectation = expectation(description: "Background thread completion")
         let testY: CGFloat = 500
-        var backgroundResult: CGFloat = 0
+        let backgroundResult = ValueCapture<CGFloat>(0)
         let mainThreadResult = ScreenHelper.cocoaYToQuartzY(testY)
         
         DispatchQueue.global(qos: .userInitiated).async {
-            backgroundResult = ScreenHelper.cocoaYToQuartzYSync(testY)
+            backgroundResult.value = ScreenHelper.cocoaYToQuartzYSync(testY)
             expectation.fulfill()
         }
         
         waitForExpectations(timeout: 5.0)
         
-        XCTAssertEqual(backgroundResult, mainThreadResult)
+        XCTAssertEqual(backgroundResult.value, mainThreadResult)
     }
 
     func testCurrentMousePositionQuartzFromBackgroundThread() {
         let expectation = expectation(description: "Background thread completion")
-        var backgroundPosition: CGPoint = .zero
+        let backgroundPosition = ValueCapture<CGPoint>(.zero)
         
         DispatchQueue.global(qos: .userInitiated).async {
-            backgroundPosition = ScreenHelper.currentMousePositionQuartz()
+            backgroundPosition.value = ScreenHelper.currentMousePositionQuartz()
             expectation.fulfill()
         }
         
         waitForExpectations(timeout: 5.0)
         
-        XCTAssertFalse(backgroundPosition.x.isNaN)
-        XCTAssertFalse(backgroundPosition.y.isNaN)
+        XCTAssertFalse(backgroundPosition.value.x.isNaN)
+        XCTAssertFalse(backgroundPosition.value.y.isNaN)
     }
 }

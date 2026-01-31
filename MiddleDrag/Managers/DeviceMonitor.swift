@@ -55,10 +55,10 @@ import os
     unsafe os_unfair_lock_unlock(&gCallbackLock)
     
     #if DEBUG
-        touchCount += 1
+        unsafe touchCount += 1
         // Log sparingly to avoid performance impact
         if unsafe touchCount <= 5 || touchCount % 500 == 0 {
-            Log.debug(unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
+            Log.debug( unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
         }
     #endif
 
@@ -142,8 +142,8 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Start monitoring the default multitouch device
     @unsafe @discardableResult
     func start() -> Bool {
-        stateLock.lock()
-        defer { stateLock.unlock() }
+        unsafe stateLock.lock()
+        defer { unsafe stateLock.unlock() }
 
         guard unsafe !isRunning else { return true }
 
@@ -214,11 +214,11 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Stop monitoring
     /// Safe to call even if start() was never called
     @unsafe func stop() {
-        stateLock.lock()
+        unsafe stateLock.lock()
 
         // Safe to call when not running - just return early
         guard unsafe isRunning else {
-            stateLock.unlock()
+            unsafe stateLock.unlock()
             return
         }
 
@@ -230,7 +230,7 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe registeredDevices.removeAll()
         unsafe self.device = nil
 
-        stateLock.unlock()
+        unsafe stateLock.unlock()
 
         // CRITICAL: Disable callbacks and handle global cleanup under lock.
         // This must happen BEFORE unregistering callbacks with the framework,
@@ -255,7 +255,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // IMPORTANT: Unregister callbacks FIRST, before stopping devices
         // This prevents the framework's internal thread (mt_ThreadedMTEntry)
         // from receiving NEW callbacks while we're stopping devices.
-        for unsafe deviceRef in devicesToStop {
+        for unsafe deviceRef in unsafe devicesToStop {
             unsafe MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
         }
 
@@ -267,7 +267,7 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
 
         // Now safe to stop devices
-        for unsafe deviceRef in devicesToStop {
+        for unsafe deviceRef in unsafe devicesToStop {
             unsafe MTDeviceStop(deviceRef)
         }
 
@@ -287,9 +287,9 @@ class DeviceMonitor: TouchDeviceProviding {
         // Check if we're still running before processing - this prevents processing
         // events during shutdown, which could cause race conditions with the
         // MultitouchSupport framework's internal thread
-        stateLock.lock()
-        let stillRunning = isRunning
-        stateLock.unlock()
+        unsafe stateLock.lock()
+        let stillRunning = unsafe isRunning
+        unsafe stateLock.unlock()
 
         guard stillRunning else { return false }
 

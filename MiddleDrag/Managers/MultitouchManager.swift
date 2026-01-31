@@ -207,7 +207,7 @@ final class MultitouchManager: @unchecked Sendable {
         let now = CACurrentMediaTime()
         let timeSinceLastRestart = now - lastRestartCompletedTime
         if lastRestartCompletedTime > 0 && timeSinceLastRestart < Self.minimumRestartInterval {
-            Log.debug("Restart throttled: \(String(format: "%.3f", timeSinceLastRestart))s since last restart", category: .device)
+            Log.debug(unsafe "Restart throttled: \(String(format: "%.3f", timeSinceLastRestart))s since last restart", category: .device)
             // Schedule a delayed restart instead
             restartWorkItem?.cancel()
             let remainingDelay = Self.minimumRestartInterval - timeSinceLastRestart
@@ -639,7 +639,7 @@ extension MultitouchManager: DeviceMonitorDelegate {
         if touchCount > 0 {
             let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: touchCount)
             // Create a Swift array copy of the touch data
-            touchDataCopy = unsafe (0..<touchCount).map { touchArray[$0] }
+            touchDataCopy = (0..<touchCount).map { unsafe touchArray[$0] }
         } else {
             touchDataCopy = []
         }
@@ -649,9 +649,9 @@ extension MultitouchManager: DeviceMonitorDelegate {
         gestureQueue.async { [weak self] in
             guard !touchDataCopy.isEmpty else { return }
             // Use withUnsafeBufferPointer to get a pointer to our copied data
-            touchDataCopy.withUnsafeBufferPointer { buffer in
+            unsafe touchDataCopy.withUnsafeBufferPointer { buffer in
                 guard let baseAddress = buffer.baseAddress else { return }
-                let rawPointer = UnsafeMutableRawPointer(mutating: baseAddress)
+                let rawPointer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
                 unsafe self?.gestureRecognizer.processTouches(
                     rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
             }
