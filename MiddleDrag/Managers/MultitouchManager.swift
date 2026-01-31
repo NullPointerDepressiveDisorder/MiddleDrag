@@ -646,14 +646,25 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
+        // IMPORTANT: We must call processTouches even with zero touches so the
+        // gesture recognizer can properly end gestures via stableFrameCount logic.
         gestureQueue.async { [weak self] in
-            guard !touchDataCopy.isEmpty else { return }
-            // Use withUnsafeBufferPointer to get a pointer to our copied data
-            unsafe touchDataCopy.withUnsafeBufferPointer { buffer in
-                guard let baseAddress = buffer.baseAddress else { return }
-                let rawPointer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
+            if touchDataCopy.isEmpty {
+                // Zero touches - still need to notify gesture recognizer so it can
+                // properly end active gestures via stableFrameCount mechanism
                 unsafe self?.gestureRecognizer.processTouches(
-                    rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+                    UnsafeMutableRawPointer(bitPattern: 1)!, // Non-null placeholder, won't be dereferenced when count=0
+                    count: 0,
+                    timestamp: timestamp,
+                    modifierFlags: modifierFlags)
+            } else {
+                // Use withUnsafeBufferPointer to get a pointer to our copied data
+                unsafe touchDataCopy.withUnsafeBufferPointer { buffer in
+                    guard let baseAddress = buffer.baseAddress else { return }
+                    let rawPointer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
+                    unsafe self?.gestureRecognizer.processTouches(
+                        rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+                }
             }
         }
     }
