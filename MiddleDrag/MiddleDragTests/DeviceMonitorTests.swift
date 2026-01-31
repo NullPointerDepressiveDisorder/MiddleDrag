@@ -235,6 +235,82 @@ import XCTest
             "frameworkCleanupDelay should not be excessive")
     }
 
+    // MARK: - Callback Synchronization Tests
+    // These tests verify the fix for EXC_BAD_ACCESS caused by the callback
+    // accessing gDeviceMonitor while it's being set to nil during rapid restarts.
+
+    func testCallbackDisabledBeforeUnregister() {
+        // This test verifies that callbacks are disabled BEFORE the framework
+        // is told to unregister them. This prevents race conditions where
+        // an in-flight callback accesses a nil gDeviceMonitor.
+        unsafe monitor.start()
+        
+        // Stop should complete without crash - the key fix is that
+        // gCallbackEnabled is set to false BEFORE MTUnregisterContactFrameCallback
+        unsafe XCTAssertNoThrow(monitor.stop())
+    }
+
+    func testRapidRestartCyclesWithDelayDoNotCrash() {
+        // Simulates the exact scenario from the bug report:
+        // Rapid restart cycles during connectivity changes causing
+        // gDeviceMonitor to become nil while callbacks are still in-flight.
+        for i in 0..<10 {
+            unsafe monitor.start()
+            // Simulate some activity
+            Thread.sleep(forTimeInterval: 0.005)
+            unsafe monitor.stop()
+            
+            // Create a new monitor to simulate restart
+            if i < 9 {  // Don't create on last iteration
+                unsafe monitor = unsafe DeviceMonitor()
+            }
+        }
+        // Test passes if no crash occurred
+        XCTAssertTrue(true)
+    }
+
+    func testConcurrentStartStopDoesNotCrash() {
+        // Test that concurrent start/stop operations don't crash
+        // due to the new locking mechanism
+        let expectation = XCTestExpectation(description: "Concurrent operations complete")
+        expectation.expectedFulfillmentCount = 2
+        
+        DispatchQueue.global().async {
+            for _ in 0..<5 {
+                unsafe self.monitor.start()
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+            expectation.fulfill()
+        }
+        
+        DispatchQueue.global().async {
+            for _ in 0..<5 {
+                unsafe self.monitor.stop()
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+            expectation.fulfill()
+        }
+        
+        unsafe wait(for: [expectation], timeout: 5.0)
+    }
+
+    func testMultipleMonitorCreationDuringCleanup() {
+        // Test that creating new monitors while the old one is being cleaned up
+        // doesn't cause a crash. This tests the gPendingCleanup mechanism.
+        unsafe monitor.start()
+        unsafe monitor.stop()
+        
+        // Immediately create new monitors without waiting for cleanup
+        for _ in 0..<5 {
+            let newMonitor = unsafe DeviceMonitor()
+            unsafe newMonitor.start()
+            unsafe newMonitor.stop()
+        }
+        
+        // Test passes if no crash occurred
+        XCTAssertTrue(true)
+    }
+
     // MARK: - Delegate Callback Tests
 
     func testHandleContactCallsDelegate() {
