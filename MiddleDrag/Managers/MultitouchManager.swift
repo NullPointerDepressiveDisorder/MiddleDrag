@@ -625,14 +625,32 @@ extension MultitouchManager: DeviceMonitorDelegate {
         // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
+        // CRITICAL: Copy touch data synchronously during this callback.
+        // The touches pointer is only valid for the duration of this callback.
+        // The MultitouchSupport framework owns this memory and may free/reuse it
+        // immediately after the callback returns. We MUST copy the data before
+        // dispatching to the gesture queue.
+        let touchCount = Int(count)
+        let touchDataCopy: [MTTouch]
+        if touchCount > 0 {
+            let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: touchCount)
+            // Create a Swift array copy of the touch data
+            touchDataCopy = unsafe (0..<touchCount).map { touchArray[$0] }
+        } else {
+            touchDataCopy = []
+        }
+
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
-        // Note: touches pointer is valid only during this callback, but processTouches
-        // copies the data it needs synchronously before returning
-        let touchesPtr = unsafe touches  // Capture in local to make intent clear
         gestureQueue.async { [weak self] in
-            unsafe self?.gestureRecognizer.processTouches(
-                touchesPtr, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
+            guard !touchDataCopy.isEmpty else { return }
+            // Use withUnsafeBufferPointer to get a pointer to our copied data
+            touchDataCopy.withUnsafeBufferPointer { buffer in
+                guard let baseAddress = buffer.baseAddress else { return }
+                let rawPointer = UnsafeMutableRawPointer(mutating: baseAddress)
+                unsafe self?.gestureRecognizer.processTouches(
+                    rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+            }
         }
     }
 }
