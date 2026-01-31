@@ -1273,6 +1273,95 @@ final class MultitouchManagerTests: XCTestCase {
             "restartCleanupDelay should not be excessive")
     }
 
+    func testMinimumRestartIntervalConstantExists() {
+        // Verify the minimum restart interval constant is defined
+        XCTAssertGreaterThan(
+            MultitouchManager.minimumRestartInterval, 0,
+            "minimumRestartInterval should be positive")
+        XCTAssertLessThanOrEqual(
+            MultitouchManager.minimumRestartInterval, 1.0,
+            "minimumRestartInterval should not be excessive")
+    }
+
+    func testRestartThrottlingPreventsRaceCondition() {
+        // Verifies that rapid restart calls are throttled to prevent race conditions
+        // This specifically tests the fix for EXC_BREAKPOINT crashes from rapid
+        // foreground/background toggling
+        var creationCount = 0
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                creationCount += 1
+                return unsafe MockDeviceMonitor()
+            },
+            eventTapSetup: { true }
+        )
+
+        manager.start()
+        XCTAssertEqual(creationCount, 1)
+
+        // Simulate rapid foreground/background toggling by calling restart many times
+        // in quick succession (faster than minimumRestartInterval)
+        for _ in 0..<10 {
+            manager.restart()
+        }
+
+        // Wait long enough for throttled restarts to complete
+        // Should coalesce to fewer actual restarts due to throttling
+        let expectation = XCTestExpectation(description: "Throttled restarts complete")
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.minimumRestartInterval + MultitouchManager.restartCleanupDelay + 0.2
+        ) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+
+        // We expect far fewer than 10 device creations due to:
+        // 1. The first restart being in progress blocks subsequent ones
+        // 2. Throttling after restart completes delays subsequent restarts
+        // Should be: 1 initial + 1-2 restarts = 2-3 total
+        XCTAssertLessThanOrEqual(creationCount, 4, "Rapid restarts should be throttled")
+        XCTAssertTrue(manager.isMonitoring, "Should still be monitoring after throttled restarts")
+
+        manager.stop()
+    }
+
+    func testRestartInProgressBlocksDuplicateCalls() {
+        // Verifies that restart() returns early when a restart is already in progress
+        var creationCount = 0
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                creationCount += 1
+                return unsafe MockDeviceMonitor()
+            },
+            eventTapSetup: { true }
+        )
+
+        manager.start()
+        XCTAssertEqual(creationCount, 1)
+
+        // First restart enters the async delay
+        manager.restart()
+
+        // Immediately try to restart again - should be blocked
+        manager.restart()
+        manager.restart()
+
+        // Wait for the single restart to complete
+        let expectation = XCTestExpectation(description: "Restart complete")
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.restartCleanupDelay + 0.1
+        ) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Only 2 device creations: initial start + one restart
+        // The duplicate restart calls while in progress should have been skipped
+        XCTAssertEqual(creationCount, 2, "Duplicate restart calls during in-progress restart should be skipped")
+
+        manager.stop()
+    }
+
     func testRapidRestartCyclesDoNotCrash() {
         // Simulates rapid wake-from-sleep scenarios where multiple restart
         // calls could occur in quick succession.
@@ -1282,18 +1371,19 @@ final class MultitouchManagerTests: XCTestCase {
 
         manager.start()
 
-        // Multiple rapid restarts - each queues an async restart
+        // Multiple rapid restarts - most will be throttled or blocked
         for _ in 0..<3 {
             XCTAssertNoThrow(manager.restart())
         }
 
-        // Wait for all async restarts to complete
+        // Wait for all async restarts to complete (account for throttling delays)
         let expectation = XCTestExpectation(description: "All restarts complete")
-        DispatchQueue.main.asyncAfter(deadline: .now() + MultitouchManager.restartCleanupDelay * 4)
-        {
+        DispatchQueue.main.asyncAfter(
+            deadline: .now() + MultitouchManager.minimumRestartInterval + MultitouchManager.restartCleanupDelay + 0.2
+        ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [expectation], timeout: 3.0)
 
         // Should still be monitoring after all restarts
         XCTAssertTrue(manager.isMonitoring)
