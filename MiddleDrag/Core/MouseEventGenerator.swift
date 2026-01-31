@@ -416,20 +416,20 @@ final class MouseEventGenerator: @unchecked Sendable {
         if timeSinceActivity > stuckDragTimeout {
             // Drag appears to be stuck - auto-release
             Log.warning(
-                "Stuck drag detected - no activity for \(String(format: "%.1f", timeSinceActivity))s, auto-releasing",
+                unsafe "Stuck drag detected - no activity for \(String(format: "%.1f", timeSinceActivity))s, auto-releasing",
                 category: .gesture
             )
             
             // Log to Sentry if telemetry is enabled
             if CrashReporter.shared.anyTelemetryEnabled {
-                let attributes: [String: Any] = unsafe [
+                let attributes: [String: Any] = [
                     "category": "gesture",
                     "event": "stuck_drag_auto_release",
                     "time_since_activity": timeSinceActivity,
                     "timeout_threshold": stuckDragTimeout,
                     "session_id": Log.sessionID,
                 ]
-                unsafe SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)
+                SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)
             }
             
             // Force release the stuck drag, passing the generation we captured

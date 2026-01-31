@@ -162,12 +162,11 @@ final class MultitouchManager: @unchecked Sendable {
 
     /// Stop monitoring
     func stop() {
-        // Cancel any pending restart
+        // Clear restart state and cancel any pending restart work item.
+        // This must be done under lock to prevent data races with restart().
+        restartLock.lock()
         restartWorkItem?.cancel()
         restartWorkItem = nil
-
-        // Clear restart state to prevent interference with future starts
-        restartLock.lock()
         isRestartInProgress = false
         lastRestartCompletedTime = 0
         restartLock.unlock()
@@ -208,7 +207,7 @@ final class MultitouchManager: @unchecked Sendable {
         let now = CACurrentMediaTime()
         let timeSinceLastRestart = now - lastRestartCompletedTime
         if lastRestartCompletedTime > 0 && timeSinceLastRestart < Self.minimumRestartInterval {
-            Log.debug("Restart throttled: \(String(format: "%.3f", timeSinceLastRestart))s since last restart", category: .device)
+            Log.debug(unsafe "Restart throttled: \(String(format: "%.3f", timeSinceLastRestart))s since last restart", category: .device)
             // Schedule a delayed restart instead
             restartWorkItem?.cancel()
             let remainingDelay = Self.minimumRestartInterval - timeSinceLastRestart
@@ -222,6 +221,11 @@ final class MultitouchManager: @unchecked Sendable {
         }
 
         isRestartInProgress = true
+
+        // Cancel any pending restart work item while still holding the lock.
+        // This prevents data races with stop() which also accesses restartWorkItem.
+        restartWorkItem?.cancel()
+        restartWorkItem = nil
         restartLock.unlock()
 
         Log.info("Restarting multitouch monitoring", category: .device)
@@ -238,14 +242,14 @@ final class MultitouchManager: @unchecked Sendable {
         // may still be releasing resources when we try to start new devices,
         // causing CFRelease(NULL) crashes or EXC_BREAKPOINT exceptions.
 
-        // Cancel any pending restart to prevent race conditions with multiple rapid restarts
-        restartWorkItem?.cancel()
-
         let workItem = DispatchWorkItem { [weak self] in
             self?.performRestart(wasEnabled: wasEnabled)
         }
 
+        // Store work item under lock to prevent data races
+        restartLock.lock()
         restartWorkItem = workItem
+        restartLock.unlock()
 
         // Use async dispatch to avoid blocking the main thread during wake.
         DispatchQueue.main.asyncAfter(
@@ -625,14 +629,43 @@ extension MultitouchManager: DeviceMonitorDelegate {
         // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
+        // CRITICAL: Copy touch data synchronously during this callback.
+        // The touches pointer is only valid for the duration of this callback.
+        // The MultitouchSupport framework owns this memory and may free/reuse it
+        // immediately after the callback returns. We MUST copy the data before
+        // dispatching to the gesture queue.
+        let touchCount = Int(count)
+        let touchDataCopy: [MTTouch]
+        if touchCount > 0 {
+            let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: touchCount)
+            // Create a Swift array copy of the touch data
+            touchDataCopy = (0..<touchCount).map { unsafe touchArray[$0] }
+        } else {
+            touchDataCopy = []
+        }
+
         // Gesture recognition and finger counting is done inside processTouches
         // State updates happen in delegate callbacks dispatched to main thread
-        // Note: touches pointer is valid only during this callback, but processTouches
-        // copies the data it needs synchronously before returning
-        let touchesPtr = unsafe touches  // Capture in local to make intent clear
+        // IMPORTANT: We must call processTouches even with zero touches so the
+        // gesture recognizer can properly end gestures via stableFrameCount logic.
         gestureQueue.async { [weak self] in
-            unsafe self?.gestureRecognizer.processTouches(
-                touchesPtr, count: Int(count), timestamp: timestamp, modifierFlags: modifierFlags)
+            if touchDataCopy.isEmpty {
+                // Zero touches - still need to notify gesture recognizer so it can
+                // properly end active gestures via stableFrameCount mechanism
+                unsafe self?.gestureRecognizer.processTouches(
+                    UnsafeMutableRawPointer(bitPattern: 1)!, // Non-null placeholder, won't be dereferenced when count=0
+                    count: 0,
+                    timestamp: timestamp,
+                    modifierFlags: modifierFlags)
+            } else {
+                // Use withUnsafeBufferPointer to get a pointer to our copied data
+                unsafe touchDataCopy.withUnsafeBufferPointer { buffer in
+                    guard let baseAddress = buffer.baseAddress else { return }
+                    let rawPointer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
+                    unsafe self?.gestureRecognizer.processTouches(
+                        rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+                }
+            }
         }
     }
 }

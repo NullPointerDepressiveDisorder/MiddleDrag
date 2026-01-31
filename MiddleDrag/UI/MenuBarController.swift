@@ -643,10 +643,15 @@ class MenuBarController: NSObject {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.1
             button.animator().alphaValue = 0.3
-        } completionHandler: {
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.1
-                button.animator().alphaValue = 1.0
+        } completionHandler: { [weak button] in
+            // NSAnimationContext runs completion handlers on the main thread,
+            // but Swift's concurrency doesn't know that statically
+            MainActor.assumeIsolated {
+                guard let button = button else { return }
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.1
+                    button.animator().alphaValue = 1.0
+                }
             }
         }
     }

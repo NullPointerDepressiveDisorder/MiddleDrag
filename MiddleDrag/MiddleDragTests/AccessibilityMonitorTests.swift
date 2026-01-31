@@ -226,10 +226,14 @@ class SystemAppLifecycleControllerTests: XCTestCase {
         controller.processFactory = { MockFailingProcessRunner() }
 
         let expectation = XCTestExpectation(description: "Fallback opener called")
-        var capturedConfig: NSWorkspace.OpenConfiguration?
+        // Use a class wrapper to safely capture in @Sendable closure
+        final class ConfigCapture: @unchecked Sendable {
+            var config: NSWorkspace.OpenConfiguration?
+        }
+        let capture = ConfigCapture()
 
         controller.workspaceAppOpener = { url, config, completion in
-            capturedConfig = config
+            capture.config = config
             expectation.fulfill()
             // Simulate success
             completion(nil, nil)
@@ -238,7 +242,7 @@ class SystemAppLifecycleControllerTests: XCTestCase {
         controller.relaunch()
 
         wait(for: [expectation], timeout: 1.0)
-        XCTAssertNotNil(capturedConfig)
-        XCTAssertTrue(capturedConfig?.createsNewApplicationInstance ?? false)
+        XCTAssertNotNil(capture.config)
+        XCTAssertTrue(capture.config?.createsNewApplicationInstance ?? false)
     }
 }
