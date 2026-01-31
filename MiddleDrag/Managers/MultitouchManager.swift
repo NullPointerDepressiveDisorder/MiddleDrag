@@ -162,12 +162,11 @@ final class MultitouchManager: @unchecked Sendable {
 
     /// Stop monitoring
     func stop() {
-        // Cancel any pending restart
+        // Clear restart state and cancel any pending restart work item.
+        // This must be done under lock to prevent data races with restart().
+        restartLock.lock()
         restartWorkItem?.cancel()
         restartWorkItem = nil
-
-        // Clear restart state to prevent interference with future starts
-        restartLock.lock()
         isRestartInProgress = false
         lastRestartCompletedTime = 0
         restartLock.unlock()
@@ -222,6 +221,11 @@ final class MultitouchManager: @unchecked Sendable {
         }
 
         isRestartInProgress = true
+
+        // Cancel any pending restart work item while still holding the lock.
+        // This prevents data races with stop() which also accesses restartWorkItem.
+        restartWorkItem?.cancel()
+        restartWorkItem = nil
         restartLock.unlock()
 
         Log.info("Restarting multitouch monitoring", category: .device)
@@ -238,14 +242,14 @@ final class MultitouchManager: @unchecked Sendable {
         // may still be releasing resources when we try to start new devices,
         // causing CFRelease(NULL) crashes or EXC_BREAKPOINT exceptions.
 
-        // Cancel any pending restart to prevent race conditions with multiple rapid restarts
-        restartWorkItem?.cancel()
-
         let workItem = DispatchWorkItem { [weak self] in
             self?.performRestart(wasEnabled: wasEnabled)
         }
 
+        // Store work item under lock to prevent data races
+        restartLock.lock()
         restartWorkItem = workItem
+        restartLock.unlock()
 
         // Use async dispatch to avoid blocking the main thread during wake.
         DispatchQueue.main.asyncAfter(
