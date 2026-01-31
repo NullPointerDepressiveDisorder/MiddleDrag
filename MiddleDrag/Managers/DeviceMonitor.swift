@@ -1,5 +1,6 @@
 import CoreFoundation
 import Foundation
+import os
 
 // MARK: - Debug Touch Counter (Debug builds only)
 
@@ -19,8 +20,10 @@ import Foundation
 @unsafe nonisolated(unsafe) private var gCallbackEnabled: Bool = false
 
 /// Lock to synchronize callback processing with stop/deinit operations.
-/// This prevents the callback from accessing gDeviceMonitor while it's being cleared.
-@unsafe nonisolated(unsafe) private let gCallbackLock = NSLock()
+/// Uses os_unfair_lock for minimal overhead in high-frequency C callbacks.
+/// This is Apple's recommended lock for performance-critical short critical sections.
+/// Note: os_unfair_lock must not be moved in memory after initialization - safe here as a global.
+@unsafe nonisolated(unsafe) private var gCallbackLock = os_unfair_lock()
 
 /// Reference to a DeviceMonitor pending cleanup.
 /// When a DeviceMonitor is stopped, it's moved here to keep it alive until
@@ -36,19 +39,19 @@ import Foundation
     // CRITICAL: Check the enabled flag FIRST, before accessing gDeviceMonitor.
     // This prevents accessing a nil or dangling pointer during teardown.
     // We use the lock to synchronize with stop() which sets the flag to false.
-    unsafe gCallbackLock.lock()
+    unsafe os_unfair_lock_lock(&gCallbackLock)
     guard unsafe gCallbackEnabled else {
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
         return 0
     }
     // Copy the monitor reference while holding the lock
     guard let monitor = unsafe gDeviceMonitor,
           let touches = unsafe touches
     else {
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
         return 0
     }
-    unsafe gCallbackLock.unlock()
+    unsafe os_unfair_lock_unlock(&gCallbackLock)
     
     #if DEBUG
         touchCount += 1
@@ -106,7 +109,7 @@ class DeviceMonitor: TouchDeviceProviding {
 
     init() {
         // Acquire lock to safely update global state
-        unsafe gCallbackLock.lock()
+        unsafe os_unfair_lock_lock(&gCallbackLock)
         
         // Release any previous pending cleanup reference
         // The old instance has had time to complete cleanup by now
@@ -119,7 +122,7 @@ class DeviceMonitor: TouchDeviceProviding {
             unsafe ownsGlobalReference = true
         }
         
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
     deinit {
@@ -127,7 +130,7 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe stop()
         
         // Acquire lock to safely update global state
-        unsafe gCallbackLock.lock()
+        unsafe os_unfair_lock_lock(&gCallbackLock)
         
         // Only clear the global reference if this instance owns it
         if unsafe ownsGlobalReference && gDeviceMonitor === self {
@@ -141,7 +144,7 @@ class DeviceMonitor: TouchDeviceProviding {
             unsafe gDeviceMonitor = nil
         }
         
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
     // MARK: - Public Interface
@@ -208,9 +211,9 @@ class DeviceMonitor: TouchDeviceProviding {
         
         // Enable callbacks AFTER all devices are registered.
         // This ensures gDeviceMonitor is fully set up before callbacks can access it.
-        unsafe gCallbackLock.lock()
+        unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = true
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
         
         return true
     }
@@ -227,9 +230,9 @@ class DeviceMonitor: TouchDeviceProviding {
         // have in-flight callbacks that could access gDeviceMonitor.
         // The lock synchronizes with the callback to ensure no callback is
         // accessing gDeviceMonitor while we're tearing down.
-        unsafe gCallbackLock.lock()
+        unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = false
-        unsafe gCallbackLock.unlock()
+        unsafe os_unfair_lock_unlock(&gCallbackLock)
 
         // IMPORTANT: Unregister callbacks FIRST, before stopping devices
         // This prevents the framework's internal thread (mt_ThreadedMTEntry)
