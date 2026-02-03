@@ -166,7 +166,7 @@ To add a new feature, identify which layer it belongs to:
 ## Dependencies
 
 The refactored code maintains minimal dependencies:
-- No external Swift packages required (except Sparkle for updates)
+- No external Swift packages required (except Sparkle for updates and Sentry for analytics/error reporting)
 - Uses only system frameworks
 - Private framework access isolated to one file
 
