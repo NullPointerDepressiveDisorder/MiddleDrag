@@ -41,21 +41,21 @@ MiddleDrag/
 └── MiddleDrag.entitlements             # App entitlements
 │
 MiddleDragTests/                        # Unit test target
+├── AccessibilityMonitorTests.swift         # Tests for accessibility permissions
+├── AlertHelperTests.swift                  # Tests for alert dialogs
+├── AnalyticsManagerTests.swift             # Tests for analytics
+├── DeviceMonitorTests.swift                # Tests for device monitoring
 ├── GestureModelsTests.swift                # Tests for gesture models
 ├── GestureRecognizerTests.swift            # Tests for gesture recognition logic
-├── TouchModelsTests.swift                  # Tests for touch data structures
+├── LaunchAtLoginManagerTests.swift         # Tests for launch at login
+├── MenuBarControllerTests.swift            # Tests for menu bar UI
 ├── MouseEventGeneratorTests.swift          # Tests for mouse event generation
 ├── MultitouchFrameworkTests.swift          # Tests for multitouch framework bindings
 ├── MultitouchManagerTests.swift            # Tests for main coordinator
-├── DeviceMonitorTests.swift                # Tests for device monitoring
-├── AccessibilityMonitorTests.swift         # Tests for accessibility permissions
-├── MenuBarControllerTests.swift            # Tests for menu bar UI
-├── AlertHelperTests.swift                  # Tests for alert dialogs
 ├── PreferencesManagerTests.swift           # Tests for preferences persistence
-├── LaunchAtLoginManagerTests.swift         # Tests for launch at login
-├── AnalyticsManagerTests.swift             # Tests for analytics
 ├── ScreenHelperTests.swift                 # Tests for screen coordinate handling
 ├── SystemGestureHelperTests.swift          # Tests for system gesture settings
+├── TouchModelsTests.swift                  # Tests for touch data structures
 ├── WindowHelperTests.swift                 # Tests for window detection
 └── Mocks/                                  # Mock objects for testing
     └── MockDeviceMonitor.swift             # Mock device monitor
@@ -63,7 +63,7 @@ MiddleDragTests/                        # Unit test target
 .github/                                # GitHub configuration
 ├── workflows/                              # CI/CD workflows
 │   └── *.yml                               # GitHub Actions workflow files
-├── ISSUE_TEMPLATE/                         # Issue templates
+└── ISSUE_TEMPLATE/                         # Issue templates
 │
 Root Files:
 ├── README.md                           # Project documentation
@@ -94,6 +94,7 @@ Root Files:
 - Each component can be tested in isolation
 - Mock delegates and protocols for testing
 - Clear interfaces between modules
+- Comprehensive test coverage with 17 test files
 
 ### 4. **Maintainability**
 - Easy to locate specific functionality
