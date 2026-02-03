@@ -39,7 +39,7 @@ MiddleDrag/
 ├── AppDelegate.swift               # Application delegate
 ├── Info.plist                      # App configuration
 └── MiddleDrag.entitlements         # App entitlements
-│
+
 ├── MiddleDragTests/                # Unit test target
 │   ├── AccessibilityMonitorTests.swift     # Tests for accessibility monitor
 │   ├── AlertHelperTests.swift              # Tests for alert helper
@@ -64,7 +64,7 @@ MiddleDrag/
 ├── workflows/                          # CI/CD workflows
 │   └── *.yml                           # GitHub Actions workflow files
 └── ISSUE_TEMPLATE/                     # Issue templates
-│
+
 Root Files:
 ├── README.md                       # Project documentation
 ├── PROJECT_STRUCTURE.md            # This file
