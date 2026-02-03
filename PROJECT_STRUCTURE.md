@@ -64,7 +64,6 @@ MiddleDragTests/                        # Unit test target
 ├── workflows/                              # CI/CD workflows
 │   └── *.yml                               # GitHub Actions workflow files
 ├── ISSUE_TEMPLATE/                         # Issue templates
-└── copilot-instructions.md                 # Copilot configuration
 │
 Root Files:
 ├── README.md                           # Project documentation
