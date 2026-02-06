@@ -93,8 +93,7 @@ jobs:
             fi
 
             git fetch origin "$BRANCH_NAME"
-            git checkout "$BRANCH_NAME"
-            git reset --hard "origin/$BRANCH_NAME"
+            git checkout -b "version-bump-$VERSION"
 
             NOTES="${{ inputs.notes }}"
             ./bump-version.sh "$VERSION" "$NOTES"
@@ -102,6 +101,10 @@ jobs:
             # Rebase on latest main in case of new commits
             git fetch origin "$BRANCH_NAME"
             git rebase "origin/$BRANCH_NAME"
+
+            # Update main branch to point to new commit
+            git checkout "$BRANCH_NAME"
+            git reset --hard "version-bump-$VERSION"
 
             # Re-create the tag to point to HEAD after rebase
             git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
