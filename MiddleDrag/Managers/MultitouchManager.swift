@@ -561,10 +561,8 @@ final class MultitouchManager: @unchecked Sendable {
         // work even when gestures are cancelled (e.g., modifier key not held)
         // However, don't perform force clicks during an active drag to avoid interference
         // Also skip if we're passing through to system (e.g., title bar drag)
-        // Also skip if a gesture is being tracked - the gesture recognizer's tap detection
-        // will handle the middle click, preventing double-fire
         let hasThreeOrMoreFingers = currentFingerCount >= 3
-        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging && !shouldPassThroughCurrentGesture && !isInThreeFingerGesture {
+        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging && !shouldPassThroughCurrentGesture {
             // Check event type - we want to handle both down and up
             if type == .leftMouseDown || type == .leftMouseUp {
                 // Perform middle click instead, but only if we haven't just performed one
