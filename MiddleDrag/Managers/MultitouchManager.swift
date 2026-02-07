@@ -57,7 +57,14 @@ final class MultitouchManager: @unchecked Sendable {
     // gesture boundaries (the click release can cause brief finger instability that
     // ends and restarts the gesture). A timestamp survives these gesture restarts
     // and naturally expires so subsequent intentional taps still work.
-    private var lastForceClickTime: TimeInterval = 0
+    // Protected by forceClickLock: written from processEvent (event tap thread),
+    // read from gestureRecognizerDidTap (gesture queue / main dispatch).
+    private let forceClickLock = NSLock()
+    private var _lastForceClickTime: TimeInterval = 0
+    private var lastForceClickTime: TimeInterval {
+        get { forceClickLock.withLock { _lastForceClickTime } }
+        set { forceClickLock.withLock { _lastForceClickTime = newValue } }
+    }
     private let forceClickDeduplicationWindow: TimeInterval = 0.5  // 500ms
 
     // Core components
@@ -385,6 +392,7 @@ final class MultitouchManager: @unchecked Sendable {
             currentFingerCount = 0  // Reset finger count when disabled
             lastGestureWasActive = false
             gestureEndTime = 0
+            lastForceClickTime = 0
         }
     }
 
