@@ -53,8 +53,24 @@ final class MouseEventGenerator: @unchecked Sendable {
     // to prevent multiple performClick() calls from different code paths
     // (force-click conversion + gesture tap) from firing within a short window.
     // Thread-safe because it's only read/written on eventQueue.
-    private var lastClickTime: CFTimeInterval = 0
-    private let clickDeduplicationWindow: CFTimeInterval = 0.15  // 150ms
+    // Internal access for testability.
+    internal var lastClickTime: CFTimeInterval = 0
+    internal var clickDeduplicationWindow: CFTimeInterval = 0.15  // 150ms
+    
+    // Click counter for testing: _clickCount is incremented on eventQueue each time
+    // a click is actually emitted. Use the clickCount property to read safely from
+    // other threads (it dispatches sync to eventQueue).
+    private var _clickCount: Int = 0
+    
+    /// Thread-safe click count. Reading syncs to eventQueue; reset from tests before async work.
+    internal var clickCount: Int {
+        get { eventQueue.sync { _clickCount } }
+    }
+    
+    /// Reset click count — call only when no async work is in flight (e.g., setUp).
+    internal func resetClickCount() {
+        eventQueue.sync { _clickCount = 0 }
+    }
 
     // MARK: - Initialization
 
@@ -251,6 +267,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             upEvent.flags = []
 
             // Post events with small delay between them
+            self._clickCount += 1
             downEvent.post(tap: .cghidEventTap)
             usleep(10000)  // 10ms delay
             upEvent.post(tap: .cghidEventTap)

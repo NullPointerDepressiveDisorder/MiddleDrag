@@ -957,4 +957,116 @@ final class MouseEventGeneratorTests: XCTestCase {
         // Force release after normal end should still be safe
         XCTAssertNoThrow(generator.forceMiddleMouseUp())
     }
+    
+    // MARK: - Click Deduplication Tests
+    
+    func testClickCountStartsAtZero() {
+        XCTAssertEqual(generator.clickCount, 0)
+    }
+    
+    func testSingleClickIncrementsCount() {
+        generator.performClick()
+        
+        // clickCount getter syncs on eventQueue, so it waits for performClick to complete
+        let count = generator.clickCount
+        XCTAssertEqual(count, 1, "Single performClick should emit exactly 1 click")
+    }
+    
+    func testTwoRapidClicksWithinWindowEmitsOnlyOne() {
+        // Use a generous dedup window so both calls definitely fall within it
+        generator.clickDeduplicationWindow = 1.0
+        
+        // Fire two clicks back-to-back (both enqueue on the serial eventQueue;
+        // the second will execute after the first and find lastClickTime within window)
+        generator.performClick()
+        generator.performClick()
+        
+        let count = generator.clickCount
+        XCTAssertEqual(count, 1, "Two rapid performClick calls within the dedup window should emit only 1 click")
+    }
+    
+    func testThreeRapidClicksWithinWindowEmitsOnlyOne() {
+        generator.clickDeduplicationWindow = 1.0
+        
+        generator.performClick()
+        generator.performClick()
+        generator.performClick()
+        
+        let count = generator.clickCount
+        XCTAssertEqual(count, 1, "Three rapid performClick calls within the dedup window should emit only 1 click")
+    }
+    
+    func testTwoClicksOutsideWindowEmitsBoth() {
+        // Use a very short dedup window
+        generator.clickDeduplicationWindow = 0.01  // 10ms
+        
+        generator.performClick()
+        
+        // Wait for the first click to complete and the dedup window to expire.
+        // performClick has a 10ms usleep inside, plus we need the 10ms window to pass.
+        let expectation = XCTestExpectation(description: "Dedup window expired")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 0.5)
+        
+        generator.performClick()
+        
+        let count = generator.clickCount
+        XCTAssertEqual(count, 2, "Two performClick calls outside the dedup window should emit 2 clicks")
+    }
+    
+    func testDefaultDeduplicationWindow() {
+        XCTAssertEqual(generator.clickDeduplicationWindow, 0.15, accuracy: 0.001,
+                       "Default dedup window should be 150ms")
+    }
+    
+    func testResetClickCount() {
+        generator.performClick()
+        
+        // Verify click happened
+        XCTAssertEqual(generator.clickCount, 1)
+        
+        generator.resetClickCount()
+        XCTAssertEqual(generator.clickCount, 0, "resetClickCount should zero the counter")
+    }
+    
+    func testDeduplicationWindowIsConfigurable() {
+        generator.clickDeduplicationWindow = 2.0
+        
+        generator.performClick()
+        
+        // Wait 500ms — well beyond default 150ms but within our custom 2s window
+        let expectation = XCTestExpectation(description: "Wait past default window")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+        
+        generator.performClick()
+        
+        let count = generator.clickCount
+        XCTAssertEqual(count, 1, "Second click at 500ms should be deduped with a 2s window")
+    }
+    
+    func testClickDuringDragIsNotCounted() {
+        // Start a drag so isMiddleMouseDown is true
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        
+        // Wait for startDrag to complete (it sets state synchronously,
+        // but sendMiddleMouseDown posts an event)
+        let startExp = XCTestExpectation(description: "Drag started")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            startExp.fulfill()
+        }
+        wait(for: [startExp], timeout: 0.5)
+        
+        // performClick during active drag should be skipped (isMiddleMouseDown guard)
+        generator.performClick()
+        
+        let count = generator.clickCount
+        XCTAssertEqual(count, 0, "performClick during active drag should not emit a click")
+        
+        generator.endDrag()
+    }
 }
