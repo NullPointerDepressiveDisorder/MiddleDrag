@@ -49,6 +49,16 @@ final class MultitouchManager: @unchecked Sendable {
     // Whether current gesture should pass through to system (e.g., title bar drag)
     // Set at gesture start and checked in all delegate methods
     private var shouldPassThroughCurrentGesture: Bool = false
+    
+    // Whether the force-click conversion (event tap) already performed a middle click
+    // recently. When a physical trackpad click occurs with 3 fingers, the force-click
+    // path fires performClick() immediately. If the user keeps their fingers on the
+    // trackpad, the gesture recognizer may fire a tap as well — potentially across
+    // gesture boundaries (the click release can cause brief finger instability that
+    // ends and restarts the gesture). A timestamp survives these gesture restarts
+    // and naturally expires so subsequent intentional taps still work.
+    private var lastForceClickTime: TimeInterval = 0
+    private let forceClickDeduplicationWindow: TimeInterval = 0.5  // 500ms
 
     // Core components
     private let gestureRecognizer = GestureRecognizer()
@@ -321,6 +331,7 @@ final class MultitouchManager: @unchecked Sendable {
         currentFingerCount = 0  // Reset finger count on stop
         lastGestureWasActive = false
         gestureEndTime = 0
+        lastForceClickTime = 0
 
         deviceMonitor?.stop()
         deviceMonitor = nil
@@ -559,6 +570,7 @@ final class MultitouchManager: @unchecked Sendable {
             if type == .leftMouseDown || type == .leftMouseUp {
                 // Perform middle click instead
                 if type == .leftMouseDown {
+                    lastForceClickTime = CACurrentMediaTime()
                     mouseGenerator.performClick()
                 }
                 // Suppress the original left click
@@ -703,6 +715,24 @@ extension MultitouchManager: GestureRecognizerDelegate {
         // Skip if this gesture is being passed through to system (e.g., title bar drag)
         if shouldPassThroughCurrentGesture {
             shouldPassThroughCurrentGesture = false
+            return
+        }
+        
+        // Skip if a force-click (physical trackpad click with 3 fingers) recently
+        // performed a middle click. Without this, the user gets a double click:
+        // one from the force-click conversion in processEvent, and another from
+        // this tap detection when they lift their fingers. Uses a timestamp rather
+        // than a boolean flag because the click release can cause brief finger
+        // instability that ends and restarts the gesture (resetting per-gesture state).
+        let timeSinceForceClick = CACurrentMediaTime() - lastForceClickTime
+        if timeSinceForceClick < forceClickDeduplicationWindow {
+            // Still reset gesture state
+            DispatchQueue.main.async { [weak self] in
+                self?.isInThreeFingerGesture = false
+                self?.isActivelyDragging = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = true  // Force click was active
+            }
             return
         }
         
