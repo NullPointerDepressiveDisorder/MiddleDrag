@@ -6,6 +6,29 @@
     <description>Most recent updates to MiddleDrag</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.1.4</title>
+      <pubDate>Sat, 07 Feb 2026 09:05:03 +0000</pubDate>
+      <sparkle:version>1.4.1.4</sparkle:version>
+      <sparkle:shortVersionString>1.4.1.4</sparkle:shortVersionString>
+      <description><![CDATA[Bug/double tab (#99)
+
+* Fix: Prevent double middle-clicks during multitouch gestures
+
+* Fix: Prevent double middle-clicks by skipping gesture tracking check
+
+* Fix: Implement click deduplication to prevent double middle-clicks from multiple sources
+
+* Fix: Implement force-click deduplication to prevent double middle-clicks from trackpad gestures
+
+* Fix: Enhance click deduplication with internal click count and reset functionality
+
+* Fix: Implement thread-safe access for lastForceClickTime to enhance click deduplication
+---
+**SHA256:** `8b1cbfef8190e4fe60a97e719222b9c42081101e4018c9e4a939f870c3f6db17`]]></description>
+      <enclosure url="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/download/v1.4.1.4/MiddleDrag-1.4.1.4.pkg" sparkle:edSignature="hW6LPT7LbdJOfZ0wAUPJmwAf4ULMxg6mhlKuA85DAaI6d+9vxfqCzOGux6wMXTw4Dt2ajP6QEXxLRmz1bUGNCw==" length="3497874" type="application/octet-stream" />
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
       <title>Version 1.4.1.3</title>
       <pubDate>Fri, 06 Feb 2026 03:42:50 +0000</pubDate>
       <sparkle:version>1.4.1.3</sparkle:version>
