@@ -50,6 +50,14 @@ final class MultitouchManager: @unchecked Sendable {
     // Set at gesture start and checked in all delegate methods
     private var shouldPassThroughCurrentGesture: Bool = false
 
+    // Deduplication: tracks the last time a middle click was performed to prevent
+    // both the force-click conversion AND gesture tap from firing for the same user action.
+    // When a 3-finger tap occurs, macOS generates a system left-click that the event tap
+    // converts to middle-click (force-click path), AND the gesture recognizer independently
+    // detects a tap and fires another middle-click. This timestamp prevents the second one.
+    private var lastMiddleClickTime: TimeInterval = 0
+    private let middleClickDeduplicationWindow: TimeInterval = 0.15  // 150ms
+
     // Core components
     private let gestureRecognizer = GestureRecognizer()
     private let mouseGenerator = MouseEventGenerator()
@@ -553,13 +561,20 @@ final class MultitouchManager: @unchecked Sendable {
         // work even when gestures are cancelled (e.g., modifier key not held)
         // However, don't perform force clicks during an active drag to avoid interference
         // Also skip if we're passing through to system (e.g., title bar drag)
+        // Also skip if a gesture is being tracked - the gesture recognizer's tap detection
+        // will handle the middle click, preventing double-fire
         let hasThreeOrMoreFingers = currentFingerCount >= 3
-        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging && !shouldPassThroughCurrentGesture {
+        if hasThreeOrMoreFingers && isLeftButton && !isOurEvent && !isActivelyDragging && !shouldPassThroughCurrentGesture && !isInThreeFingerGesture {
             // Check event type - we want to handle both down and up
             if type == .leftMouseDown || type == .leftMouseUp {
-                // Perform middle click instead
+                // Perform middle click instead, but only if we haven't just performed one
+                // This prevents double-fire when both force-click and gesture tap paths trigger
                 if type == .leftMouseDown {
-                    mouseGenerator.performClick()
+                    let now = CACurrentMediaTime()
+                    if now - lastMiddleClickTime > middleClickDeduplicationWindow {
+                        lastMiddleClickTime = now
+                        mouseGenerator.performClick()
+                    }
                 }
                 // Suppress the original left click
                 return nil
@@ -768,8 +783,14 @@ extension MultitouchManager: GestureRecognizerDelegate {
         mouseGenerator.cancelDrag()
 
         // Only perform the click if window meets size requirements
+        // Also check deduplication window to prevent double-fire when force-click
+        // conversion in processEvent already handled this tap
         if shouldPerformTap {
-            mouseGenerator.performClick()
+            let now = CACurrentMediaTime()
+            if now - lastMiddleClickTime > middleClickDeduplicationWindow {
+                lastMiddleClickTime = now
+                mouseGenerator.performClick()
+            }
         }
     }
 
