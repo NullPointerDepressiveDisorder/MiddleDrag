@@ -48,6 +48,13 @@ final class MouseEventGenerator: @unchecked Sendable {
     // Smoothing state for EMA (exponential moving average)
     private var previousDeltaX: CGFloat = 0
     private var previousDeltaY: CGFloat = 0
+    
+    // Click deduplication: tracks last click time on the serial eventQueue
+    // to prevent multiple performClick() calls from different code paths
+    // (force-click conversion + gesture tap) from firing within a short window.
+    // Thread-safe because it's only read/written on eventQueue.
+    private var lastClickTime: CFTimeInterval = 0
+    private let clickDeduplicationWindow: CFTimeInterval = 0.15  // 150ms
 
     // MARK: - Initialization
 
@@ -199,6 +206,17 @@ final class MouseEventGenerator: @unchecked Sendable {
                 // This prevents glitches during drag operations
                 return
             }
+            
+            // Deduplication: prevent double-clicks from multiple code paths.
+            // Both the force-click conversion (event tap intercepting left clicks with 3 fingers)
+            // and the gesture recognizer tap detection can call performClick() for the same
+            // physical user action. Since both dispatch here on the serial eventQueue, this
+            // timestamp check reliably deduplicates them.
+            let now = CACurrentMediaTime()
+            if now - self.lastClickTime < self.clickDeduplicationWindow {
+                return
+            }
+            self.lastClickTime = now
 
             let clickLocation = self.currentMouseLocationQuartz
 
