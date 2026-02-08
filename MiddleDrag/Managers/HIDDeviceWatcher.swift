@@ -35,6 +35,16 @@ final class HIDDeviceWatcher {
     private var hidManager: IOHIDManager?
     private var isRunning = false
 
+    /// Timestamp when the watcher was started.
+    /// IOHIDManager fires matching callbacks for all already-connected devices
+    /// when it opens. We ignore connection callbacks arriving within
+    /// `initialEnumerationWindow` of start to avoid triggering unnecessary
+    /// restarts of MultitouchManager on every launch.
+    private var startTime: TimeInterval = 0
+
+    /// How long after start() to ignore connection callbacks (initial enumeration)
+    private static let initialEnumerationWindow: TimeInterval = 2.0
+
     /// Debounce timer to coalesce rapid connect/disconnect events
     /// (e.g., Bluetooth negotiation can fire multiple events)
     private var debounceWorkItem: DispatchWorkItem?
@@ -108,6 +118,7 @@ final class HIDDeviceWatcher {
         }
 
         isRunning = true
+        startTime = ProcessInfo.processInfo.systemUptime
         Log.info("HID device watcher started", category: .device)
     }
 
@@ -132,6 +143,16 @@ final class HIDDeviceWatcher {
 
     private func handleDeviceConnected(_ device: IOHIDDevice) {
         let productName = IOHIDDeviceGetProperty(device, kIOHIDProductKey as CFString) as? String ?? "Unknown"
+
+        // Ignore devices reported during initial enumeration.
+        // IOHIDManager fires matching callbacks for already-connected devices
+        // when it first opens — these are not new connections.
+        let elapsed = ProcessInfo.processInfo.systemUptime - startTime
+        guard elapsed > Self.initialEnumerationWindow else {
+            Log.debug("HID device watcher ignoring initial enumeration: \(productName)", category: .device)
+            return
+        }
+
         Log.info("HID multitouch device connected: \(productName)", category: .device)
 
         // Debounce: Bluetooth negotiation can fire multiple events rapidly
