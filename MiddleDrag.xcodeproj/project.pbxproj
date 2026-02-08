@@ -59,11 +59,13 @@
 				MiddleDragTests/DeviceMonitorTests.swift,
 				MiddleDragTests/GestureModelsTests.swift,
 				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/HIDDeviceWatcherTests.swift,
 				MiddleDragTests/LaunchAtLoginManagerTests.swift,
 				MiddleDragTests/MenuBarControllerTests.swift,
 				MiddleDragTests/Mocks/MockDeviceMonitor.swift,
 				MiddleDragTests/MouseEventGeneratorTests.swift,
 				MiddleDragTests/MultitouchFrameworkTests.swift,
+				MiddleDragTests/MultitouchManagerHIDTests.swift,
 				MiddleDragTests/MultitouchManagerTests.swift,
 				MiddleDragTests/PreferencesManagerTests.swift,
 				MiddleDragTests/ScreenHelperTests.swift,
@@ -72,14 +74,6 @@
 				MiddleDragTests/WindowHelperTests.swift,
 			);
 			target = 1A0000011 /* MiddleDrag */;
-		};
-		ECAF38FA2F3813A0003F3182 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Managers/HIDDeviceWatcher.swift,
-				Managers/MultitouchManager.swift,
-			);
-			target = MDT00000007 /* MiddleDragTests */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -97,7 +91,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
-				ECAF38FA2F3813A0003F3182 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";

@@ -58,7 +58,7 @@ import os
         unsafe touchCount += 1
         // Log sparingly to avoid performance impact
         if unsafe touchCount <= 5 || touchCount % 500 == 0 {
-            Log.debug(unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
+            Log.debug( unsafe "Touch callback #\(touchCount): \(numTouches) touches", category: .device)
         }
     #endif
 

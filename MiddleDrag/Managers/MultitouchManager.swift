@@ -151,7 +151,7 @@ final class MultitouchManager: @unchecked Sendable {
     // MARK: - Public Interface
 
     /// Start monitoring for gestures
-    @MainActor func start() {
+    func start() {
         guard !isMonitoring else { return }
 
         applyConfiguration()
@@ -189,7 +189,7 @@ final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Stop monitoring
-    @MainActor func stop() {
+    func stop() {
         // Stop HID device watcher
         stopHIDDeviceWatcher()
 
@@ -395,7 +395,7 @@ final class MultitouchManager: @unchecked Sendable {
 
     // MARK: - HID Device Watching
 
-    @MainActor private func startHIDDeviceWatcher() {
+    private func startHIDDeviceWatcher() {
         guard hidDeviceWatcher == nil else { return }
         let watcher = HIDDeviceWatcher()
         watcher.delegate = self
@@ -403,7 +403,7 @@ final class MultitouchManager: @unchecked Sendable {
         hidDeviceWatcher = watcher
     }
 
-    @MainActor private func stopHIDDeviceWatcher() {
+    private func stopHIDDeviceWatcher() {
         hidDeviceWatcher?.stop()
         hidDeviceWatcher = nil
     }

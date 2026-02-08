@@ -11,7 +11,11 @@ import os
 ///
 /// Uses IOHIDManager to monitor for devices matching the "digitizer" usage page,
 /// which covers trackpads and other multitouch input devices.
-@MainActor
+///
+/// Thread safety: All IOHIDManager operations are scheduled on the main run loop,
+/// so callbacks arrive on the main thread. The class is not marked @MainActor to
+/// avoid forcing isolation onto callers like MultitouchManager, which would cascade
+/// @MainActor requirements through start()/stop() to all call sites including tests.
 final class HIDDeviceWatcher {
 
     // MARK: - Types
@@ -40,7 +44,7 @@ final class HIDDeviceWatcher {
 
     // MARK: - Lifecycle
 
-    isolated deinit {
+    deinit {
         stop()
     }
 
