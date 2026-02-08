@@ -59,11 +59,13 @@
 				MiddleDragTests/DeviceMonitorTests.swift,
 				MiddleDragTests/GestureModelsTests.swift,
 				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/HIDDeviceWatcherTests.swift,
 				MiddleDragTests/LaunchAtLoginManagerTests.swift,
 				MiddleDragTests/MenuBarControllerTests.swift,
 				MiddleDragTests/Mocks/MockDeviceMonitor.swift,
 				MiddleDragTests/MouseEventGeneratorTests.swift,
 				MiddleDragTests/MultitouchFrameworkTests.swift,
+				MiddleDragTests/MultitouchManagerHIDTests.swift,
 				MiddleDragTests/MultitouchManagerTests.swift,
 				MiddleDragTests/PreferencesManagerTests.swift,
 				MiddleDragTests/ScreenHelperTests.swift,
@@ -590,7 +592,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -613,7 +615,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
