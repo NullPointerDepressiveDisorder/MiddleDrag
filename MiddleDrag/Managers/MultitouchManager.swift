@@ -87,6 +87,9 @@ final class MultitouchManager: @unchecked Sendable {
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
 
+    // HID device watcher for detecting Bluetooth trackpad connections after launch
+    private var hidDeviceWatcher: HIDDeviceWatcher?
+
     // Work item for debouncing restarts
     private var restartWorkItem: DispatchWorkItem?
 
@@ -148,7 +151,7 @@ final class MultitouchManager: @unchecked Sendable {
     // MARK: - Public Interface
 
     /// Start monitoring for gestures
-    func start() {
+    @MainActor func start() {
         guard !isMonitoring else { return }
 
         applyConfiguration()
@@ -171,17 +174,25 @@ final class MultitouchManager: @unchecked Sendable {
             teardownEventTap()
             isMonitoring = false
             isEnabled = false
+
+            // Start HID device watcher to detect late-connecting devices
+            // (e.g., Bluetooth Magic Trackpad connecting after login)
+            startHIDDeviceWatcher()
             return
         }
 
         addSleepWakeObservers()
+        startHIDDeviceWatcher()
 
         isMonitoring = true
         isEnabled = true
     }
 
     /// Stop monitoring
-    func stop() {
+    @MainActor func stop() {
+        // Stop HID device watcher
+        stopHIDDeviceWatcher()
+
         // Clear restart state and cancel any pending restart work item.
         // This must be done under lock to prevent data races with restart().
         restartLock.lock()
@@ -379,6 +390,71 @@ final class MultitouchManager: @unchecked Sendable {
         if let observer = wakeObserver {
             NSWorkspace.shared.notificationCenter.removeObserver(observer)
             wakeObserver = nil
+        }
+    }
+
+    // MARK: - HID Device Watching
+
+    @MainActor private func startHIDDeviceWatcher() {
+        guard hidDeviceWatcher == nil else { return }
+        let watcher = HIDDeviceWatcher()
+        watcher.delegate = self
+        watcher.start()
+        hidDeviceWatcher = watcher
+    }
+
+    @MainActor private func stopHIDDeviceWatcher() {
+        hidDeviceWatcher?.stop()
+        hidDeviceWatcher = nil
+    }
+
+    /// Attempt to start monitoring after a new HID device is detected.
+    /// Unlike restart(), this handles the case where monitoring was never
+    /// successfully started (e.g., no devices at launch).
+    private func attemptStartAfterDeviceConnection() {
+        if isMonitoring {
+            // Already monitoring — restart to pick up the new device
+            Log.info("New device detected while monitoring - restarting to pick up device", category: .device)
+            restart()
+        } else {
+            // Not monitoring — this is likely the initial launch case where
+            // no devices were found. Try a fresh start.
+            Log.info("New device detected - attempting initial start", category: .device)
+
+            applyConfiguration()
+            let eventTapSuccess = eventTapSetupFactory()
+
+            if !eventTapSuccess {
+                Log.error("Failed to start after device connection: could not create event tap", category: .device)
+                return
+            }
+
+            deviceMonitor = deviceProviderFactory()
+            unsafe deviceMonitor?.delegate = self
+
+            guard deviceMonitor?.start() == true else {
+                Log.warning(
+                    "Device connection detected but still no compatible multitouch hardware.",
+                    category: .device)
+                deviceMonitor?.stop()
+                deviceMonitor = nil
+                teardownEventTap()
+                return
+            }
+
+            addSleepWakeObservers()
+
+            isMonitoring = true
+            isEnabled = true
+            Log.info("Multitouch monitoring started after device connection", category: .device)
+
+            // Update the menu bar UI to reflect the new state
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: .deviceConnectionStateChanged,
+                    object: nil
+                )
+            }
         }
     }
 
@@ -940,5 +1016,25 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.lastGestureWasActive = false  // Drag was cancelled, not active
         }
         mouseGenerator.cancelDrag()
+    }
+}
+
+
+// MARK: - HIDDeviceWatcherDelegate
+
+extension MultitouchManager: HIDDeviceWatcher.Delegate {
+    func hidDeviceWatcherDidDetectDeviceConnection(_ watcher: HIDDeviceWatcher) {
+        Log.info("HID device watcher detected new multitouch device", category: .device)
+        attemptStartAfterDeviceConnection()
+    }
+
+    func hidDeviceWatcherDidDetectDeviceDisconnection(_ watcher: HIDDeviceWatcher) {
+        Log.info("HID device watcher detected multitouch device removal", category: .device)
+        // If we're currently monitoring, restart to update the device list.
+        // If the removed device was the only one, DeviceMonitor.start() will
+        // fail and we'll gracefully go back to waiting for a new device.
+        if isMonitoring {
+            restart()
+        }
     }
 }

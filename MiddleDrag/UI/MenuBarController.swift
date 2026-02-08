@@ -705,5 +705,6 @@ class MenuBarController: NSObject {
 extension Notification.Name {
     static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
     static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
+    static let deviceConnectionStateChanged = Notification.Name("MiddleDragDeviceConnectionStateChanged")
 }
 

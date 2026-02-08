@@ -73,6 +73,14 @@
 			);
 			target = 1A0000011 /* MiddleDrag */;
 		};
+		ECAF38FA2F3813A0003F3182 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Managers/HIDDeviceWatcher.swift,
+				Managers/MultitouchManager.swift,
+			);
+			target = MDT00000007 /* MiddleDragTests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -89,6 +97,7 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
+				ECAF38FA2F3813A0003F3182 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";

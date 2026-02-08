@@ -160,6 +160,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             name: .launchAtLoginChanged,
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(deviceConnectionStateChanged(_:)),
+            name: .deviceConnectionStateChanged,
+            object: nil
+        )
     }
 
     // MARK: - Notification Handlers
@@ -177,6 +184,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let enabled = notification.object as? Bool {
             LaunchAtLoginManager.shared.setLaunchAtLogin(enabled)
         }
+    }
+
+    @objc private func deviceConnectionStateChanged(_ notification: Notification) {
+        // Update menu bar UI when device connection state changes
+        // (e.g., Bluetooth trackpad connected after launch)
+        let isEnabled = multitouchManager.isEnabled
+        menuBarController?.updateStatusIcon(enabled: isEnabled)
+        menuBarController?.buildMenu()
+        Log.info("Menu bar updated after device connection state change", category: .app)
     }
 
     // MARK: - Gesture Configuration
