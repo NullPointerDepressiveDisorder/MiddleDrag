@@ -32,13 +32,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EC04C4A32F3850F30029C1D0 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Managers/MultitouchManager.swift,
-			);
-			target = MDT00000007 /* MiddleDragTests */;
-		};
 		EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -98,7 +91,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
-				EC04C4A32F3850F30029C1D0 /* Exceptions for "MiddleDrag" folder in "MiddleDragTests" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";
@@ -600,7 +592,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
@@ -623,7 +615,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};

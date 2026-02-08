@@ -49,20 +49,20 @@ final class SystemGestureHelperTests: XCTestCase {
     override func setUp() {
         super.setUp()
         // Save originals
-        originalSettingsProvider = SystemGestureHelper.settingsProvider
-        originalProcessRunner = SystemGestureHelper.processRunner
+        originalSettingsProvider = unsafe SystemGestureHelper.settingsProvider
+        originalProcessRunner = unsafe SystemGestureHelper.processRunner
 
         // Create and inject mocks
         mockSettingsProvider = MockTrackpadSettingsProvider()
         mockProcessRunner = MockProcessRunner()
-        SystemGestureHelper.settingsProvider = mockSettingsProvider
-        SystemGestureHelper.processRunner = mockProcessRunner
+        unsafe SystemGestureHelper.settingsProvider = mockSettingsProvider
+        unsafe SystemGestureHelper.processRunner = mockProcessRunner
     }
 
     override func tearDown() {
         // Restore originals
-        SystemGestureHelper.settingsProvider = originalSettingsProvider
-        SystemGestureHelper.processRunner = originalProcessRunner
+        unsafe SystemGestureHelper.settingsProvider = originalSettingsProvider
+        unsafe SystemGestureHelper.processRunner = originalProcessRunner
         mockSettingsProvider = nil
         mockProcessRunner = nil
         super.tearDown()

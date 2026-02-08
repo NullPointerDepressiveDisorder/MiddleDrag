@@ -7,20 +7,20 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {
-        let instance1 = MultitouchManager.shared
-        let instance2 = MultitouchManager.shared
+        let instance1 = unsafe MultitouchManager.shared
+        let instance2 = unsafe MultitouchManager.shared
         XCTAssertTrue(instance1 === instance2)
     }
 
     // MARK: - Configuration Tests
 
     func testDefaultConfiguration() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
         XCTAssertNotNil(manager.configuration)
     }
 
     func testUpdateConfiguration() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
         var newConfig = GestureConfiguration()
         newConfig.sensitivity = 2.0
         newConfig.tapThreshold = 0.3
@@ -34,7 +34,7 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testUpdateConfigurationPalmRejection() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
         var newConfig = GestureConfiguration()
         newConfig.exclusionZoneEnabled = true
         newConfig.exclusionZoneSize = 0.25
@@ -58,7 +58,7 @@ final class MultitouchManagerTests: XCTestCase {
     func testInitialMonitoringStateIsFalse() {
         // Create a fresh instance for isolated testing
         // Note: shared instance may already be monitoring
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
 
         // After stop, should not be monitoring
         manager.stop()
@@ -66,7 +66,7 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testStopWhenNotMonitoring() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
         manager.stop()
 
         // Calling stop again should not crash
@@ -77,7 +77,7 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Middle Drag Enable/Disable Tests
 
     func testMiddleDragEnabledConfiguration() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
         var config = GestureConfiguration()
 
         config.middleDragEnabled = true
@@ -92,7 +92,7 @@ final class MultitouchManagerTests: XCTestCase {
     // MARK: - Configuration Propagation Tests
 
     func testConfigurationPropagatesAllValues() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
 
         var config = GestureConfiguration()
         config.sensitivity = 3.0
@@ -252,7 +252,7 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testDoubleStopDoesNotCrash() {
-        let manager = MultitouchManager.shared
+        let manager = unsafe MultitouchManager.shared
 
         // Ensure clean state
         manager.stop()
@@ -1882,10 +1882,10 @@ final class MultitouchManagerTests: XCTestCase {
 
     override func tearDown() {
         // Ensure we stop monitoring after each test
-        MultitouchManager.shared.stop()
+        unsafe MultitouchManager.shared.stop()
 
         // Reset configuration to defaults
-        MultitouchManager.shared.updateConfiguration(GestureConfiguration())
+        unsafe MultitouchManager.shared.updateConfiguration(GestureConfiguration())
 
         super.tearDown()
     }
@@ -2034,13 +2034,13 @@ final class MultitouchManagerTests: XCTestCase {
         manager.updateConfiguration(config)
 
         manager.start()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
 
         // Call from background thread - uses DispatchQueue.main.sync
         let expectation = XCTestExpectation(description: "Background thread check completes")
         DispatchQueue.global(qos: .userInitiated).async {
             // This exercises shouldSkipGestureForDesktop from background thread
-            manager.gestureRecognizerDidBeginDragging(recognizer)
+            unsafe manager.gestureRecognizerDidBeginDragging(recognizer)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 2.0)
@@ -2093,12 +2093,12 @@ final class MultitouchManagerTests: XCTestCase {
         manager.updateConfiguration(config)
 
         manager.start()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
 
         // Call from background thread - uses DispatchQueue.main.sync
         let expectation = XCTestExpectation(description: "Background thread drag check completes")
         DispatchQueue.global(qos: .userInitiated).async {
-            manager.gestureRecognizerDidBeginDragging(recognizer)
+            unsafe manager.gestureRecognizerDidBeginDragging(recognizer)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 2.0)
@@ -2149,12 +2149,12 @@ final class MultitouchManagerTests: XCTestCase {
         manager.updateConfiguration(config)
 
         manager.start()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
 
         // Call from background thread - uses DispatchQueue.main.sync
         let expectation = XCTestExpectation(description: "Background thread tap check completes")
         DispatchQueue.global(qos: .userInitiated).async {
-            manager.gestureRecognizerDidTap(recognizer)
+            unsafe manager.gestureRecognizerDidTap(recognizer)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 2.0)
@@ -2179,12 +2179,12 @@ final class MultitouchManagerTests: XCTestCase {
         manager.updateConfiguration(config)
 
         manager.start()
-        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+        unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
 
         // Call from background thread - exercises both MainActor.assumeIsolated paths
         let expectation = XCTestExpectation(description: "Combined check completes")
         DispatchQueue.global(qos: .userInitiated).async {
-            manager.gestureRecognizerDidBeginDragging(recognizer)
+            unsafe manager.gestureRecognizerDidBeginDragging(recognizer)
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 2.0)
@@ -2197,7 +2197,7 @@ final class MultitouchManagerTests: XCTestCase {
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
-        let recognizer = GestureRecognizer()
+        nonisolated(unsafe) let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
         config.middleDragEnabled = true
@@ -2216,16 +2216,16 @@ final class MultitouchManagerTests: XCTestCase {
         for _ in 0..<iterations {
             // Main thread call
             DispatchQueue.main.async {
-                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
-                manager.gestureRecognizerDidBeginDragging(recognizer)
-                manager.gestureRecognizerDidEndDragging(recognizer)
+                unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                unsafe manager.gestureRecognizerDidBeginDragging(recognizer)
+                unsafe manager.gestureRecognizerDidEndDragging(recognizer)
                 expectation.fulfill()
             }
 
             // Background thread call
             DispatchQueue.global(qos: .userInitiated).async {
-                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
-                manager.gestureRecognizerDidTap(recognizer)
+                unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                unsafe manager.gestureRecognizerDidTap(recognizer)
                 expectation.fulfill()
             }
         }
