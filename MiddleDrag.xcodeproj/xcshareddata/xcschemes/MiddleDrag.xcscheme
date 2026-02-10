@@ -41,17 +41,6 @@
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "MDT00000007"
-               BuildableName = "MiddleDragTests.xctest"
-               BlueprintName = "MiddleDragTests"
-               ReferencedContainer = "container:MiddleDrag.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
                BlueprintIdentifier = "EC2E12FB2F3AB9D20091578B"
                BuildableName = "MiddleDragCoreTests.xctest"
                BlueprintName = "MiddleDragCoreTests"
