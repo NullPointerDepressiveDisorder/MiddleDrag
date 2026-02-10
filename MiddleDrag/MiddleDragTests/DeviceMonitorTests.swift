@@ -190,7 +190,7 @@ import XCTest
 
         // Use a conservative 10ms threshold to avoid flakiness while still
         // catching regressions where the delay is removed entirely.
-        // The actual delay is DeviceMonitor.frameworkCleanupDelay (50ms).
+        // The actual delay is DeviceMonitor.frameworkCleanupDelay (500ms).
         XCTAssertGreaterThanOrEqual(
             elapsed, 0.01,
             "stop() should include safety delay for framework cleanup")
@@ -266,7 +266,7 @@ import XCTest
         // is told to unregister them. This prevents race conditions where
         // an in-flight callback accesses a nil gDeviceMonitor.
         unsafe monitor.start()
-        
+
         // Stop should complete without crash - the key fix is that
         // gCallbackEnabled is set to false BEFORE MTUnregisterContactFrameCallback
         unsafe XCTAssertNoThrow(monitor.stop())
@@ -276,24 +276,30 @@ import XCTest
         // Simulates the exact scenario from the bug report:
         // Rapid restart cycles during connectivity changes causing
         // gDeviceMonitor to become nil while callbacks are still in-flight.
-        // 
+        //
         // This test verifies crash-safety of the synchronization mechanism.
         // A crash here would indicate a race condition in the callback/stop logic.
+        //
+        // NOTE: Limited to 3 iterations because each stop() blocks for
+        // frameworkCleanupDelay (0.5s) when a real device is present,
+        // so more iterations cause the test to appear to hang.
+        let iterations = 3
         var cyclesCompleted = 0
-        for i in 0..<10 {
+        for i in 0..<iterations {
             unsafe monitor.start()
             // Simulate some activity
             Thread.sleep(forTimeInterval: 0.005)
             unsafe monitor.stop()
             cyclesCompleted += 1
-            
+
             // Create a new monitor to simulate restart
-            if i < 9 {  // Don't create on last iteration
+            if i < iterations - 1 {
                 unsafe monitor = unsafe DeviceMonitor()
             }
         }
         // Verify all cycles completed without crash
-        XCTAssertEqual(cyclesCompleted, 10, "All restart cycles should complete without crash")
+        XCTAssertEqual(
+            cyclesCompleted, iterations, "All restart cycles should complete without crash")
     }
 
     func testConcurrentStartStopDoesNotCrash() {
@@ -305,7 +311,7 @@ import XCTest
         expectation.expectedFulfillmentCount = 2
         var startCount = 0
         var stopCount = 0
-        
+
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.start()
@@ -314,7 +320,7 @@ import XCTest
             }
             expectation.fulfill()
         }
-        
+
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.stop()
@@ -323,7 +329,7 @@ import XCTest
             }
             expectation.fulfill()
         }
-        
+
         unsafe wait(for: [expectation], timeout: 5.0)
         // Verify operations completed (crash-safety check)
         XCTAssertEqual(startCount, 5, "All start operations should complete")
@@ -335,7 +341,7 @@ import XCTest
         // doesn't cause a crash. This tests the gPendingCleanup mechanism.
         unsafe monitor.start()
         unsafe monitor.stop()
-        
+
         // Immediately create new monitors without waiting for cleanup.
         // Each monitor is properly stopped before creating the next one.
         var monitorsCreated = 0
@@ -347,31 +353,32 @@ import XCTest
                 monitorsCreated += 1
             }
         }
-        
+
         // Verify all monitors were created and cleaned up without crash
-        XCTAssertEqual(monitorsCreated, 5, "All monitors should be created and stopped without crash")
+        XCTAssertEqual(
+            monitorsCreated, 5, "All monitors should be created and stopped without crash")
     }
 
     func testInitAcquiresGlobalReference() {
         // Test that init() properly acquires the global reference when none exists
         // This exercises the lock acquisition and global state setup in init()
-        
+
         // First, clear any existing monitor
         unsafe monitor.stop()
         unsafe monitor = nil
-        
+
         // Small delay to allow cleanup
         RunLoop.current.run(until: Date(timeIntervalSinceNow: 0.02))
-        
+
         // Create a new monitor - it should acquire the global reference
         let newMonitor = unsafe DeviceMonitor()
-        
+
         // The monitor was created successfully (no crash = lock works correctly)
         unsafe XCTAssertNotNil(newMonitor)
-        
+
         // Clean up
         unsafe newMonitor.stop()
-        
+
         // Reassign for tearDown
         unsafe monitor = unsafe DeviceMonitor()
     }
@@ -379,14 +386,14 @@ import XCTest
     func testSecondMonitorDoesNotTakeGlobalReference() {
         // Test that a second monitor doesn't take ownership of the global reference
         // when the first one still owns it. This exercises the `if gDeviceMonitor == nil` check.
-        
+
         // First monitor already exists from setUp and owns global reference
         let secondMonitor = unsafe DeviceMonitor()
-        
+
         // Both monitors should exist without crash
         unsafe XCTAssertNotNil(monitor)
         unsafe XCTAssertNotNil(secondMonitor)
-        
+
         // Clean up second monitor
         unsafe secondMonitor.stop()
     }

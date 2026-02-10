@@ -8,23 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
-		EC2E12FD2F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; };
 		EC2E13072F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; };
 		EC2E13082F3AB9D20091578B /* MiddleDragCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EC2E136A2F3ABC260091578B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E13692F3ABC260091578B /* Sentry */; };
 		EC2E136C2F3ABC2D0091578B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E136B2F3ABC2D0091578B /* Sparkle */; };
-		EC2E13762F3AD1EE0091578B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E13752F3AD1EE0091578B /* Sentry */; };
-		EC2E13782F3AD1F20091578B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E13772F3AD1F20091578B /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		EC2E12FE2F3AB9D20091578B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 1A0000015 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = EC2E12F12F3AB9D20091578B;
-			remoteInfo = MiddleDragCore;
-		};
 		EC2E13002F3AB9D20091578B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1A0000015 /* Project object */;
@@ -190,9 +180,7 @@
 		1A0000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				EC2E13782F3AD1F20091578B /* Sparkle in Frameworks */,
 				EC2E13072F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */,
-				EC2E13762F3AD1EE0091578B /* Sentry in Frameworks */,
 			);
 		};
 		EC2E12EF2F3AB9D20091578B /* Frameworks */ = {
@@ -205,7 +193,6 @@
 		EC2E12F92F3AB9D20091578B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				EC2E12FD2F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -273,10 +260,6 @@
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
-			packageProductDependencies = (
-				EC2E13752F3AD1EE0091578B /* Sentry */,
-				EC2E13772F3AD1F20091578B /* Sparkle */,
-			);
 			productName = MiddleDrag;
 			productReference = 1A0000004 /* MiddleDrag.app */;
 			productType = "com.apple.product-type.application";
@@ -312,7 +295,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				EC2E12FF2F3AB9D20091578B /* PBXTargetDependency */,
 				EC2E13012F3AB9D20091578B /* PBXTargetDependency */,
 			);
 			name = MiddleDragCoreTests;
@@ -436,11 +418,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		EC2E12FF2F3AB9D20091578B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = EC2E12F12F3AB9D20091578B /* MiddleDragCore */;
-			targetProxy = EC2E12FE2F3AB9D20091578B /* PBXContainerItemProxy */;
-		};
 		EC2E13012F3AB9D20091578B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1A0000011 /* MiddleDrag */;
@@ -936,16 +913,6 @@
 			productName = Sentry;
 		};
 		EC2E136B2F3ABC2D0091578B /* Sparkle */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
-			productName = Sparkle;
-		};
-		EC2E13752F3AD1EE0091578B /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
-		EC2E13772F3AD1F20091578B /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
