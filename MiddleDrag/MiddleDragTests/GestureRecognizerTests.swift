@@ -1,7 +1,7 @@
 import CoreGraphics
 import XCTest
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 final class GestureRecognizerTests: XCTestCase {
 

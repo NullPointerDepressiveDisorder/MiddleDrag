@@ -1,6 +1,6 @@
 import Foundation
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 /// Mock implementation of TouchDeviceProviding for unit testing.
 /// Allows simulating touch input without requiring hardware access.
