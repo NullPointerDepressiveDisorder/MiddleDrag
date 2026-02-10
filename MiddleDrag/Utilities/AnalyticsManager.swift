@@ -48,7 +48,7 @@ public enum Log {
     }
     
     /// Check if Sentry logging should be enabled (only if telemetry is enabled)
-    public static var shouldLogToSentry: Bool {
+    static var shouldLogToSentry: Bool {
         return CrashReporter.shared.anyTelemetryEnabled
     }
     

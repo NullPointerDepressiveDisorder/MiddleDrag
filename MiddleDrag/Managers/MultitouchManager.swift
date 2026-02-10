@@ -277,7 +277,7 @@ public final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Performs the actual restart after the cleanup delay
-    public func performRestart(wasEnabled: Bool) {
+    func performRestart(wasEnabled: Bool) {
         // Verify we should still restart (manager may have been stopped during delay)
         guard wakeObserver != nil else {
             markRestartComplete()
