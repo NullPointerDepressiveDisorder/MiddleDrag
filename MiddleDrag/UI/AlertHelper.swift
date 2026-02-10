@@ -23,7 +23,7 @@ class DefaultAlertPresenter: AlertPresenter {
 
 /// Helper for displaying alerts and dialogs
 @MainActor
-class AlertHelper {
+public class AlertHelper {
 
     // MARK: - Dependency Injection
 
@@ -208,7 +208,7 @@ class AlertHelper {
     ///   - isFirstLaunch: Whether this is shown on first launch (affects both the welcome message and the button text)
     ///   - onDismiss: Optional callback when user dismisses without applying changes
     /// - Returns: true if user wants to apply the recommended changes
-    static func showGestureConfigurationPrompt(
+    public static func showGestureConfigurationPrompt(
         isFirstLaunch: Bool = false,
         onDismiss: (() -> Void)? = nil
     ) -> Bool {
@@ -230,13 +230,13 @@ class AlertHelper {
     }
 
     /// Show success feedback after applying changes
-    static func showGestureConfigurationSuccess() {
+    public static func showGestureConfigurationSuccess() {
         let alert = createGestureConfigurationSuccessAlert()
         _ = presenter.runModal(alert)
     }
 
     /// Show failure feedback if changes couldn't be applied
-    static func showGestureConfigurationFailure() {
+    public static func showGestureConfigurationFailure() {
         let alert = createGestureConfigurationFailureAlert()
         if presenter.runModal(alert) == .alertFirstButtonReturn {
             openTrackpadSettings()

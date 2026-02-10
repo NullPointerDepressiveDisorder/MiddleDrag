@@ -1,4 +1,5 @@
 import Cocoa
+import MiddleDragCore
 
 /// Main application delegate
 @MainActor

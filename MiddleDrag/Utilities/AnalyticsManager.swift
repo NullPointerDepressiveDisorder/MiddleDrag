@@ -6,7 +6,7 @@ import os.log
 // MARK: - Logger
 /// A unified logger that writes to os_log (always) and Sentry (if enabled)
 /// Usage: Log.debug("message"), Log.info("message"), Log.warning("message"), Log.error("message"), Log.fatal("message")
-enum Log {
+public enum Log {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.middledrag"
     
     // OS Log categories
@@ -16,7 +16,7 @@ enum Log {
     private static let appLog = OSLog(subsystem: subsystem, category: "app")
     
     // Session ID to distinguish different testing/debugging sessions
-    static let sessionID: String = {
+    public static let sessionID: String = {
         // Generate a short, readable session ID (e.g., "2026-01-16-abc123")
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
@@ -25,13 +25,13 @@ enum Log {
         return "\(dateStr)-\(randomStr)"
     }()
     
-    enum Category: String {
+    public enum Category: String {
         case gesture
         case device
         case crash
         case app
         
-        var osLog: OSLog {
+        public var osLog: OSLog {
             switch self {
             case .gesture: return Log.gestureLog
             case .device: return Log.deviceLog
@@ -48,12 +48,12 @@ enum Log {
     }
     
     /// Check if Sentry logging should be enabled (only if telemetry is enabled)
-    private static var shouldLogToSentry: Bool {
+    public static var shouldLogToSentry: Bool {
         return CrashReporter.shared.anyTelemetryEnabled
     }
     
     /// Debug level - only in debug builds
-    static func debug(_ message: String, category: Category = .app) {
+    public static func debug(_ message: String, category: Category = .app) {
         #if DEBUG
         unsafe os_log(.debug, log: category.osLog, "%{public}@", message)
         #endif
@@ -64,7 +64,7 @@ enum Log {
     }
     
     /// Info level
-    static func info(_ message: String, category: Category = .app) {
+    public static func info(_ message: String, category: Category = .app) {
         unsafe os_log(.info, log: category.osLog, "%{public}@", message)
         // Only log to Sentry if telemetry is enabled (offline by default)
         if shouldLogToSentry {
@@ -73,7 +73,7 @@ enum Log {
     }
     
     /// Warning level
-    static func warning(_ message: String, category: Category = .app) {
+    public static func warning(_ message: String, category: Category = .app) {
         unsafe os_log(.error, log: category.osLog, "⚠️ %{public}@", message)
         // Only log to Sentry if telemetry is enabled (offline by default)
         if shouldLogToSentry {
@@ -82,7 +82,7 @@ enum Log {
     }
     
     /// Error level
-    static func error(_ message: String, category: Category = .app, error: Error? = nil) {
+    public static func error(_ message: String, category: Category = .app, error: Error? = nil) {
         unsafe os_log(.fault, log: category.osLog, "❌ %{public}@", message)
         // Only log to Sentry if telemetry is enabled (offline by default)
         if shouldLogToSentry {
@@ -126,9 +126,9 @@ enum Log {
 /// - Performance monitoring ON: Network calls during normal operation (sampled)
 
 /// Thread-safety: Uses UserDefaults (internally synchronized) and Sentry SDK (thread-safe)
-final class CrashReporter: @unchecked Sendable {
+public final class CrashReporter: @unchecked Sendable {
     
-    static let shared = CrashReporter()
+    public static let shared = CrashReporter()
     
     // MARK: - Configuration
     
@@ -187,7 +187,7 @@ final class CrashReporter: @unchecked Sendable {
     }
     
     /// Returns true if any telemetry is enabled (for UI display)
-    var anyTelemetryEnabled: Bool {
+    public var anyTelemetryEnabled: Bool {
         return isEnabled || performanceMonitoringEnabled
     }
     
@@ -198,7 +198,7 @@ final class CrashReporter: @unchecked Sendable {
     private init() {}
     
     /// Call at app launch - only initializes Sentry if user has opted in
-    func initializeIfEnabled() {
+    public func initializeIfEnabled() {
         guard anyTelemetryEnabled else {
             #if DEBUG
             SentrySDK.logger.debug("CrashReporter: Telemetry disabled (offline mode)")

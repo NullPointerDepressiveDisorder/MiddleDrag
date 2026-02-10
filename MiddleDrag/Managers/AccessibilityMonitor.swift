@@ -3,7 +3,7 @@ import Foundation
 
 /// Manages accessibility permission polling and app handling
 /// Thread-safety: Timer runs on main thread, state changes are sequential
-final class AccessibilityMonitor: @unchecked Sendable {
+public final class AccessibilityMonitor: @unchecked Sendable {
 
     // MARK: - Properties
 
@@ -15,14 +15,14 @@ final class AccessibilityMonitor: @unchecked Sendable {
     private var lastKnownState: Bool = false
 
     /// Called when permission is granted (transition from false to true)
-    var onGrant: (() -> Void)?
+    public var onGrant: (() -> Void)?
 
     /// Called when permission is revoked (transition from true to false)
-    var onRevocation: (() -> Void)?
+    public var onRevocation: (() -> Void)?
 
     // MARK: - Initialization
 
-    init(
+    public init(
         initialState: Bool? = nil,
         permissionChecker: AccessibilityPermissionChecking = SystemAccessibilityPermissionChecker(),
         appController: AppLifecycleControlling = SystemAppLifecycleController(),
@@ -46,7 +46,7 @@ final class AccessibilityMonitor: @unchecked Sendable {
     }
 
     /// Starts monitoring for accessibility permission changes
-    func startMonitoring(interval: TimeInterval = 1.0) {
+    public func startMonitoring(interval: TimeInterval = 1.0) {
         stopMonitoring()
 
         Log.info("Starting accessibility permission monitoring", category: .app)
@@ -65,7 +65,7 @@ final class AccessibilityMonitor: @unchecked Sendable {
     }
 
     /// Stops monitoring
-    func stopMonitoring() {
+    public func stopMonitoring() {
         timer?.invalidate()
         timer = nil
     }
@@ -95,8 +95,9 @@ final class AccessibilityMonitor: @unchecked Sendable {
     }
 
     /// Helper to trigger relaunch (exposed for the closure to use if needed)
-    func triggerRelaunch() {
+    public func triggerRelaunch() {
         Log.info("Restarting app to apply permissions...", category: .app)
         appController.relaunch()
     }
 }
+

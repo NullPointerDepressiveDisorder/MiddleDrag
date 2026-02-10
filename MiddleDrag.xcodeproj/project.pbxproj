@@ -7,50 +7,86 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		EC0E54092F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
 		EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */ = {isa = PBXBuildFile; fileRef = EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */; };
-		EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC93816A2EDE493A0012FDBE /* Sentry */; };
-		ECCE59182F16F72300962494 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECCE59172F16F72300962494 /* Sparkle */; settings = {ATTRIBUTES = (Required, ); }; };
+		EC2E12FD2F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; };
+		EC2E13072F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; };
+		EC2E13082F3AB9D20091578B /* MiddleDragCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		EC2E136A2F3ABC260091578B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E13692F3ABC260091578B /* Sentry */; };
+		EC2E136C2F3ABC2D0091578B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E136B2F3ABC2D0091578B /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		MDT00000015 /* PBXContainerItemProxy */ = {
+		EC2E12FE2F3AB9D20091578B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A0000015 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EC2E12F12F3AB9D20091578B;
+			remoteInfo = MiddleDragCore;
+		};
+		EC2E13002F3AB9D20091578B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 1A0000015 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 1A0000011;
 			remoteInfo = MiddleDrag;
 		};
+		EC2E13052F3AB9D20091578B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 1A0000015 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = EC2E12F12F3AB9D20091578B;
+			remoteInfo = MiddleDragCore;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		EC2E12E92F3AAC6C0091578B /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = Frameworks;
+			files = (
+				EC2E13082F3AB9D20091578B /* MiddleDragCore.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		1A0000004 /* MiddleDrag.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MiddleDrag.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = "<group>"; };
+		EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MiddleDragCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC2E12FC2F3AB9D20091578B /* MiddleDragCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		MDT00000005 /* MiddleDragTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */ = {
+		EC2E13232F3ABB0E0091578B /* Exceptions for "MiddleDrag" folder in "MiddleDragCore" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Debug.xcconfig,
-				Release.xcconfig,
-				Secrets.xcconfig,
+				Core/GestureRecognizer.swift,
+				Core/MouseEventGenerator.swift,
+				Core/MultitouchFramework.swift,
+				Core/TouchDeviceProviding.swift,
+				Managers/AccessibilityMonitor.swift,
+				Managers/AccessibilityWrappers.swift,
+				Managers/DeviceMonitor.swift,
+				Managers/MultitouchManager.swift,
+				Models/GestureModels.swift,
+				Models/TouchModels.swift,
+				UI/AlertHelper.swift,
+				UI/MenuBarController.swift,
+				Utilities/AnalyticsManager.swift,
+				Utilities/LaunchAtLoginManager.swift,
+				Utilities/PreferencesManager.swift,
+				Utilities/ScreenHelper.swift,
+				Utilities/SystemGestureHelper.swift,
+				Utilities/UpdateManager.swift,
+				Utilities/WindowHelper.swift,
 			);
-			target = 1A0000011 /* MiddleDrag */;
+			target = EC2E12F12F3AB9D20091578B /* MiddleDragCore */;
 		};
-		EC79662E2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDragTests" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Debug.xcconfig,
-				Release.xcconfig,
-				Secrets.xcconfig,
-			);
-			target = MDT00000007 /* MiddleDragTests */;
-		};
-		ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+		EC2E13682F3ABB910091578B /* Exceptions for "MiddleDrag" folder in "MiddleDragCoreTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				MiddleDragTests/AccessibilityMonitorTests.swift,
@@ -71,6 +107,57 @@
 				MiddleDragTests/TouchModelsTests.swift,
 				MiddleDragTests/WindowHelperTests.swift,
 			);
+			target = EC2E12FB2F3AB9D20091578B /* MiddleDragCoreTests */;
+		};
+		EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Debug.xcconfig,
+				Release.xcconfig,
+				Secrets.xcconfig,
+			);
+			target = 1A0000011 /* MiddleDrag */;
+		};
+		ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Core/GestureRecognizer.swift,
+				Core/MouseEventGenerator.swift,
+				Core/MultitouchFramework.swift,
+				Core/TouchDeviceProviding.swift,
+				Managers/AccessibilityMonitor.swift,
+				Managers/AccessibilityWrappers.swift,
+				Managers/DeviceMonitor.swift,
+				Managers/MultitouchManager.swift,
+				MiddleDragTests/AccessibilityMonitorTests.swift,
+				MiddleDragTests/AlertHelperTests.swift,
+				MiddleDragTests/AnalyticsManagerTests.swift,
+				MiddleDragTests/DeviceMonitorTests.swift,
+				MiddleDragTests/GestureModelsTests.swift,
+				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/LaunchAtLoginManagerTests.swift,
+				MiddleDragTests/MenuBarControllerTests.swift,
+				MiddleDragTests/Mocks/MockDeviceMonitor.swift,
+				MiddleDragTests/MouseEventGeneratorTests.swift,
+				MiddleDragTests/MultitouchFrameworkTests.swift,
+				MiddleDragTests/MultitouchManagerTests.swift,
+				MiddleDragTests/PreferencesManagerTests.swift,
+				MiddleDragTests/ScreenHelperTests.swift,
+				MiddleDragTests/SystemGestureHelperTests.swift,
+				MiddleDragTests/TouchModelsTests.swift,
+				MiddleDragTests/WindowHelperTests.swift,
+				Models/GestureModels.swift,
+				Models/TouchModels.swift,
+				UI/AlertHelper.swift,
+				UI/MenuBarController.swift,
+				Utilities/AnalyticsManager.swift,
+				Utilities/LaunchAtLoginManager.swift,
+				Utilities/PreferencesManager.swift,
+				Utilities/ScreenHelper.swift,
+				Utilities/SystemGestureHelper.swift,
+				Utilities/UpdateManager.swift,
+				Utilities/WindowHelper.swift,
+			);
 			target = 1A0000011 /* MiddleDrag */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -80,7 +167,6 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				EC79662D2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDrag" target */,
-				EC79662E2EFD87E2007453A4 /* Exceptions for "Frameworks" folder in "MiddleDragTests" target */,
 			);
 			path = Frameworks;
 			sourceTree = "<group>";
@@ -89,6 +175,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				ECABF2BD2F1D9B4300912BC9 /* Exceptions for "MiddleDrag" folder in "MiddleDrag" target */,
+				EC2E13232F3ABB0E0091578B /* Exceptions for "MiddleDrag" folder in "MiddleDragCore" target */,
+				EC2E13682F3ABB910091578B /* Exceptions for "MiddleDrag" folder in "MiddleDragCoreTests" target */,
 			);
 			path = MiddleDrag;
 			sourceTree = "<group>";
@@ -99,13 +187,20 @@
 		1A0000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
-				EC93816B2EDE493A0012FDBE /* Sentry in Frameworks */,
-				ECCE59182F16F72300962494 /* Sparkle in Frameworks */,
+				EC2E13072F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */,
 			);
 		};
-		MDT00000010 /* Frameworks */ = {
+		EC2E12EF2F3AB9D20091578B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				EC2E136A2F3ABC260091578B /* Sentry in Frameworks */,
+				EC2E136C2F3ABC2D0091578B /* Sparkle in Frameworks */,
+			);
+		};
+		EC2E12F92F3AB9D20091578B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				EC2E12FD2F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -126,7 +221,8 @@
 			isa = PBXGroup;
 			children = (
 				1A0000004 /* MiddleDrag.app */,
-				MDT00000005 /* MiddleDragTests.xctest */,
+				EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */,
+				EC2E12FC2F3AB9D20091578B /* MiddleDragCoreTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,6 +238,14 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXHeadersBuildPhase section */
+		EC2E12ED2F3AB9D20091578B /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			files = (
+			);
+		};
+/* End PBXHeadersBuildPhase section */
+
 /* Begin PBXNativeTarget section */
 		1A0000011 /* MiddleDrag */ = {
 			isa = PBXNativeTarget;
@@ -151,41 +255,59 @@
 				1A0000007 /* Frameworks */,
 				1A0000014 /* Resources */,
 				EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */,
+				EC2E12E92F3AAC6C0091578B /* Embed Frameworks */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				EC2E13062F3AB9D20091578B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				EC79661A2EFD8784007453A4 /* Frameworks */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
-			packageProductDependencies = (
-				ECCE59172F16F72300962494 /* Sparkle */,
-			);
 			productName = MiddleDrag;
 			productReference = 1A0000004 /* MiddleDrag.app */;
 			productType = "com.apple.product-type.application";
 		};
-		MDT00000007 /* MiddleDragTests */ = {
+		EC2E12F12F3AB9D20091578B /* MiddleDragCore */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = MDT00000008 /* Build configuration list for PBXNativeTarget "MiddleDragTests" */;
+			buildConfigurationList = EC2E13092F3AB9D20091578B /* Build configuration list for PBXNativeTarget "MiddleDragCore" */;
 			buildPhases = (
-				MDT00000009 /* Sources */,
-				MDT00000010 /* Frameworks */,
-				MDT00000011 /* Resources */,
+				EC2E12ED2F3AB9D20091578B /* Headers */,
+				EC2E12EE2F3AB9D20091578B /* Sources */,
+				EC2E12EF2F3AB9D20091578B /* Frameworks */,
+				EC2E12F02F3AB9D20091578B /* Resources */,
+			);
+			buildRules = (
+			);
+			name = MiddleDragCore;
+			packageProductDependencies = (
+				EC2E13692F3ABC260091578B /* Sentry */,
+				EC2E136B2F3ABC2D0091578B /* Sparkle */,
+			);
+			productName = MiddleDragCore;
+			productReference = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		EC2E12FB2F3AB9D20091578B /* MiddleDragCoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EC2E130C2F3AB9D20091578B /* Build configuration list for PBXNativeTarget "MiddleDragCoreTests" */;
+			buildPhases = (
+				EC2E12F82F3AB9D20091578B /* Sources */,
+				EC2E12F92F3AB9D20091578B /* Frameworks */,
+				EC2E12FA2F3AB9D20091578B /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				MDT00000012 /* PBXTargetDependency */,
+				EC2E12FF2F3AB9D20091578B /* PBXTargetDependency */,
+				EC2E13012F3AB9D20091578B /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				EC79661A2EFD8784007453A4 /* Frameworks */,
-				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
-			);
-			name = MiddleDragTests;
-			productName = MiddleDragTests;
-			productReference = MDT00000005 /* MiddleDragTests.xctest */;
+			name = MiddleDragCoreTests;
+			productName = MiddleDragCoreTests;
+			productReference = EC2E12FC2F3AB9D20091578B /* MiddleDragCoreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -195,14 +317,18 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1400;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
 					1A0000011 = {
 						CreatedOnToolsVersion = 14.0;
 					};
-					MDT00000007 = {
-						CreatedOnToolsVersion = 14.0;
+					EC2E12F12F3AB9D20091578B = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					EC2E12FB2F3AB9D20091578B = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 1A0000011;
 					};
 				};
 			};
@@ -224,7 +350,8 @@
 			projectRoot = "";
 			targets = (
 				1A0000011 /* MiddleDrag */,
-				MDT00000007 /* MiddleDragTests */,
+				EC2E12F12F3AB9D20091578B /* MiddleDragCore */,
+				EC2E12FB2F3AB9D20091578B /* MiddleDragCoreTests */,
 			);
 		};
 /* End PBXProject section */
@@ -236,10 +363,14 @@
 				EC0E540A2F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */,
 			);
 		};
-		MDT00000011 /* Resources */ = {
+		EC2E12F02F3AB9D20091578B /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			files = (
-				EC0E54092F19EEF1001AC128 /* THIRD_PARTY_LICENSES in Resources */,
+			);
+		};
+		EC2E12FA2F3AB9D20091578B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -282,7 +413,12 @@
 			files = (
 			);
 		};
-		MDT00000009 /* Sources */ = {
+		EC2E12EE2F3AB9D20091578B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
+		EC2E12F82F3AB9D20091578B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
 			);
@@ -290,10 +426,20 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		MDT00000012 /* PBXTargetDependency */ = {
+		EC2E12FF2F3AB9D20091578B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EC2E12F12F3AB9D20091578B /* MiddleDragCore */;
+			targetProxy = EC2E12FE2F3AB9D20091578B /* PBXContainerItemProxy */;
+		};
+		EC2E13012F3AB9D20091578B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 1A0000011 /* MiddleDrag */;
-			targetProxy = MDT00000015 /* PBXContainerItemProxy */;
+			targetProxy = EC2E13002F3AB9D20091578B /* PBXContainerItemProxy */;
+		};
+		EC2E13062F3AB9D20091578B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = EC2E12F12F3AB9D20091578B /* MiddleDragCore */;
+			targetProxy = EC2E13052F3AB9D20091578B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -462,10 +608,7 @@
 				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/System/Library/PrivateFrameworks,
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MiddleDrag/Info.plist;
@@ -479,13 +622,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MARKETING_VERSION = 1.4.1.4;
-				OTHER_LDFLAGS = (
-					"-framework",
-					MultitouchSupport,
-					"-framework",
-					CoreFoundation,
-					"-Wl,-no_warn_duplicate_libraries",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = app.middledrag.MiddleDrag;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -530,10 +667,7 @@
 				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
 				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
 				ENABLE_RESOURCE_ACCESS_PHOTO_LIBRARY = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					/System/Library/PrivateFrameworks,
-				);
+				FRAMEWORK_SEARCH_PATHS = "$(inherited)";
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MiddleDrag/Info.plist;
@@ -547,13 +681,7 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 11.5;
 				MARKETING_VERSION = 1.4.1.4;
-				OTHER_LDFLAGS = (
-					"-framework",
-					MultitouchSupport,
-					"-framework",
-					CoreFoundation,
-					"-Wl,-no_warn_duplicate_libraries",
-				);
+				OTHER_LDFLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = app.middledrag.MiddleDrag;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -571,49 +699,155 @@
 			};
 			name = Release;
 		};
-		MDT00000013 /* Debug configuration for PBXNativeTarget "MiddleDragTests" */ = {
+		EC2E130A2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCore" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Manual;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				OTHER_LDFLAGS = (
 					"-framework",
 					MultitouchSupport,
-					"-framework",
-					CoreFoundation,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NullPointer.MiddleDragCore;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
 			};
 			name = Debug;
 		};
-		MDT00000014 /* Release configuration for PBXNativeTarget "MiddleDragTests" */ = {
+		EC2E130B2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCore" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_STYLE = Manual;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Developer ID Application";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = "";
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_MODULE_VERIFIER = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
 				MARKETING_VERSION = 1.0;
+				MODULE_VERIFIER_SUPPORTED_LANGUAGES = "objective-c objective-c++";
+				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu17 gnu++20";
 				OTHER_LDFLAGS = (
 					"-framework",
 					MultitouchSupport,
-					"-framework",
-					CoreFoundation,
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.middledrag.MiddleDragTests;
+				PRODUCT_BUNDLE_IDENTIFIER = NullPointer.MiddleDragCore;
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_INSTALL_MODULE = YES;
+				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		EC2E130D2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCoreTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PA6CS4W4H9;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NullPointer.MiddleDragCoreTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MiddleDrag";
+			};
+			name = Debug;
+		};
+		EC2E130E2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCoreTests" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PA6CS4W4H9;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.2;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = NullPointer.MiddleDragCoreTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MiddleDrag.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MiddleDrag";
 			};
 			name = Release;
 		};
@@ -636,11 +870,19 @@
 			);
 			defaultConfigurationName = Release;
 		};
-		MDT00000008 /* Build configuration list for PBXNativeTarget "MiddleDragTests" */ = {
+		EC2E13092F3AB9D20091578B /* Build configuration list for PBXNativeTarget "MiddleDragCore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				MDT00000013 /* Debug configuration for PBXNativeTarget "MiddleDragTests" */,
-				MDT00000014 /* Release configuration for PBXNativeTarget "MiddleDragTests" */,
+				EC2E130A2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCore" */,
+				EC2E130B2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCore" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		EC2E130C2F3AB9D20091578B /* Build configuration list for PBXNativeTarget "MiddleDragCoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EC2E130D2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCoreTests" */,
+				EC2E130E2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCoreTests" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -666,12 +908,12 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		EC93816A2EDE493A0012FDBE /* Sentry */ = {
+		EC2E13692F3ABC260091578B /* Sentry */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
 		};
-		ECCE59172F16F72300962494 /* Sparkle */ = {
+		EC2E136B2F3ABC2D0091578B /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;

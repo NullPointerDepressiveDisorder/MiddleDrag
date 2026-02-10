@@ -2,7 +2,7 @@ import Cocoa
 
 /// Manages the menu bar UI and user interactions
 @MainActor
-class MenuBarController: NSObject {
+public class MenuBarController: NSObject {
 
     // MARK: - Properties
 
@@ -20,7 +20,7 @@ class MenuBarController: NSObject {
 
     // MARK: - Initialization
 
-    init(multitouchManager: MultitouchManager, preferences: UserPreferences) {
+    public init(multitouchManager: MultitouchManager, preferences: UserPreferences) {
         self.multitouchManager = multitouchManager
         self.preferences = preferences
         super.init()
@@ -703,7 +703,7 @@ class MenuBarController: NSObject {
 // MARK: - Notification Names
 
 extension Notification.Name {
-    static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
-    static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
+    public static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
+    public static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
 }
 

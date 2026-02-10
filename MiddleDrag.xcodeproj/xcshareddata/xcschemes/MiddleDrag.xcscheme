@@ -42,6 +42,17 @@
                ReferencedContainer = "container:MiddleDrag.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "EC2E12D82F3AAC6C0091578B"
+               BuildableName = "MiddleDragCoreTests.xctest"
+               BlueprintName = "MiddleDragCoreTests"
+               ReferencedContainer = "container:MiddleDrag.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

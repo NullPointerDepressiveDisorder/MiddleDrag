@@ -22,7 +22,7 @@ enum GestureState: Sendable {
 // MARK: - Configuration
 
 /// Configuration for gesture detection and mouse behavior
-struct GestureConfiguration: Sendable {
+public struct GestureConfiguration: Sendable {
     // Sensitivity and smoothing
     var sensitivity: Float = 1.0
     var smoothingFactor: Float = 0.3
@@ -110,8 +110,8 @@ enum ModifierKeyType: String, Codable, CaseIterable, Sendable {
 // MARK: - User Preferences
 
 /// User preferences that persist across app launches
-struct UserPreferences: Codable, Sendable {
-    var launchAtLogin: Bool = false
+public struct UserPreferences: Codable, Sendable {
+    public var launchAtLogin: Bool = false
     var dragSensitivity: Double = 1.0
     var tapThreshold: Double = 0.15
     var maxTapHoldDuration: Double = 0.5  // 500ms max hold for tap
@@ -152,7 +152,7 @@ struct UserPreferences: Codable, Sendable {
     var titleBarHeight: Double = 28  // Height of title bar region in pixels
 
     /// Convert to GestureConfiguration
-    var gestureConfig: GestureConfiguration {
+    public var gestureConfig: GestureConfiguration {
         return GestureConfiguration(
             sensitivity: Float(dragSensitivity),
             smoothingFactor: Float(smoothingFactor),

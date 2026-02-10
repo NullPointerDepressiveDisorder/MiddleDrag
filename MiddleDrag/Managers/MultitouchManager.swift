@@ -4,7 +4,7 @@ import Foundation
 
 /// Main manager that coordinates multitouch monitoring and gesture recognition
 /// Thread-safety: Uses internal gestureQueue for synchronization of touch processing
-final class MultitouchManager: @unchecked Sendable {
+public final class MultitouchManager: @unchecked Sendable {
 
     // MARK: - Constants
 
@@ -33,7 +33,7 @@ final class MultitouchManager: @unchecked Sendable {
     private(set) var isEnabled = false
 
     /// Whether monitoring is active
-    private(set) var isMonitoring = false
+    public private(set) var isMonitoring = false
 
     /// Whether currently in a three-finger gesture (used for event suppression)
     private(set) var isInThreeFingerGesture = false
@@ -118,7 +118,7 @@ final class MultitouchManager: @unchecked Sendable {
 
     /// Shared production instance
     /// Note: Initialized once at app startup, accessed from main thread and gesture queue
-    static let shared = MultitouchManager()
+    public static let shared = MultitouchManager()
 
     /// Initialize with optional factories for dependency injection
     /// - Parameters:
@@ -148,7 +148,7 @@ final class MultitouchManager: @unchecked Sendable {
     // MARK: - Public Interface
 
     /// Start monitoring for gestures
-    func start() {
+    public func start() {
         guard !isMonitoring else { return }
 
         applyConfiguration()
@@ -181,7 +181,7 @@ final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Stop monitoring
-    func stop() {
+    public func stop() {
         // Clear restart state and cancel any pending restart work item.
         // This must be done under lock to prevent data races with restart().
         restartLock.lock()
@@ -202,7 +202,7 @@ final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Restart monitoring (used after sleep/wake)
-    func restart() {
+    public func restart() {
         // Allow restart if either:
         // 1. wakeObserver exists (normal production case after successful start)
         // 2. isMonitoring is true (for test scenarios where event tap setup may fail)
@@ -277,7 +277,7 @@ final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Performs the actual restart after the cleanup delay
-    private func performRestart(wasEnabled: Bool) {
+    public func performRestart(wasEnabled: Bool) {
         // Verify we should still restart (manager may have been stopped during delay)
         guard wakeObserver != nil else {
             markRestartComplete()
@@ -397,7 +397,7 @@ final class MultitouchManager: @unchecked Sendable {
     }
 
     /// Update configuration
-    func updateConfiguration(_ config: GestureConfiguration) {
+    public func updateConfiguration(_ config: GestureConfiguration) {
         configuration = config
         applyConfiguration()
     }
