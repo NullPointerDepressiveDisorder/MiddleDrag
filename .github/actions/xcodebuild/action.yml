@@ -65,6 +65,9 @@ runs:
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_REQUIRED=NO"
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_ALLOWED=NO"
 
+        # Skip Launch Services registration on CI to prevent lsregister hangs
+        XCODE_CMD="$XCODE_CMD SKIP_INSTALL=YES"
+
         # Optional: Coverage
         if [ "${{ inputs.enable-coverage }}" == "true" ]; then
           XCODE_CMD="$XCODE_CMD -enableCodeCoverage YES"
@@ -91,4 +94,13 @@ runs:
         fi
 
         echo "Running: $XCODE_CMD"
-        eval $XCODE_CMD
+        # Use timeout to prevent hanging indefinitely in CI
+        timeout 600 bash -c "eval $XCODE_CMD" || {
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "❌ Build timed out after 10 minutes"
+            exit 1
+          else
+            exit $EXIT_CODE
+          fi
+        }
