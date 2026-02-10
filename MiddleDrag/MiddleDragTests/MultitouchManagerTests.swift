@@ -2197,7 +2197,7 @@ final class MultitouchManagerTests: XCTestCase {
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
-        let recognizer = GestureRecognizer()
+        nonisolated(unsafe) let recognizer = GestureRecognizer()
 
         var config = GestureConfiguration()
         config.middleDragEnabled = true
@@ -2216,16 +2216,16 @@ final class MultitouchManagerTests: XCTestCase {
         for _ in 0..<iterations {
             // Main thread call
             DispatchQueue.main.async {
-                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
-                manager.gestureRecognizerDidBeginDragging(recognizer)
-                manager.gestureRecognizerDidEndDragging(recognizer)
+                unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                unsafe manager.gestureRecognizerDidBeginDragging(recognizer)
+                unsafe manager.gestureRecognizerDidEndDragging(recognizer)
                 expectation.fulfill()
             }
 
             // Background thread call
             DispatchQueue.global(qos: .userInitiated).async {
-                manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
-                manager.gestureRecognizerDidTap(recognizer)
+                unsafe manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0.5, y: 0.5))
+                unsafe manager.gestureRecognizerDidTap(recognizer)
                 expectation.fulfill()
             }
         }
