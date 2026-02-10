@@ -94,13 +94,4 @@ runs:
         fi
 
         echo "Running: $XCODE_CMD"
-        # Use timeout to prevent hanging indefinitely in CI
-        timeout 600 bash -c "eval $XCODE_CMD" || {
-          EXIT_CODE=$?
-          if [ $EXIT_CODE -eq 124 ]; then
-            echo "❌ Build timed out after 10 minutes"
-            exit 1
-          else
-            exit $EXIT_CODE
-          fi
-        }
+        eval $XCODE_CMD
