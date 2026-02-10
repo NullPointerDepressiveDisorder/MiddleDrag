@@ -1,0 +1,30 @@
+{
+  "configurations" : [
+    {
+      "id" : "D0D482C3-A1BE-4B3C-AB2D-B9F00AFD0654",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:MiddleDrag.xcodeproj",
+      "identifier" : "1A0000011",
+      "name" : "MiddleDrag"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : true,
+      "target" : {
+        "containerPath" : "container:MiddleDrag.xcodeproj",
+        "identifier" : "EC2E12FB2F3AB9D20091578B",
+        "name" : "MiddleDragCoreTests"
+      }
+    }
+  ],
+  "version" : 1
+}

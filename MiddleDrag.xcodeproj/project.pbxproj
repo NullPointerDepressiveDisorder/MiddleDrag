@@ -58,6 +58,7 @@
 		EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */ = {isa = PBXFileReference; lastKnownFileType = text; path = THIRD_PARTY_LICENSES; sourceTree = "<group>"; };
 		EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MiddleDragCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		EC2E12FC2F3AB9D20091578B /* MiddleDragCoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MiddleDragCoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC6B400E2F3AE7C5006E9C7D /* MiddleDrag.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = file; path = MiddleDrag.xctestplan; sourceTree = "<group>"; };
 		EC7965532EFD8664007453A4 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		EC7965542EFD8678007453A4 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -213,6 +214,7 @@
 		1A0000008 = {
 			isa = PBXGroup;
 			children = (
+				EC6B400E2F3AE7C5006E9C7D /* MiddleDrag.xctestplan */,
 				EC0E54082F19EEF1001AC128 /* THIRD_PARTY_LICENSES */,
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 				1A0000010 /* Products */,
@@ -454,6 +456,8 @@
 /* Begin XCBuildConfiguration section */
 		1A0000017 /* Debug configuration for PBXProject "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Debug.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -526,6 +530,8 @@
 		};
 		1A0000018 /* Release configuration for PBXProject "MiddleDrag" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Release.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -709,9 +715,11 @@
 		};
 		EC2E130A2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCore" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Debug.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -761,9 +769,11 @@
 		};
 		EC2E130B2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCore" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Release.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = NO;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
@@ -812,6 +822,8 @@
 		};
 		EC2E130D2F3AB9D20091578B /* Debug configuration for PBXNativeTarget "MiddleDragCoreTests" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Debug.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
@@ -837,6 +849,8 @@
 		};
 		EC2E130E2F3AB9D20091578B /* Release configuration for PBXNativeTarget "MiddleDragCoreTests" */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = EC79661A2EFD8784007453A4 /* Frameworks */;
+			baseConfigurationReferenceRelativePath = Release.xcconfig;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CODE_SIGN_STYLE = Automatic;
