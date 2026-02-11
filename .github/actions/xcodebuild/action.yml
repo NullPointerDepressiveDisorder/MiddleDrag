@@ -65,8 +65,9 @@ runs:
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_REQUIRED=NO"
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_ALLOWED=NO"
 
-        # Skip Launch Services registration on CI to prevent lsregister hangs
+        # Skip install/registration paths on CI to prevent lsregister hangs
         XCODE_CMD="$XCODE_CMD SKIP_INSTALL=YES"
+        XCODE_CMD="$XCODE_CMD REGISTER_APP_WITH_LAUNCH_SERVICES=NO"
 
         # Optional: Coverage
         if [ "${{ inputs.enable-coverage }}" == "true" ]; then

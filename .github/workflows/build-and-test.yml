@@ -22,6 +22,7 @@ jobs:
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     name: Build & Test with Coverage
     runs-on: macos-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
