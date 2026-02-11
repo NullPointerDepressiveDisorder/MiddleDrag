@@ -111,6 +111,11 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Tracks whether this instance owns the global callback reference
     private var ownsGlobalReference = false
 
+    /// Global lifecycle lock to serialize start/stop across instances.
+    /// This prevents concurrent MTDeviceStart/MTDeviceStop calls, which can crash
+    /// the MultitouchSupport framework under parallel test execution.
+    private static let lifecycleLock = NSLock()
+
     // MARK: - Lifecycle
 
     init() {
@@ -143,6 +148,9 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Start monitoring the default multitouch device
     @unsafe @discardableResult
     func start() -> Bool {
+        unsafe DeviceMonitor.lifecycleLock.lock()
+        defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
+
         unsafe stateLock.lock()
         defer { unsafe stateLock.unlock() }
 
@@ -215,6 +223,9 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Stop monitoring
     /// Safe to call even if start() was never called
     @unsafe func stop() {
+        unsafe DeviceMonitor.lifecycleLock.lock()
+        defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
+
         unsafe stateLock.lock()
 
         // Safe to call when not running - just return early
