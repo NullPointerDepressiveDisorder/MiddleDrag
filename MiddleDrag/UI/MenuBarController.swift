@@ -28,6 +28,14 @@ public class MenuBarController: NSObject {
         setupStatusItem()
     }
 
+    deinit {
+        MainActor.assumeIsolated {
+            if let statusItem = statusItem {
+                NSStatusBar.system.removeStatusItem(statusItem)
+            }
+        }
+    }
+
     // MARK: - Setup
 
     private func setupStatusItem() {
