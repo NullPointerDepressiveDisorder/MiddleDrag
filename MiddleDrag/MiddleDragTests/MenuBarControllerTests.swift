@@ -11,8 +11,11 @@ import XCTest
     var notificationExpectation: XCTestExpectation?
     var receivedNotificationObject: Any?
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        if ProcessInfo.processInfo.environment["CI"] != nil {
+            throw XCTSkip("Skipping MenuBarController UI tests in headless CI.")
+        }
+        try super.setUpWithError()
         unsafe mockDevice = unsafe MockDeviceMonitor()
         unsafe manager = MultitouchManager(
             deviceProviderFactory: { unsafe self.mockDevice }, eventTapSetup: { true })
