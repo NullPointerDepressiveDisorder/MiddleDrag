@@ -29,9 +29,18 @@ public class MenuBarController: NSObject {
     }
 
     deinit {
-        MainActor.assumeIsolated {
-            if let statusItem = statusItem {
-                NSStatusBar.system.removeStatusItem(statusItem)
+        let statusItemToRemove = statusItem
+
+        if Thread.isMainThread {
+            if let statusItemToRemove {
+                NSStatusBar.system.removeStatusItem(statusItemToRemove)
+            }
+            return
+        }
+
+        DispatchQueue.main.async {
+            if let statusItemToRemove {
+                NSStatusBar.system.removeStatusItem(statusItemToRemove)
             }
         }
     }
