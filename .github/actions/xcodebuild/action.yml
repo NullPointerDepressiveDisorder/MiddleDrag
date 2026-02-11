@@ -50,6 +50,9 @@ runs:
         # Determine if running tests or building
         if [ "${{ inputs.run-tests }}" == "true" ]; then
           XCODE_CMD="$XCODE_CMD test"
+          # DeviceMonitor/Multitouch tests use shared global state; parallel workers can hang/flap.
+          XCODE_CMD="$XCODE_CMD -parallel-testing-enabled NO"
+          XCODE_CMD="$XCODE_CMD -maximum-parallel-testing-workers 1"
         else
           XCODE_CMD="$XCODE_CMD build"
         fi
