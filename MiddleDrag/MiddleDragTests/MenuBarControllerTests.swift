@@ -12,9 +12,6 @@ import XCTest
     var receivedNotificationObject: Any?
 
     override func setUpWithError() throws {
-        if ProcessInfo.processInfo.environment["CI"] != nil {
-            throw XCTSkip("Skipping MenuBarController UI tests in headless CI.")
-        }
         try super.setUpWithError()
         unsafe mockDevice = unsafe MockDeviceMonitor()
         unsafe manager = MultitouchManager(

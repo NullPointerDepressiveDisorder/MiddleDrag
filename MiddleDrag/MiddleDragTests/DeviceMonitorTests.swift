@@ -44,7 +44,6 @@ import XCTest
 
     override func setUpWithError() throws {
         try super.setUpWithError()
-        try requireUnsafeMultitouchTestsEnabled()
         // Create a fresh monitor for each test
         unsafe monitor = unsafe DeviceMonitor()
     }

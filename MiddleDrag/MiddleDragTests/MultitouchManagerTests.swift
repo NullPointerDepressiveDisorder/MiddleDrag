@@ -4,6 +4,12 @@ import XCTest
 
 final class MultitouchManagerTests: XCTestCase {
 
+    private func requireCGEventTestsEnabled() throws {
+        if ProcessInfo.processInfo.environment["RUN_CGEVENT_TESTS"] == "0" {
+            throw XCTSkip("Skipping CGEvent-based tests; set RUN_CGEVENT_TESTS=1 to run.")
+        }
+    }
+
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {
@@ -1466,7 +1472,8 @@ final class MultitouchManagerTests: XCTestCase {
 
     // MARK: - Event Processing Logic Tests
 
-    func testProcessEventPassesThroughTapDisabledEvents() {
+    func testProcessEventPassesThroughTapDisabledEvents() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1478,7 +1485,8 @@ final class MultitouchManagerTests: XCTestCase {
         unsafe XCTAssertNotNil(result)
     }
 
-    func testProcessEventIdentifiesOurEvents() {
+    func testProcessEventIdentifiesOurEvents() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1500,7 +1508,8 @@ final class MultitouchManagerTests: XCTestCase {
         }
     }
 
-    func testProcessEventIntercptsForceClick() {
+    func testProcessEventIntercptsForceClick() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1520,7 +1529,8 @@ final class MultitouchManagerTests: XCTestCase {
             result, "Physical left click with 3 fingers should be suppressed (Force Click)")
     }
 
-    func testProcessEventPassesNormalLeftClick() {
+    func testProcessEventPassesNormalLeftClick() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1537,7 +1547,8 @@ final class MultitouchManagerTests: XCTestCase {
         unsafe XCTAssertNotNil(result, "Normal left click should pass through")
     }
 
-    func testProcessEventSuppressesDuringGesture() {
+    func testProcessEventSuppressesDuringGesture() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1569,7 +1580,8 @@ final class MultitouchManagerTests: XCTestCase {
     // cannot be easily mocked in unit tests. The modifier key logic is tested through
     // integration testing and manual verification.
 
-    func testProcessEventSuppressesWhenModifierHeldAndGestureActive() {
+    func testProcessEventSuppressesWhenModifierHeldAndGestureActive() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1608,7 +1620,8 @@ final class MultitouchManagerTests: XCTestCase {
 
     // MARK: - Last Gesture Was Active Flag Tests
 
-    func testCancelledGestureDoesNotSuppressEventsAfterEnd() {
+    func testCancelledGestureDoesNotSuppressEventsAfterEnd() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1651,7 +1664,8 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
-    func testActiveGestureSuppressesEventsAfterEnd() {
+    func testActiveGestureSuppressesEventsAfterEnd() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1699,7 +1713,8 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
-    func testCancelledDragDoesNotSuppressEventsAfterEnd() {
+    func testCancelledDragDoesNotSuppressEventsAfterEnd() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1748,7 +1763,8 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
-    func testActiveDragSuppressesEventsAfterEnd() {
+    func testActiveDragSuppressesEventsAfterEnd() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1798,7 +1814,8 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
-    func testEventSuppressionWindowExpires() {
+    func testEventSuppressionWindowExpires() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -1843,7 +1860,8 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
 
-    func testToggleEnabledResetsLastGestureWasActive() {
+    func testToggleEnabledResetsLastGestureWasActive() throws {
+        try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
@@ -2194,9 +2212,6 @@ final class MultitouchManagerTests: XCTestCase {
 
     func testMainActorIsolatedCallsDoNotDeadlock() throws {
         // Stress test to ensure no deadlock from rapid thread switches
-        // Skip in CI as this test can hang due to MainActor.assumeIsolated complexity
-        try XCTSkipIf(ProcessInfo.processInfo.environment["CI"] != nil, "Skipping stress test in CI")
-        
         let mockDevice = unsafe MockDeviceMonitor()
         let manager = MultitouchManager(
             deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })

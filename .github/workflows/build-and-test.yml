@@ -34,6 +34,9 @@ jobs:
 
       - name: Run Tests with Coverage
         uses: ./.github/actions/xcodebuild
+        env:
+          RUN_UNSAFE_MULTITOUCH_TESTS: "1"
+          RUN_CGEVENT_TESTS: "1"
         with:
           configuration: Debug
           run-tests: "true"
