@@ -55,6 +55,11 @@ final class GestureRecognizerTests: XCTestCase {
     /// Creates touch data in memory and returns pointer + cleanup closure
     private func createTouchData(touches: [MTTouch]) -> (UnsafeMutableRawPointer, Int, () -> Void) {
         let count = touches.count
+        guard count > 0 else {
+            // Non-null placeholder; processTouches won't dereference when count == 0.
+            return (UnsafeMutableRawPointer(bitPattern: 1)!, 0, {})
+        }
+
         let pointer = UnsafeMutablePointer<MTTouch>.allocate(capacity: count)
 
         for (index, touch) in touches.enumerated() {
