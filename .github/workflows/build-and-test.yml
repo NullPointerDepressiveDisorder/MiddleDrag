@@ -32,11 +32,6 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build
-        uses: ./.github/actions/xcodebuild
-        with:
-          configuration: Debug
-
       - name: Run Tests with Coverage
         uses: ./.github/actions/xcodebuild
         with:
