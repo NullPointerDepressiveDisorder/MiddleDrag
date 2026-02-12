@@ -6,7 +6,15 @@ public class MenuBarController: NSObject {
 
     // MARK: - Properties
 
-    private var statusItem: NSStatusItem!
+    private struct StatusItemBox: @unchecked Sendable {
+        let value: NSStatusItem
+    }
+
+    private var statusItemStorage: StatusItemBox?
+    private var statusItem: NSStatusItem! {
+        get { statusItemStorage?.value }
+        set { statusItemStorage = newValue.map(StatusItemBox.init(value:)) }
+    }
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
 
@@ -29,18 +37,18 @@ public class MenuBarController: NSObject {
     }
 
     deinit {
-        let statusItemToRemove = statusItem
+        let statusItemToRemove = statusItemStorage
 
         if Thread.isMainThread {
             if let statusItemToRemove {
-                NSStatusBar.system.removeStatusItem(statusItemToRemove)
+                NSStatusBar.system.removeStatusItem(statusItemToRemove.value)
             }
             return
         }
 
         DispatchQueue.main.async {
             if let statusItemToRemove {
-                NSStatusBar.system.removeStatusItem(statusItemToRemove)
+                NSStatusBar.system.removeStatusItem(statusItemToRemove.value)
             }
         }
     }

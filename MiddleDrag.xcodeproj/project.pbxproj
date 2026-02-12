@@ -118,6 +118,7 @@
 				Core/MouseEventGenerator.swift,
 				Core/MultitouchFramework.swift,
 				Core/TouchDeviceProviding.swift,
+				Info.plist,
 				Managers/AccessibilityMonitor.swift,
 				Managers/AccessibilityWrappers.swift,
 				Managers/DeviceMonitor.swift,
@@ -370,11 +371,14 @@
 /* Begin PBXShellScriptBuildPhase section */
 		EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
+			alwaysOutOfDate = 0;
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}",
 			);
 			name = "Upload Debug Symbols & Source Context";
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/sentry-debug-files-upload.stamp",
+			);
 			shellPath = /bin/sh;
 			shellScript = (
 				"# Type a script or drag a script file from your workspace to insert its path.",
@@ -394,6 +398,7 @@
 				"else",
 				"echo \"warning: sentry-cli not installed, download from https://github.com/getsentry/sentry-cli/releases\"",
 				"fi",
+				"touch \"${DERIVED_FILE_DIR}/sentry-debug-files-upload.stamp\"",
 				"",
 			);
 		};
@@ -736,7 +741,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INSTALL_MODULE = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -789,7 +794,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_INSTALL_MODULE = YES;
-				SWIFT_INSTALL_OBJC_HEADER = NO;
+				SWIFT_INSTALL_OBJC_HEADER = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				VERSIONING_SYSTEM = "apple-generic";
