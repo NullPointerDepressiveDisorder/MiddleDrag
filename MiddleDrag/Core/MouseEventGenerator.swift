@@ -343,6 +343,21 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Coordinate Conversion
 
+    /// Reads mouse location via AppKit on the main thread and converts to Quartz coordinates.
+    /// AppKit APIs like NSEvent/NSScreen are not thread-safe and must not be read off-main.
+    private static func appKitMouseLocationQuartz() -> CGPoint {
+        let readOnMain = {
+            let cocoaLocation = NSEvent.mouseLocation
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 0
+            return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        }
+
+        if Thread.isMainThread {
+            return readOnMain()
+        }
+        return DispatchQueue.main.sync(execute: readOnMain)
+    }
+
     /// Get current mouse position in Quartz coordinates
     private var currentMouseLocationQuartz: CGPoint {
         if !shouldPostEvents {
@@ -357,11 +372,9 @@ final class MouseEventGenerator: @unchecked Sendable {
         if let event = CGEvent(source: nil) {
             return event.location
         }
-        
-        // Fallback: use primary screen height for multi-monitor support
-        let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
-        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+
+        // Fallback when CGEvent creation fails (e.g., missing permissions).
+        return Self.appKitMouseLocationQuartz()
     }
 
     /// Get current mouse location in Quartz coordinates (public)
@@ -378,9 +391,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         if let event = CGEvent(source: nil) {
             return event.location
         }
-        let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
-        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        return appKitMouseLocationQuartz()
     }
 
     // MARK: - Private Methods
