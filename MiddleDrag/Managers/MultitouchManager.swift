@@ -652,42 +652,33 @@ extension MultitouchManager: DeviceMonitorDelegate {
         // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
-        // CRITICAL: Copy touch data synchronously during this callback.
         // The touches pointer is only valid for the duration of this callback.
-        // The MultitouchSupport framework owns this memory and may free/reuse it
-        // immediately after the callback returns. We MUST copy the data before
-        // dispatching to the gesture queue.
+        // Copy touch data via raw memcpy — much cheaper than Swift Array allocation
+        // + map closure that was causing per-frame GC pressure and jitter at 100Hz+.
         let touchCount = Int(count)
-        let touchDataCopy: [MTTouch]
+        let touchesPtr: UnsafeMutableRawPointer?
         if touchCount > 0 {
-            let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: touchCount)
-            // Create a Swift array copy of the touch data
-            touchDataCopy = (0..<touchCount).map { unsafe touchArray[$0] }
+            let byteCount = touchCount * MemoryLayout<MTTouch>.stride
+            let buffer = UnsafeMutableRawPointer.allocate(
+                byteCount: byteCount, alignment: MemoryLayout<MTTouch>.alignment)
+            unsafe buffer.copyMemory(from: touches, byteCount: byteCount)
+            touchesPtr = buffer
         } else {
-            touchDataCopy = []
+            touchesPtr = nil
         }
 
-        // Gesture recognition and finger counting is done inside processTouches
-        // State updates happen in delegate callbacks dispatched to main thread
-        // IMPORTANT: We must call processTouches even with zero touches so the
-        // gesture recognizer can properly end gestures via stableFrameCount logic.
         gestureQueue.async { [weak self] in
-            if touchDataCopy.isEmpty {
-                // Zero touches - still need to notify gesture recognizer so it can
-                // properly end active gestures via stableFrameCount mechanism
+            if let buffer = touchesPtr {
+                defer { buffer.deallocate() }
                 unsafe self?.gestureRecognizer.processTouches(
-                    UnsafeMutableRawPointer(bitPattern: 1)!, // Non-null placeholder, won't be dereferenced when count=0
+                    buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+            } else {
+                // Zero touches — still notify so gesture recognizer can end via stableFrameCount
+                unsafe self?.gestureRecognizer.processTouches(
+                    UnsafeMutableRawPointer(bitPattern: 1)!,
                     count: 0,
                     timestamp: timestamp,
                     modifierFlags: modifierFlags)
-            } else {
-                // Use withUnsafeBufferPointer to get a pointer to our copied data
-                unsafe touchDataCopy.withUnsafeBufferPointer { buffer in
-                    guard let baseAddress = buffer.baseAddress else { return }
-                    let rawPointer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
-                    unsafe self?.gestureRecognizer.processTouches(
-                        rawPointer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
-                }
             }
         }
     }

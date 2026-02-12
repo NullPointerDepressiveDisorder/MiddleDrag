@@ -163,22 +163,18 @@ final class MouseEventGenerator: @unchecked Sendable {
         }
 
         let currentPos = currentMouseLocationQuartz
-        let targetPos = CGPoint(
-            x: currentPos.x + smoothedDeltaX,
-            y: currentPos.y + smoothedDeltaY
-        )
         
         guard shouldPostEvents else { return }
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseDragged,
-                mouseCursorPosition: targetPos,
+                mouseCursorPosition: currentPos,
                 mouseButton: .center
             )
         else { return }
 
-        // Set deltas for macOS cursor movement; position field for apps that read it
+        // Use relative deltas instead of absolute positioning
         event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
         event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
         
