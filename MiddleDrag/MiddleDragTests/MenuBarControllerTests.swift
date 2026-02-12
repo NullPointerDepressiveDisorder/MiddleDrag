@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 @MainActor @unsafe final class MenuBarControllerTests: XCTestCase {
 
@@ -11,8 +11,8 @@ import XCTest
     var notificationExpectation: XCTestExpectation?
     var receivedNotificationObject: Any?
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
         unsafe mockDevice = unsafe MockDeviceMonitor()
         unsafe manager = MultitouchManager(
             deviceProviderFactory: { unsafe self.mockDevice }, eventTapSetup: { true })

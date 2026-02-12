@@ -1,7 +1,7 @@
 import ServiceManagement
 import XCTest
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 final class LaunchAtLoginManagerTests: XCTestCase {
 

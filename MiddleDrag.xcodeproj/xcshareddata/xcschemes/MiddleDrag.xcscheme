@@ -28,17 +28,22 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      codeCoverageEnabled = "YES"
-      shouldAutocreateTestPlan = "YES">
+      codeCoverageEnabled = "YES">
+      <TestPlans>
+         <TestPlanReference
+            reference = "container:MiddleDrag.xctestplan"
+            default = "YES">
+         </TestPlanReference>
+      </TestPlans>
       <Testables>
          <TestableReference
             skipped = "NO"
             parallelizable = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "MDT00000007"
-               BuildableName = "MiddleDragTests.xctest"
-               BlueprintName = "MiddleDragTests"
+               BlueprintIdentifier = "EC2E12FB2F3AB9D20091578B"
+               BuildableName = "MiddleDragCoreTests.xctest"
+               BlueprintName = "MiddleDragCoreTests"
                ReferencedContainer = "container:MiddleDrag.xcodeproj">
             </BuildableReference>
          </TestableReference>

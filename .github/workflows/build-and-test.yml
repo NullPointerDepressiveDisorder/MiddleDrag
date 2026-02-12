@@ -22,6 +22,7 @@ jobs:
     if: ${{ needs.pre_job.outputs.should_skip != 'true' }}
     name: Build & Test with Coverage
     runs-on: macos-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -31,11 +32,6 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1.6.0
         with:
           xcode-version: latest-stable
-
-      - name: Build
-        uses: ./.github/actions/xcodebuild
-        with:
-          configuration: Debug
 
       - name: Run Tests with Coverage
         uses: ./.github/actions/xcodebuild

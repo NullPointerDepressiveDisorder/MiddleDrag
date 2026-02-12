@@ -41,7 +41,7 @@ class DefaultProcessRunner: ProcessRunner {
 
 /// Helper for detecting and configuring macOS system gesture settings
 /// to prevent conflicts with MiddleDrag's three-finger gestures.
-class SystemGestureHelper {
+public class SystemGestureHelper {
 
     // MARK: - Dependency Injection
 
@@ -75,7 +75,7 @@ class SystemGestureHelper {
     // MARK: - Detection
 
     /// Returns true if 3-finger gestures are enabled that could conflict with MiddleDrag
-    static func hasConflictingSettings() -> Bool {
+    public static func hasConflictingSettings() -> Bool {
         let threeFingerVert = getTrackpadSetting(.threeFingerVertSwipe) ?? 0
         let threeFingerHoriz = getTrackpadSetting(.threeFingerHorizSwipe) ?? 0
 
@@ -118,7 +118,7 @@ class SystemGestureHelper {
     /// Apply recommended settings (disable 3-finger, enable 4-finger gestures)
     /// - Returns: true if all settings were applied successfully
     @discardableResult
-    static func applyRecommendedSettings() -> Bool {
+    public static func applyRecommendedSettings() -> Bool {
         var success = true
 
         for (key, value) in recommendedSettings {

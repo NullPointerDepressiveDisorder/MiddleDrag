@@ -5,9 +5,9 @@ import Sparkle
 /// Offline by default - only checks for updates when explicitly enabled by user
 /// Thread-safety: All mutable state is isolated to @MainActor to prevent data races
 @MainActor
-final class UpdateManager: NSObject {
+public final class UpdateManager: NSObject {
 
-    static let shared = UpdateManager()
+    public static let shared = UpdateManager()
 
     private var updaterController: SPUStandardUpdaterController?
     
@@ -64,7 +64,7 @@ final class UpdateManager: NSObject {
     /// Initialize Sparkle updater asynchronously to avoid blocking the main thread
     /// Call this from AppDelegate after app finishes launching
     /// The initialization is deferred to prevent app hanging during launch
-    func initialize() {
+    public func initialize() {
         guard !isInitializing && !isInitialized else {
             Log.info("UpdateManager already initialized or initializing", category: .app)
             return
@@ -178,26 +178,26 @@ final class UpdateManager: NSObject {
 
 extension UpdateManager: SPUUpdaterDelegate {
 
-    nonisolated func allowedChannels(for updater: SPUUpdater) -> Set<String> {
+    nonisolated public func allowedChannels(for updater: SPUUpdater) -> Set<String> {
         // Only stable channel for now
         // Could add "beta" channel later if needed
         return Set()
     }
 
-    nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+    nonisolated public func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         let version = item.displayVersionString
         Task { @MainActor in
             Log.info("Update available: \(version)", category: .app)
         }
     }
 
-    nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
+    nonisolated public func updaterDidNotFindUpdate(_ updater: SPUUpdater) {
         Task { @MainActor in
             Log.info("No updates available", category: .app)
         }
     }
 
-    nonisolated func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
+    nonisolated public func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) {
         let errorMessage = error.localizedDescription
         Task { @MainActor in
             Log.error("Update check failed: \(errorMessage)", category: .app)

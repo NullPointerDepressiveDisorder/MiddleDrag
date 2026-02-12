@@ -2,19 +2,20 @@ import AppKit
 import Foundation
 
 /// Protocol for checking accessibility permissions (for testing)
-protocol AccessibilityPermissionChecking {
+public protocol AccessibilityPermissionChecking {
     var isTrusted: Bool { get }
 }
 
 /// Default implementation wrapping system API
-class SystemAccessibilityPermissionChecker: AccessibilityPermissionChecking {
-    var isTrusted: Bool {
+public class SystemAccessibilityPermissionChecker: AccessibilityPermissionChecking {
+    public init() {}
+    public var isTrusted: Bool {
         AXIsProcessTrusted()
     }
 }
 
 /// Protocol for app control (relaunching/termination) (for testing)
-protocol AppLifecycleControlling {
+public protocol AppLifecycleControlling {
     func relaunch()
     @MainActor func terminate()
 }
@@ -32,12 +33,13 @@ extension Process: AppLifecycleProcessRunner {}
 /// Controller for app lifecycle operations (relaunch, terminate)
 /// Marked @unchecked Sendable as it's only used for simple fire-and-forget operations
 /// with no meaningful shared mutable state that could race
-class SystemAppLifecycleController: AppLifecycleControlling, @unchecked Sendable {
+public class SystemAppLifecycleController: AppLifecycleControlling, @unchecked Sendable {
+    public init() {}
 
     // Factory for creating processes, can be overridden for testing
     internal var processFactory: () -> AppLifecycleProcessRunner = { Process() }
 
-    func relaunch() {
+    public func relaunch() {
         let bundlePath = Bundle.main.bundlePath
         var task = processFactory()
 
@@ -97,7 +99,7 @@ class SystemAppLifecycleController: AppLifecycleControlling, @unchecked Sendable
     }
 
     @MainActor
-    func terminate() {
+    public func terminate() {
         NSApp.terminate(nil)
     }
 }

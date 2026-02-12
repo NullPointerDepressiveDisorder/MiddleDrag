@@ -1,10 +1,17 @@
 import Cocoa
+import MiddleDragCore
 
 /// Main application delegate
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Properties
+
+    /// True when running under XCTest (unit/integration tests).
+    private var isRunningTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
 
     private let multitouchManager = MultitouchManager.shared
     private var menuBarController: MenuBarController?
@@ -15,6 +22,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Application Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if isRunningTests {
+            Log.info("Skipping app bootstrap while running tests", category: .app)
+            return
+        }
+
         // Initialize crash reporting only if user has opted in (offline by default)
         CrashReporter.shared.initializeIfEnabled()
 

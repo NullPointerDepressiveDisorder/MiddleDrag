@@ -3,14 +3,14 @@ import Cocoa
 
 /// Manages launch at login functionality
 /// Thread-safety: Uses ServiceManagement APIs which are thread-safe
-final class LaunchAtLoginManager: @unchecked Sendable {
+public final class LaunchAtLoginManager: @unchecked Sendable {
     
-    static let shared = LaunchAtLoginManager()
+    public static let shared = LaunchAtLoginManager()
     
     private init() {}
     
     /// Configure launch at login
-    func setLaunchAtLogin(_ enabled: Bool) {
+    public func setLaunchAtLogin(_ enabled: Bool) {
         if #available(macOS 13.0, *) {
             configureLaunchAtLoginModern(enabled)
         } else {

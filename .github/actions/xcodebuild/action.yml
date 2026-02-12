@@ -50,6 +50,9 @@ runs:
         # Determine if running tests or building
         if [ "${{ inputs.run-tests }}" == "true" ]; then
           XCODE_CMD="$XCODE_CMD test"
+          # DeviceMonitor/Multitouch tests use shared global state; parallel workers can hang/flap.
+          XCODE_CMD="$XCODE_CMD -parallel-testing-enabled NO"
+          XCODE_CMD="$XCODE_CMD -maximum-parallel-testing-workers 1"
         else
           XCODE_CMD="$XCODE_CMD build"
         fi
@@ -64,6 +67,10 @@ runs:
         XCODE_CMD="$XCODE_CMD CODE_SIGN_IDENTITY=\"\""
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_REQUIRED=NO"
         XCODE_CMD="$XCODE_CMD CODE_SIGNING_ALLOWED=NO"
+
+        # Skip install/registration paths on CI to prevent lsregister hangs
+        XCODE_CMD="$XCODE_CMD SKIP_INSTALL=YES"
+        XCODE_CMD="$XCODE_CMD REGISTER_APP_WITH_LAUNCH_SERVICES=NO"
 
         # Optional: Coverage
         if [ "${{ inputs.enable-coverage }}" == "true" ]; then

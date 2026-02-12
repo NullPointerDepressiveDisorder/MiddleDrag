@@ -111,6 +111,11 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Tracks whether this instance owns the global callback reference
     private var ownsGlobalReference = false
 
+    /// Global lifecycle lock to serialize start/stop across instances.
+    /// This prevents concurrent MTDeviceStart/MTDeviceStop calls, which can crash
+    /// the MultitouchSupport framework under parallel test execution.
+    private static let lifecycleLock = NSLock()
+
     // MARK: - Lifecycle
 
     init() {
@@ -143,6 +148,9 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Start monitoring the default multitouch device
     @unsafe @discardableResult
     func start() -> Bool {
+        unsafe DeviceMonitor.lifecycleLock.lock()
+        defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
+
         unsafe stateLock.lock()
         defer { unsafe stateLock.unlock() }
 
@@ -215,11 +223,13 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Stop monitoring
     /// Safe to call even if start() was never called
     @unsafe func stop() {
+        unsafe DeviceMonitor.lifecycleLock.lock()
         unsafe stateLock.lock()
 
         // Safe to call when not running - just return early
         guard unsafe isRunning else {
             unsafe stateLock.unlock()
+            unsafe DeviceMonitor.lifecycleLock.unlock()
             return
         }
 
@@ -260,12 +270,21 @@ class DeviceMonitor: TouchDeviceProviding {
             unsafe MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
         }
 
+        // Release lifecycle lock before sleeping so other start/stop callers don't
+        // block for the full framework cleanup delay.
+        unsafe DeviceMonitor.lifecycleLock.unlock()
+
         // Brief pause to allow the framework's internal thread to complete
         // any in-flight operations AFTER we've disabled callbacks and unregistered.
         // Even with callbacks disabled, we still need to wait for any callback
         // that was already dispatched but hasn't checked the flag yet.
         // This sleep is intentionally done with lock unlocked to avoid blocking other threads.
         unsafe Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
+
+        // Reacquire lifecycle lock to serialize MTDeviceStop with MTDeviceStart/MTDeviceStop
+        // from any other DeviceMonitor instance.
+        unsafe DeviceMonitor.lifecycleLock.lock()
+        defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
 
         // Now safe to stop devices. Acquire lock before each MTDeviceStop to ensure
         // the framework's internal thread (mt_ThreadedMTEntry) cannot access the device

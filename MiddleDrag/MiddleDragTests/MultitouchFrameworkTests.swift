@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 final class MultitouchFrameworkTests: XCTestCase {
 

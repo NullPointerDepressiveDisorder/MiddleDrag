@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import MiddleDrag
+@testable import MiddleDragCore
 
 // MARK: - Mock Alert Presenter
 

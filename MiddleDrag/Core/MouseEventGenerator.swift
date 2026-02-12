@@ -36,6 +36,12 @@ final class MouseEventGenerator: @unchecked Sendable {
     
     private var eventSource: CGEventSource?
 
+    /// Avoid posting CGEvents in CI to prevent hangs in headless environments.
+    private static let shouldPostEventsInThisProcess: Bool = {
+        ProcessInfo.processInfo.environment["CI"] == nil
+    }()
+    private var shouldPostEvents: Bool { Self.shouldPostEventsInThisProcess }
+
     // Event generation queue for thread safety
     private let eventQueue = DispatchQueue(label: "com.middledrag.mouse", qos: .userInitiated)
     
@@ -162,6 +168,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             y: currentPos.y + smoothedDeltaY
         )
         
+        guard shouldPostEvents else { return }
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
@@ -268,6 +275,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
             // Post events with small delay between them
             self._clickCount += 1
+            guard self.shouldPostEvents else { return }
             downEvent.post(tap: .cghidEventTap)
             usleep(10000)  // 10ms delay
             upEvent.post(tap: .cghidEventTap)
@@ -335,31 +343,61 @@ final class MouseEventGenerator: @unchecked Sendable {
 
     // MARK: - Coordinate Conversion
 
+    /// Reads mouse location via AppKit on the main thread and converts to Quartz coordinates.
+    /// AppKit APIs like NSEvent/NSScreen are not thread-safe and must not be read off-main.
+    private static func appKitMouseLocationQuartz() -> CGPoint {
+        let readOnMain = {
+            let cocoaLocation = NSEvent.mouseLocation
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 0
+            return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        }
+
+        if Thread.isMainThread {
+            return readOnMain()
+        }
+        return DispatchQueue.main.sync(execute: readOnMain)
+    }
+
     /// Get current mouse position in Quartz coordinates
     private var currentMouseLocationQuartz: CGPoint {
+        if !shouldPostEvents {
+            // CI callers can be on background queues; avoid AppKit screen APIs off-main.
+            guard Thread.isMainThread else { return .zero }
+
+            // Avoid CGEvent calls in headless CI to prevent hangs.
+            let cocoaLocation = NSEvent.mouseLocation
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 0
+            return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        }
         if let event = CGEvent(source: nil) {
             return event.location
         }
-        
-        // Fallback: use primary screen height for multi-monitor support
-        let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
-        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+
+        // Fallback when CGEvent creation fails (e.g., missing permissions).
+        return Self.appKitMouseLocationQuartz()
     }
 
     /// Get current mouse location in Quartz coordinates (public)
     static var currentMouseLocation: CGPoint {
+        if !shouldPostEventsInThisProcess {
+            // CI callers can be on background queues; avoid AppKit screen APIs off-main.
+            guard Thread.isMainThread else { return .zero }
+
+            // Avoid CGEvent calls in headless CI to prevent hangs.
+            let cocoaLocation = NSEvent.mouseLocation
+            let screenHeight = NSScreen.screens.first?.frame.height ?? 0
+            return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        }
         if let event = CGEvent(source: nil) {
             return event.location
         }
-        let cocoaLocation = NSEvent.mouseLocation
-        let screenHeight = NSScreen.screens.first?.frame.height ?? 0
-        return CGPoint(x: cocoaLocation.x, y: screenHeight - cocoaLocation.y)
+        return appKitMouseLocationQuartz()
     }
 
     // MARK: - Private Methods
 
     private func sendMiddleMouseDown(at location: CGPoint) {
+        guard shouldPostEvents else { return }
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
@@ -376,6 +414,7 @@ final class MouseEventGenerator: @unchecked Sendable {
     }
 
     private func sendMiddleMouseUp(at location: CGPoint) {
+        guard shouldPostEvents else { return }
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,

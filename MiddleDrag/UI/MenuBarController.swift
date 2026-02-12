@@ -2,11 +2,19 @@ import Cocoa
 
 /// Manages the menu bar UI and user interactions
 @MainActor
-class MenuBarController: NSObject {
+public class MenuBarController: NSObject {
 
     // MARK: - Properties
 
-    private var statusItem: NSStatusItem!
+    private struct StatusItemBox: @unchecked Sendable {
+        let value: NSStatusItem
+    }
+
+    private var statusItemStorage: StatusItemBox?
+    private var statusItem: NSStatusItem! {
+        get { statusItemStorage?.value }
+        set { statusItemStorage = newValue.map(StatusItemBox.init(value:)) }
+    }
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
 
@@ -20,12 +28,29 @@ class MenuBarController: NSObject {
 
     // MARK: - Initialization
 
-    init(multitouchManager: MultitouchManager, preferences: UserPreferences) {
+    public init(multitouchManager: MultitouchManager, preferences: UserPreferences) {
         self.multitouchManager = multitouchManager
         self.preferences = preferences
         super.init()
 
         setupStatusItem()
+    }
+
+    deinit {
+        let statusItemToRemove = statusItemStorage
+
+        if Thread.isMainThread {
+            if let statusItemToRemove {
+                NSStatusBar.system.removeStatusItem(statusItemToRemove.value)
+            }
+            return
+        }
+
+        DispatchQueue.main.async {
+            if let statusItemToRemove {
+                NSStatusBar.system.removeStatusItem(statusItemToRemove.value)
+            }
+        }
     }
 
     // MARK: - Setup
@@ -703,7 +728,7 @@ class MenuBarController: NSObject {
 // MARK: - Notification Names
 
 extension Notification.Name {
-    static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
-    static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
+    public static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
+    public static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
 }
 

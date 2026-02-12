@@ -2,9 +2,9 @@ import Foundation
 
 /// Manages user preferences persistence
 /// Thread-safe: UserDefaults is internally synchronized
-final class PreferencesManager: @unchecked Sendable {
+public final class PreferencesManager: @unchecked Sendable {
 
-    static let shared = PreferencesManager()
+    public static let shared = PreferencesManager()
 
     private let userDefaults: UserDefaults
 
@@ -85,7 +85,7 @@ final class PreferencesManager: @unchecked Sendable {
     }
 
     /// Load preferences from UserDefaults
-    func loadPreferences() -> UserPreferences {
+    public func loadPreferences() -> UserPreferences {
         let modifierKeyRaw =
             userDefaults.string(forKey: Keys.modifierKeyType) ?? ModifierKeyType.shift.rawValue
         let modifierKey = ModifierKeyType(rawValue: modifierKeyRaw) ?? .shift
@@ -120,7 +120,7 @@ final class PreferencesManager: @unchecked Sendable {
     }
 
     /// Save preferences to UserDefaults
-    func savePreferences(_ preferences: UserPreferences) {
+    public func savePreferences(_ preferences: UserPreferences) {
         userDefaults.set(preferences.launchAtLogin, forKey: Keys.launchAtLogin)
         userDefaults.set(preferences.dragSensitivity, forKey: Keys.dragSensitivity)
         userDefaults.set(preferences.tapThreshold, forKey: Keys.tapThreshold)
@@ -153,12 +153,12 @@ final class PreferencesManager: @unchecked Sendable {
     // MARK: - Gesture Configuration Prompt Tracking
 
     /// Check if the gesture configuration prompt has been shown before
-    var hasShownGestureConfigurationPrompt: Bool {
+    public var hasShownGestureConfigurationPrompt: Bool {
         return userDefaults.bool(forKey: Keys.hasShownGestureConfigurationPrompt)
     }
 
     /// Mark that the gesture configuration prompt has been shown
-    func markGestureConfigurationPromptShown() {
+    public func markGestureConfigurationPromptShown() {
         userDefaults.set(true, forKey: Keys.hasShownGestureConfigurationPrompt)
     }
 }
