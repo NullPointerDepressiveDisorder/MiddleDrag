@@ -346,6 +346,9 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// Get current mouse position in Quartz coordinates
     private var currentMouseLocationQuartz: CGPoint {
         if !shouldPostEvents {
+            // CI callers can be on background queues; avoid AppKit screen APIs off-main.
+            guard Thread.isMainThread else { return .zero }
+
             // Avoid CGEvent calls in headless CI to prevent hangs.
             let cocoaLocation = NSEvent.mouseLocation
             let screenHeight = NSScreen.screens.first?.frame.height ?? 0
@@ -364,6 +367,9 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// Get current mouse location in Quartz coordinates (public)
     static var currentMouseLocation: CGPoint {
         if !shouldPostEventsInThisProcess {
+            // CI callers can be on background queues; avoid AppKit screen APIs off-main.
+            guard Thread.isMainThread else { return .zero }
+
             // Avoid CGEvent calls in headless CI to prevent hangs.
             let cocoaLocation = NSEvent.mouseLocation
             let screenHeight = NSScreen.screens.first?.frame.height ?? 0
