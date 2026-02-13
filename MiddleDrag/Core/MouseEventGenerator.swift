@@ -231,15 +231,15 @@ final class MouseEventGenerator: @unchecked Sendable {
             )
         else { return }
 
-        // Set both integer and double delta fields — some apps (standard macOS, Blender)
-        // read double-precision deltas, others (Unity, Fusion 360, game engines) read
-        // integer deltas. The HID system populates both for real hardware events.
-        // Use .rounded() for integers to match hardware behavior: sub-pixel deltas
-        // like 0.7 should produce ±1, not 0 (truncation drops slow movements).
-        event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX.rounded()))
-        event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY.rounded()))
+        // Set both double and integer delta fields. CGEvent fields use single storage
+        // per field ID, so the last write wins. We set doubles first (sub-pixel precision
+        // for apps like Blender that read double deltas), then integers (rounded values
+        // for apps like Fusion 360/Unity that read integer deltas). This order ensures
+        // integer-reading apps see the properly rounded value, not a truncated double.
         event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
         event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
+        event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX.rounded()))
+        event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY.rounded()))
         
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
