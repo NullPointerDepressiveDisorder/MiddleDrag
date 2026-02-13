@@ -248,8 +248,8 @@
 				1A0000013 /* Sources */,
 				1A0000007 /* Frameworks */,
 				1A0000014 /* Resources */,
-				EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */,
 				EC2E12E92F3AAC6C0091578B /* Embed Frameworks */,
+				EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */,
 			);
 			buildRules = (
 			);
@@ -371,7 +371,6 @@
 /* Begin PBXShellScriptBuildPhase section */
 		EC3F44142EDE5CBB00BD36A8 /* Upload Debug Symbols & Source Context */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 0;
 			inputPaths = (
 				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${EXECUTABLE_NAME}",
 			);
