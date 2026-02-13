@@ -55,6 +55,12 @@ final class MouseEventGenerator: @unchecked Sendable {
     private var previousDeltaX: CGFloat = 0
     private var previousDeltaY: CGFloat = 0
     
+    // Accumulated drag position: seeded at startDrag from the real cursor,
+    // then advanced purely by adding deltas. Used as the event position field
+    // (for apps like Fusion 360 that read absolute position) and as the warp
+    // target (to move the visible cursor while disassociated).
+    private var lastDragPosition: CGPoint = .zero
+    
     // Click deduplication: tracks last click time on the serial eventQueue
     // to prevent multiple performClick() calls from different code paths
     // (force-click conversion + gesture tap) from firing within a short window.
@@ -78,6 +84,18 @@ final class MouseEventGenerator: @unchecked Sendable {
         eventQueue.sync { _clickCount = 0 }
     }
 
+    // MARK: - Cursor Association
+    
+    /// Re-associate mouse with cursor after drag ends.
+    /// Restores normal cursor behavior and default suppression interval.
+    private func reassociateCursor() {
+        guard shouldPostEvents else { return }
+        CGAssociateMouseAndMouseCursorPosition(1)  // true
+        if let source = eventSource {
+            source.localEventsSuppressionInterval = 0.25
+        }
+    }
+
     // MARK: - Initialization
 
     init() {
@@ -94,6 +112,8 @@ final class MouseEventGenerator: @unchecked Sendable {
         // This handles the case where a second MIDDLE_DOWN arrives before the first MIDDLE_UP
         if isMiddleMouseDown {
             Log.warning("startDrag called while already dragging - canceling existing drag first", category: .gesture)
+            // Re-associate cursor from previous drag before starting new one
+            reassociateCursor()
             // Send mouse up for the existing drag immediately (synchronously)
             let currentPos = currentMouseLocationQuartz
             sendMiddleMouseUp(at: currentPos)
@@ -104,6 +124,22 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Reset smoothing state
         previousDeltaX = 0
         previousDeltaY = 0
+        
+        // Seed accumulated drag position from actual cursor
+        lastDragPosition = quartzPos
+        
+        // Disassociate mouse from cursor so the window server won't fight with our
+        // position field. The cursor freezes; we warp it ourselves each frame.
+        // This lets us set both absolute position (for Fusion 360) and deltas (for
+        // Blender/Unity) on the same event without causing micro-stutter.
+        if shouldPostEvents {
+            CGAssociateMouseAndMouseCursorPosition(0)  // false
+            // Zero the suppression interval so our high-frequency synthetic events
+            // don't suppress each other (default is 0.25s which eats events)
+            if let source = eventSource {
+                source.localEventsSuppressionInterval = 0
+            }
+        }
         
         // Record activity time for watchdog
         activityLock.lock()
@@ -162,19 +198,28 @@ final class MouseEventGenerator: @unchecked Sendable {
             return
         }
 
-        let currentPos = currentMouseLocationQuartz
+        // Advance accumulated position by smoothed deltas
+        let targetPos = CGPoint(
+            x: lastDragPosition.x + smoothedDeltaX,
+            y: lastDragPosition.y + smoothedDeltaY
+        )
+        lastDragPosition = targetPos
         
         guard shouldPostEvents else { return }
         guard
             let event = CGEvent(
                 mouseEventSource: eventSource,
                 mouseType: .otherMouseDragged,
-                mouseCursorPosition: currentPos,
+                mouseCursorPosition: targetPos,
                 mouseButton: .center
             )
         else { return }
 
-        // Use relative deltas instead of absolute positioning
+        // Set both integer and double delta fields — some apps (standard macOS, Blender)
+        // read double-precision deltas, others (Unity, Fusion 360, game engines) read
+        // integer deltas. The HID system populates both for real hardware events.
+        event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX))
+        event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY))
         event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
         event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
         
@@ -182,14 +227,20 @@ final class MouseEventGenerator: @unchecked Sendable {
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
         event.flags = []
         event.post(tap: .cghidEventTap)
+        
+        // Warp the visible cursor to match the accumulated position.
+        // The cursor is frozen (disassociated) so the event's position field
+        // won't move it — we must warp explicitly.
+        CGWarpMouseCursorPosition(targetPos)
     }
-
-    /// End the drag operation
     func endDrag() {
         guard isMiddleMouseDown else { return }
         
         // Stop watchdog since drag is ending normally
         stopWatchdog()
+        
+        // Re-associate cursor so it's no longer frozen
+        reassociateCursor()
 
         // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
         // This prevents race conditions with rapid start/end cycles and ensures
@@ -284,6 +335,9 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         // Stop watchdog since drag is being cancelled
         stopWatchdog()
+        
+        // Re-associate cursor so it's no longer frozen
+        reassociateCursor()
 
         // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
         // This prevents race conditions with rapid cancel/start cycles and ensures
@@ -310,6 +364,9 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         // Stop watchdog if running
         stopWatchdog()
+        
+        // Re-associate cursor so it's no longer frozen
+        reassociateCursor()
         
         // Atomically reset state and capture generation
         let currentGeneration: UInt64 = stateLock.withLock {
@@ -515,6 +572,9 @@ final class MouseEventGenerator: @unchecked Sendable {
     ///                           If current generation doesn't match, a new drag has started and we abort.
     private func forceReleaseDrag(forGeneration expectedGeneration: UInt64) {
         stopWatchdogLocked()
+        
+        // Re-associate cursor so it's no longer frozen
+        reassociateCursor()
         
         // CRITICAL: Verify generation still matches before clearing state
         // This prevents race where a new drag started between checkForStuckDrag() and now
