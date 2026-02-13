@@ -415,9 +415,35 @@ final class MouseEventGenerator: @unchecked Sendable {
     // MARK: - Coordinate Conversion
     
     /// Union of all online display rects in Quartz global coordinates.
-    /// Used to clamp the accumulated drag position to visible screen area.
+    /// Cached to avoid per-frame syscalls and heap allocation at 100Hz+.
+    /// Invalidated on display reconfiguration via CGDisplayRegisterReconfigurationCallback.
     /// Internal access for testability.
+    private static let displayBoundsLock = NSLock()
+    nonisolated(unsafe) private static var _cachedDisplayBounds: CGRect?
+    nonisolated(unsafe) private static var _displayReconfigToken: Bool = {
+        // Register for display changes (resolution, arrangement, connect/disconnect).
+        // The callback invalidates the cache so the next read picks up the new geometry.
+        CGDisplayRegisterReconfigurationCallback({ _, flags, _ in
+            // Only invalidate after the reconfiguration completes
+            if flags.contains(.beginConfigurationFlag) { return }
+            MouseEventGenerator.displayBoundsLock.lock()
+            MouseEventGenerator._cachedDisplayBounds = nil
+            MouseEventGenerator.displayBoundsLock.unlock()
+        }, nil)
+        return true
+    }()
+    
     internal static var globalDisplayBounds: CGRect {
+        _ = _displayReconfigToken  // Ensure callback is registered
+        
+        displayBoundsLock.lock()
+        if let cached = _cachedDisplayBounds {
+            displayBoundsLock.unlock()
+            return cached
+        }
+        displayBoundsLock.unlock()
+        
+        // Compute outside lock (CGGetOnlineDisplayList is thread-safe)
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
         var displayCount: UInt32 = 0
         CGGetOnlineDisplayList(16, &displayIDs, &displayCount)
@@ -426,7 +452,13 @@ final class MouseEventGenerator: @unchecked Sendable {
         for i in 0..<Int(displayCount) {
             union = union.union(CGDisplayBounds(displayIDs[i]))
         }
-        return union == .null ? CGRect(x: 0, y: 0, width: 1920, height: 1080) : union
+        let result = union == .null ? CGRect(x: 0, y: 0, width: 1920, height: 1080) : union
+        
+        displayBoundsLock.lock()
+        _cachedDisplayBounds = result
+        displayBoundsLock.unlock()
+        
+        return result
     }
 
     /// Reads mouse location via AppKit on the main thread and converts to Quartz coordinates.
@@ -606,15 +638,20 @@ final class MouseEventGenerator: @unchecked Sendable {
     private func forceReleaseDrag(forGeneration expectedGeneration: UInt64) {
         stopWatchdogLocked()
         
-        // CRITICAL: Verify generation still matches before clearing state
-        // This prevents race where a new drag started between checkForStuckDrag() and now
+        // CRITICAL: Verify generation, clear state, AND re-associate cursor atomically.
+        // If we release the lock between setting _isMiddleMouseDown = false and calling
+        // reassociateCursor(), a concurrent startDrag on the gesture queue could
+        // disassociate the cursor for a new drag, then our reassociateCursor() would
+        // undo it — causing double-speed movement in the new drag.
+        // CGAssociateMouseAndMouseCursorPosition is a fast syscall (~microseconds),
+        // safe to call under lock.
         let releasedGeneration: UInt64? = stateLock.withLock {
             guard _dragGeneration == expectedGeneration else {
-                // A new drag has started - don't interfere with it!
                 Log.info("forceReleaseDrag aborted - new drag session started (expected gen \(expectedGeneration), current \(_dragGeneration))", category: .gesture)
                 return nil
             }
             _isMiddleMouseDown = false
+            reassociateCursor()
             return _dragGeneration
         }
         
@@ -622,11 +659,6 @@ final class MouseEventGenerator: @unchecked Sendable {
         guard let releasedGeneration = releasedGeneration else {
             return
         }
-        
-        // Re-associate cursor AFTER confirming this is still the active drag.
-        // Doing this before the generation check would break a new drag's
-        // disassociate-and-warp mechanism.
-        reassociateCursor()
         
         // Send mouse up event synchronously to ensure it gets through
         let currentPos = currentMouseLocationQuartz
