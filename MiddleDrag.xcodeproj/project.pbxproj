@@ -12,6 +12,8 @@
 		EC2E13082F3AB9D20091578B /* MiddleDragCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = EC2E12F22F3AB9D20091578B /* MiddleDragCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		EC2E136A2F3ABC260091578B /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E13692F3ABC260091578B /* Sentry */; };
 		EC2E136C2F3ABC2D0091578B /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = EC2E136B2F3ABC2D0091578B /* Sparkle */; };
+		ECF9BDD02F3FEEBC00E8260F /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = ECF9BDCF2F3FEEBC00E8260F /* Sentry */; };
+		ECF9BDD22F3FEEC300E8260F /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = ECF9BDD12F3FEEC300E8260F /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -181,7 +183,9 @@
 		1A0000007 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				ECF9BDD22F3FEEC300E8260F /* Sparkle in Frameworks */,
 				EC2E13072F3AB9D20091578B /* MiddleDragCore.framework in Frameworks */,
+				ECF9BDD02F3FEEBC00E8260F /* Sentry in Frameworks */,
 			);
 		};
 		EC2E12EF2F3AB9D20091578B /* Frameworks */ = {
@@ -261,6 +265,10 @@
 				ECB868372EFAC6C200DC9C8F /* MiddleDrag */,
 			);
 			name = MiddleDrag;
+			packageProductDependencies = (
+				ECF9BDCF2F3FEEBC00E8260F /* Sentry */,
+				ECF9BDD12F3FEEC300E8260F /* Sparkle */,
+			);
 			productName = MiddleDrag;
 			productReference = 1A0000004 /* MiddleDrag.app */;
 			productType = "com.apple.product-type.application";
@@ -917,6 +925,16 @@
 			productName = Sentry;
 		};
 		EC2E136B2F3ABC2D0091578B /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+		ECF9BDCF2F3FEEBC00E8260F /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = EC9381692EDE49030012FDBE /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
+		ECF9BDD12F3FEEC300E8260F /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = ECCE59162F16F70B00962494 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
