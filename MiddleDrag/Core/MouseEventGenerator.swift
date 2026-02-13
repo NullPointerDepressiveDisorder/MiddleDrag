@@ -59,7 +59,8 @@ final class MouseEventGenerator: @unchecked Sendable {
     // then advanced purely by adding deltas. Used as the event position field
     // (for apps like Fusion 360 that read absolute position) and as the warp
     // target (to move the visible cursor while disassociated).
-    private var lastDragPosition: CGPoint = .zero
+    // Internal access for testability.
+    internal var lastDragPosition: CGPoint = .zero
     
     // Click deduplication: tracks last click time on the serial eventQueue
     // to prevent multiple performClick() calls from different code paths
@@ -205,10 +206,19 @@ final class MouseEventGenerator: @unchecked Sendable {
         }
 
         // Advance accumulated position by smoothed deltas
-        let targetPos = CGPoint(
+        var targetPos = CGPoint(
             x: lastDragPosition.x + smoothedDeltaX,
             y: lastDragPosition.y + smoothedDeltaY
         )
+        
+        // Clamp to global display bounds to prevent the accumulated position from drifting
+        // off-screen. Without this, dragging past a screen edge creates a dead zone
+        // when reversing direction (the position must travel back the full overshoot
+        // before the cursor visibly moves). CGWarpMouseCursorPosition does not clamp.
+        let globalBounds = Self.globalDisplayBounds
+        targetPos.x = max(globalBounds.minX, min(targetPos.x, globalBounds.maxX - 1))
+        targetPos.y = max(globalBounds.minY, min(targetPos.y, globalBounds.maxY - 1))
+        
         lastDragPosition = targetPos
         
         guard shouldPostEvents else { return }
@@ -224,8 +234,10 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Set both integer and double delta fields — some apps (standard macOS, Blender)
         // read double-precision deltas, others (Unity, Fusion 360, game engines) read
         // integer deltas. The HID system populates both for real hardware events.
-        event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX))
-        event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY))
+        // Use .rounded() for integers to match hardware behavior: sub-pixel deltas
+        // like 0.7 should produce ±1, not 0 (truncation drops slow movements).
+        event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX.rounded()))
+        event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY.rounded()))
         event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
         event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
         
@@ -401,6 +413,21 @@ final class MouseEventGenerator: @unchecked Sendable {
     }
 
     // MARK: - Coordinate Conversion
+    
+    /// Union of all online display rects in Quartz global coordinates.
+    /// Used to clamp the accumulated drag position to visible screen area.
+    /// Internal access for testability.
+    internal static var globalDisplayBounds: CGRect {
+        var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
+        var displayCount: UInt32 = 0
+        CGGetOnlineDisplayList(16, &displayIDs, &displayCount)
+        
+        var union = CGRect.null
+        for i in 0..<Int(displayCount) {
+            union = union.union(CGDisplayBounds(displayIDs[i]))
+        }
+        return union == .null ? CGRect(x: 0, y: 0, width: 1920, height: 1080) : union
+    }
 
     /// Reads mouse location via AppKit on the main thread and converts to Quartz coordinates.
     /// AppKit APIs like NSEvent/NSScreen are not thread-safe and must not be read off-main.
