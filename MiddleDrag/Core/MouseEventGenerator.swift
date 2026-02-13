@@ -231,13 +231,9 @@ final class MouseEventGenerator: @unchecked Sendable {
             )
         else { return }
 
-        // Set both double and integer delta fields. CGEvent fields use single storage
-        // per field ID, so the last write wins. We set doubles first (sub-pixel precision
-        // for apps like Blender that read double deltas), then integers (rounded values
-        // for apps like Fusion 360/Unity that read integer deltas). This order ensures
-        // integer-reading apps see the properly rounded value, not a truncated double.
-        event.setDoubleValueField(.mouseEventDeltaX, value: Double(smoothedDeltaX))
-        event.setDoubleValueField(.mouseEventDeltaY, value: Double(smoothedDeltaY))
+        // mouseEventDeltaX/Y are effectively integral in Quartz event storage.
+        // Writing via setDoubleValueField does not preserve fractional precision, so
+        // emit rounded integer deltas explicitly (better than implicit truncation).
         event.setIntegerValueField(.mouseEventDeltaX, value: Int64(smoothedDeltaX.rounded()))
         event.setIntegerValueField(.mouseEventDeltaY, value: Int64(smoothedDeltaY.rounded()))
         
@@ -353,14 +349,15 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         // Stop watchdog since drag is being cancelled
         stopWatchdog()
-        
-        // Re-associate cursor so it's no longer frozen
-        reassociateCursor()
 
-        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
-        // This prevents race conditions with rapid cancel/start cycles and ensures
-        // updateDrag() stops processing immediately
-        isMiddleMouseDown = false
+        // CRITICAL: Re-associate cursor and clear drag state atomically.
+        // If reassociateCursor() runs outside stateLock, a concurrent startDrag()
+        // can disassociate for a new drag and then be overwritten by a stale
+        // reassociation, leaving cursor association out of sync with drag state.
+        stateLock.withLock {
+            reassociateCursor()
+            _isMiddleMouseDown = false
+        }
 
         // Asynchronously send the mouse up event and clean up state
         // The cleanup will happen on the event queue, ensuring proper sequencing
@@ -382,12 +379,12 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         // Stop watchdog if running
         stopWatchdog()
-        
-        // Re-associate cursor so it's no longer frozen
-        reassociateCursor()
-        
-        // Atomically reset state and capture generation
+
+        // CRITICAL: Re-associate cursor and clear drag state atomically with generation.
+        // This mirrors forceReleaseDrag() and prevents interleaving where startDrag()
+        // disassociates for a new session between reassociation and state update.
         let currentGeneration: UInt64 = stateLock.withLock {
+            reassociateCursor()
             _isMiddleMouseDown = false
             return _dragGeneration
         }
