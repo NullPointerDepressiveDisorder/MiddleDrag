@@ -656,20 +656,20 @@ extension MultitouchManager: DeviceMonitorDelegate {
         // Copy touch data via raw memcpy — much cheaper than Swift Array allocation
         // + map closure that was causing per-frame GC pressure and jitter at 100Hz+.
         let touchCount = Int(count)
-        let touchesPtr: UnsafeMutableRawPointer?
+        nonisolated(unsafe) let touchesPtr: UnsafeMutableRawPointer?
         if touchCount > 0 {
             let byteCount = touchCount * MemoryLayout<MTTouch>.stride
             let buffer = UnsafeMutableRawPointer.allocate(
                 byteCount: byteCount, alignment: MemoryLayout<MTTouch>.alignment)
             unsafe buffer.copyMemory(from: touches, byteCount: byteCount)
-            touchesPtr = buffer
+            unsafe touchesPtr = unsafe buffer
         } else {
-            touchesPtr = nil
+            unsafe touchesPtr = nil
         }
 
         gestureQueue.async { [weak self] in
-            if let buffer = touchesPtr {
-                defer { buffer.deallocate() }
+            if let buffer = unsafe touchesPtr {
+                defer { unsafe buffer.deallocate() }
                 unsafe self?.gestureRecognizer.processTouches(
                     buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
             } else {

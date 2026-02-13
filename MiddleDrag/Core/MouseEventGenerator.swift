@@ -90,7 +90,10 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// Restores normal cursor behavior and default suppression interval.
     private func reassociateCursor() {
         guard shouldPostEvents else { return }
-        CGAssociateMouseAndMouseCursorPosition(1)  // true
+        let error = CGAssociateMouseAndMouseCursorPosition(1)
+        if error != CGError.success {
+            Log.warning(unsafe "Failed to re-associate cursor: \(error.rawValue)", category: .gesture)
+        }
         if let source = eventSource {
             source.localEventsSuppressionInterval = 0.25
         }
@@ -133,7 +136,10 @@ final class MouseEventGenerator: @unchecked Sendable {
         // This lets us set both absolute position (for Fusion 360) and deltas (for
         // Blender/Unity) on the same event without causing micro-stutter.
         if shouldPostEvents {
-            CGAssociateMouseAndMouseCursorPosition(0)  // false
+            let error = CGAssociateMouseAndMouseCursorPosition(0)
+            if error != CGError.success {
+                Log.warning(unsafe "Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
+            }
             // Zero the suppression interval so our high-frequency synthetic events
             // don't suppress each other (default is 0.25s which eats events)
             if let source = eventSource {
@@ -573,9 +579,6 @@ final class MouseEventGenerator: @unchecked Sendable {
     private func forceReleaseDrag(forGeneration expectedGeneration: UInt64) {
         stopWatchdogLocked()
         
-        // Re-associate cursor so it's no longer frozen
-        reassociateCursor()
-        
         // CRITICAL: Verify generation still matches before clearing state
         // This prevents race where a new drag started between checkForStuckDrag() and now
         let releasedGeneration: UInt64? = stateLock.withLock {
@@ -592,6 +595,11 @@ final class MouseEventGenerator: @unchecked Sendable {
         guard let releasedGeneration = releasedGeneration else {
             return
         }
+        
+        // Re-associate cursor AFTER confirming this is still the active drag.
+        // Doing this before the generation check would break a new drag's
+        // disassociate-and-warp mechanism.
+        reassociateCursor()
         
         // Send mouse up event synchronously to ensure it gets through
         let currentPos = currentMouseLocationQuartz
