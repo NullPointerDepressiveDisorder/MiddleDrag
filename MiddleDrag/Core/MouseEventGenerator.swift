@@ -253,13 +253,14 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Stop watchdog since drag is ending normally
         stopWatchdog()
         
-        // Re-associate cursor so it's no longer frozen
-        reassociateCursor()
-
-        // CRITICAL: Set isMiddleMouseDown = false SYNCHRONOUSLY to match startDrag
-        // This prevents race conditions with rapid start/end cycles and ensures
-        // updateDrag() stops processing immediately
-        isMiddleMouseDown = false
+        // CRITICAL: Re-associate cursor and clear drag state atomically.
+        // Today endDrag() is called on gestureQueue, but matching the atomic teardown
+        // used by cancel/force paths prevents future callers from introducing races
+        // where stale reassociation can desync cursor association from drag state.
+        stateLock.withLock {
+            reassociateCursor()
+            _isMiddleMouseDown = false
+        }
 
         eventQueue.async { [weak self] in
             guard let self = self else { return }
