@@ -112,12 +112,19 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// Start a middle mouse drag operation
     /// - Parameter screenPosition: Starting position (used for reference, actual position from current cursor)
     func startDrag(at screenPosition: CGPoint) {
-        // CRITICAL: If already in a drag state, cancel it first to prevent stuck drags
-        // This handles the case where a second MIDDLE_DOWN arrives before the first MIDDLE_UP
-        if isMiddleMouseDown {
-            Log.warning("startDrag called while already dragging - canceling existing drag first", category: .gesture)
-            // Re-associate cursor from previous drag before starting new one
+        // CRITICAL: If already in a drag state, cancel it first to prevent stuck drags.
+        // Recovery must re-associate + clear state + invalidate generation atomically
+        // so watchdog force-release cannot win a race and reassociate after we
+        // disassociate for the new drag.
+        let recoveredExistingDrag = stateLock.withLock {
+            guard _isMiddleMouseDown else { return false }
             reassociateCursor()
+            _isMiddleMouseDown = false
+            _dragGeneration &+= 1  // Invalidate any watchdog release in-flight for old drag
+            return true
+        }
+        if recoveredExistingDrag {
+            Log.warning("startDrag called while already dragging - canceling existing drag first", category: .gesture)
             // Send mouse up for the existing drag immediately (synchronously)
             let currentPos = currentMouseLocationQuartz
             sendMiddleMouseUp(at: currentPos)
