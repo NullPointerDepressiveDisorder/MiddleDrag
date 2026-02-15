@@ -183,6 +183,10 @@ final class MultitouchManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isMonitoring)
         XCTAssertFalse(manager.isEnabled)
+        // When no hardware is found, manager should begin polling for late-connecting devices
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        manager.stop()  // Clean up polling timer
     }
 
     func testRestartStopsWhenHardwareUnavailable() {
@@ -212,6 +216,10 @@ final class MultitouchManagerTests: XCTestCase {
 
         XCTAssertFalse(manager.isMonitoring)
         XCTAssertFalse(manager.isEnabled)
+        // When restart fails to find hardware, manager should poll for device connections
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        manager.stop()  // Clean up polling timer
     }
 
     func testStopSetsMonitoringToFalse() {
@@ -336,6 +344,106 @@ final class MultitouchManagerTests: XCTestCase {
         // Verify manager is still stopped
         XCTAssertFalse(manager.isMonitoring, "Manager should remain stopped")
         XCTAssertFalse(manager.isEnabled, "Manager should be disabled")
+    }
+
+    // MARK: - Device Polling Tests
+
+    func testStartBeginsPollingWhenNoDeviceFound() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        XCTAssertFalse(manager.isMonitoring)
+        XCTAssertTrue(manager.isPollingForDevices, "Should poll when no device at launch")
+
+        manager.stop()
+    }
+
+    func testStopCancelsDevicePolling() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        manager.stop()
+        XCTAssertFalse(manager.isPollingForDevices, "Polling should stop on explicit stop()")
+    }
+
+    func testDoubleStartDoesNotDoublePoll() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Second start should be a no-op since we're already polling
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        manager.stop()
+    }
+
+    func testToggleEnabledAttemptsStartWhenNotMonitoring() {
+        var shouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                let monitor = unsafe MockDeviceMonitor()
+                unsafe monitor.startShouldSucceed = shouldSucceed
+                return unsafe monitor
+            },
+            eventTapSetup: { true }
+        )
+
+        // Initial start fails → starts polling
+        manager.start()
+        XCTAssertFalse(manager.isMonitoring)
+        XCTAssertTrue(manager.isPollingForDevices)
+        manager.stop()
+        XCTAssertFalse(manager.isPollingForDevices)
+
+        // Now make device available and toggle enabled
+        shouldSucceed = true
+        manager.toggleEnabled()
+
+        XCTAssertTrue(manager.isMonitoring, "toggleEnabled should start monitoring if device now available")
+        XCTAssertTrue(manager.isEnabled)
+
+        manager.stop()
+    }
+
+    func testToggleEnabledWhilePollingStopsPolling() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Toggling while polling should stop polling (user says "stop trying")
+        manager.toggleEnabled()
+        XCTAssertFalse(manager.isPollingForDevices, "Toggle while polling should stop polling")
+        XCTAssertFalse(manager.isEnabled)
+        XCTAssertFalse(manager.isMonitoring)
+    }
+
+    func testPollingConstants() {
+        // Verify backoff and timeout constants are sensible
+        XCTAssertEqual(MultitouchManager.devicePollingInterval, 3.0)
+        XCTAssertEqual(MultitouchManager.maxDevicePollingInterval, 30.0)
+        XCTAssertEqual(MultitouchManager.maxPollingDuration, 300.0)
+        XCTAssertGreaterThan(
+            MultitouchManager.maxDevicePollingInterval,
+            MultitouchManager.devicePollingInterval,
+            "Max interval must be greater than initial interval for backoff to work")
     }
 
     // MARK: - GestureRecognizerDelegate State Transition Tests
