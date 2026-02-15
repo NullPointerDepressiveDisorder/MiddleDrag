@@ -93,7 +93,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         guard shouldPostEvents else { return }
         let error = CGAssociateMouseAndMouseCursorPosition(1)
         if error != CGError.success {
-            Log.warning(unsafe "Failed to re-associate cursor: \(error.rawValue)", category: .gesture)
+            Log.warning( "Failed to re-associate cursor: \(error.rawValue)", category: .gesture)
         }
         if let source = eventSource {
             source.localEventsSuppressionInterval = 0.25
@@ -146,7 +146,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         if shouldPostEvents {
             let error = CGAssociateMouseAndMouseCursorPosition(0)
             if error != CGError.success {
-                Log.warning(unsafe "Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
+                Log.warning( "Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
             }
             // Zero the suppression interval so our high-frequency synthetic events
             // don't suppress each other (default is 0.25s which eats events)
@@ -428,21 +428,21 @@ final class MouseEventGenerator: @unchecked Sendable {
     nonisolated(unsafe) private static var _displayReconfigToken: Bool = {
         // Register for display changes (resolution, arrangement, connect/disconnect).
         // The callback invalidates the cache so the next read picks up the new geometry.
-        CGDisplayRegisterReconfigurationCallback({ _, flags, _ in
+        unsafe CGDisplayRegisterReconfigurationCallback({ _, flags, _ in
             // Only invalidate after the reconfiguration completes
             if flags.contains(.beginConfigurationFlag) { return }
             MouseEventGenerator.displayBoundsLock.lock()
-            MouseEventGenerator._cachedDisplayBounds = nil
+            unsafe MouseEventGenerator._cachedDisplayBounds = nil
             MouseEventGenerator.displayBoundsLock.unlock()
         }, nil)
         return true
     }()
     
     internal static var globalDisplayBounds: CGRect {
-        _ = _displayReconfigToken  // Ensure callback is registered
+        _ = unsafe _displayReconfigToken  // Ensure callback is registered
         
         displayBoundsLock.lock()
-        if let cached = _cachedDisplayBounds {
+        if let cached = unsafe _cachedDisplayBounds {
             displayBoundsLock.unlock()
             return cached
         }
@@ -451,7 +451,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         // Compute outside lock (CGGetOnlineDisplayList is thread-safe)
         var displayIDs = [CGDirectDisplayID](repeating: 0, count: 16)
         var displayCount: UInt32 = 0
-        CGGetOnlineDisplayList(16, &displayIDs, &displayCount)
+        unsafe CGGetOnlineDisplayList(16, &displayIDs, &displayCount)
         
         var union = CGRect.null
         for i in 0..<Int(displayCount) {
@@ -460,7 +460,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         let result = union == .null ? CGRect(x: 0, y: 0, width: 1920, height: 1080) : union
         
         displayBoundsLock.lock()
-        _cachedDisplayBounds = result
+        unsafe _cachedDisplayBounds = result
         displayBoundsLock.unlock()
         
         return result

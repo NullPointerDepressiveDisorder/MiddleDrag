@@ -24,6 +24,20 @@ public final class MultitouchManager: @unchecked Sendable {
     /// race conditions in the MultitouchSupport framework's internal thread.
     static let minimumRestartInterval: TimeInterval = 0.6
 
+    /// Initial interval between polling attempts when no multitouch device is found at launch.
+    /// This handles Bluetooth trackpads that connect after login (common during boot).
+    /// 3 seconds is a good balance between responsiveness and low overhead.
+    static let devicePollingInterval: TimeInterval = 3.0
+
+    /// Maximum interval between polling attempts after exponential backoff.
+    /// Caps at 30 seconds to avoid excessive resource usage while still checking.
+    static let maxDevicePollingInterval: TimeInterval = 30.0
+
+    /// Maximum total polling duration before giving up (5 minutes).
+    /// If no device connects within this window, polling stops and the user
+    /// can manually re-enable via the menu bar.
+    static let maxPollingDuration: TimeInterval = 300.0
+
     // MARK: - Properties
 
     /// Current gesture configuration
@@ -95,6 +109,15 @@ public final class MultitouchManager: @unchecked Sendable {
     private var isRestartInProgress = false
     private var lastRestartCompletedTime: TimeInterval = 0
 
+    // Device polling for late-connecting devices (e.g., Bluetooth trackpads at login)
+    private var devicePollingTimer: DispatchSourceTimer?
+    private var currentPollingInterval: TimeInterval = 0
+    private var pollingStartTime: TimeInterval = 0
+    /// Whether we are actively polling for multitouch device connections.
+    /// This is true when start() was called but no devices were found, so we're
+    /// periodically checking for devices that may connect later (e.g., Bluetooth trackpad at boot).
+    public private(set) var isPollingForDevices = false
+
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
 
@@ -149,7 +172,7 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Start monitoring for gestures
     public func start() {
-        guard !isMonitoring else { return }
+        guard !isMonitoring && !isPollingForDevices else { return }
 
         applyConfiguration()
         let eventTapSuccess = eventTapSetupFactory()
@@ -164,13 +187,18 @@ public final class MultitouchManager: @unchecked Sendable {
 
         guard deviceMonitor?.start() == true else {
             Log.warning(
-                "No compatible multitouch hardware detected. Gesture monitoring disabled.",
+                "No compatible multitouch hardware detected. Will poll for device connections.",
                 category: .device)
             deviceMonitor?.stop()
             deviceMonitor = nil
             teardownEventTap()
             isMonitoring = false
             isEnabled = false
+
+            // Start polling for late-connecting devices (e.g., Bluetooth trackpad at boot).
+            // Also register wake observers so polling resumes after sleep.
+            addSleepWakeObservers()
+            startDevicePolling()
             return
         }
 
@@ -182,6 +210,9 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Stop monitoring
     public func stop() {
+        // Stop device polling if active
+        stopDevicePolling()
+
         // Clear restart state and cancel any pending restart work item.
         // This must be done under lock to prevent data races with restart().
         restartLock.lock()
@@ -204,11 +235,14 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Restart monitoring (used after sleep/wake)
     public func restart() {
         // Allow restart if either:
-        // 1. wakeObserver exists (normal production case after successful start)
+        // 1. wakeObserver exists (normal production case after successful start, or polling state)
         // 2. isMonitoring is true (for test scenarios where event tap setup may fail)
         // Using wakeObserver allows retry after failed restart (when isMonitoring=false)
         // because internalStop() sets isMonitoring=false before setupEventTap() runs
         guard wakeObserver != nil || isMonitoring else { return }
+
+        // Stop device polling if active — restart will re-evaluate device availability
+        stopDevicePolling()
 
         // Prevent concurrent restart operations - this is critical to avoid race conditions
         // when rapid foreground/background toggling triggers multiple restart() calls.
@@ -301,14 +335,15 @@ public final class MultitouchManager: @unchecked Sendable {
 
         guard deviceMonitor?.start() == true else {
             Log.warning(
-                "Restart aborted: no compatible multitouch hardware detected.",
+                "Restart: no compatible multitouch hardware detected. Will poll for device connections.",
                 category: .device)
             deviceMonitor?.stop()
             deviceMonitor = nil
             teardownEventTap()
             isMonitoring = false
             isEnabled = false
-            removeSleepWakeObservers()
+            // Start polling instead of giving up — device may reconnect shortly after wake
+            startDevicePolling()
             markRestartComplete()
             return
         }
@@ -325,6 +360,135 @@ public final class MultitouchManager: @unchecked Sendable {
         isRestartInProgress = false
         lastRestartCompletedTime = CACurrentMediaTime()
         restartLock.unlock()
+    }
+
+    // MARK: - Device Polling
+
+    /// Start polling for multitouch device connections.
+    /// Called when start() or performRestart() finds no devices — typically during boot
+    /// when a Bluetooth Magic Trackpad hasn't connected yet.
+    private func startDevicePolling() {
+        guard !isPollingForDevices else { return }
+
+        isPollingForDevices = true
+        currentPollingInterval = Self.devicePollingInterval
+        pollingStartTime = CACurrentMediaTime()
+        Log.info(
+            "Starting device polling (initial interval: \(Self.devicePollingInterval)s, max duration: \(Self.maxPollingDuration)s)",
+            category: .device)
+
+        scheduleNextPoll()
+    }
+
+    /// Stop device polling.
+    /// Called when devices are found, when stop() is called, or when restart() begins.
+    private func stopDevicePolling() {
+        guard isPollingForDevices else { return }
+
+        devicePollingTimer?.cancel()
+        devicePollingTimer = nil
+        isPollingForDevices = false
+        currentPollingInterval = 0
+        pollingStartTime = 0
+        Log.debug("Device polling stopped", category: .device)
+    }
+
+    /// Schedule the next poll with exponential backoff.
+    private func scheduleNextPoll() {
+        devicePollingTimer?.cancel()
+
+        let timer = DispatchSource.makeTimerSource(queue: .main)
+        timer.schedule(deadline: .now() + currentPollingInterval)
+        timer.setEventHandler { [weak self] in
+            self?.pollForDevices()
+        }
+        timer.resume()
+        devicePollingTimer = timer
+    }
+
+    /// Resume polling after a failed connection attempt, preserving backoff state.
+    /// Unlike startDevicePolling(), this doesn't reset the interval or start time.
+    private func resumeDevicePolling() {
+        isPollingForDevices = true
+        currentPollingInterval = min(currentPollingInterval * 2, Self.maxDevicePollingInterval)
+        Log.debug(
+            unsafe "Resuming device polling (next in \(String(format: "%.0f", currentPollingInterval))s)",
+            category: .device)
+        scheduleNextPoll()
+    }
+
+    /// Check if any multitouch devices are now available.
+    /// Called periodically by the polling timer with exponential backoff.
+    private func pollForDevices() {
+        guard isPollingForDevices else {
+            stopDevicePolling()
+            return
+        }
+
+        // Check if we've exceeded the maximum polling duration
+        let elapsed = CACurrentMediaTime() - pollingStartTime
+        if elapsed >= Self.maxPollingDuration {
+            Log.info(
+                "Device polling timed out after \(Int(elapsed))s — no multitouch device found. "
+                    + "User can re-enable from menu bar.",
+                category: .device)
+            stopDevicePolling()
+            // Notify UI so it can show the timed-out state
+            NotificationCenter.default.post(name: .middleDragPollingTimedOut, object: nil)
+            return
+        }
+
+        // Quick check using the framework's device list
+        guard let deviceList = MTDeviceCreateList(),
+              CFArrayGetCount(deviceList) > 0
+        else {
+            Log.debug(
+                unsafe "Device poll: no multitouch devices found yet (next in \(String(format: "%.0f", currentPollingInterval))s)",
+                category: .device)
+            // Exponential backoff: double the interval, capped at max
+            currentPollingInterval = min(currentPollingInterval * 2, Self.maxDevicePollingInterval)
+            scheduleNextPoll()
+            return
+        }
+
+        Log.info(
+            "Device poll: multitouch device(s) detected, attempting connection...",
+            category: .device)
+        stopDevicePolling()
+
+        // Attempt full connection
+        applyConfiguration()
+        let eventTapSuccess = eventTapSetupFactory()
+
+        guard eventTapSuccess else {
+            Log.error("Device poll: could not create event tap", category: .device)
+            // Resume polling — event tap failure may be transient.
+            // Use resumeDevicePolling to preserve backoff state.
+            resumeDevicePolling()
+            return
+        }
+
+        deviceMonitor = deviceProviderFactory()
+        unsafe deviceMonitor?.delegate = self
+
+        guard deviceMonitor?.start() == true else {
+            Log.warning(
+                "Device poll: device detected but could not start monitoring, resuming polling",
+                category: .device)
+            deviceMonitor?.stop()
+            deviceMonitor = nil
+            teardownEventTap()
+            resumeDevicePolling()
+            return
+        }
+
+        // Success! Monitoring is now active.
+        isMonitoring = true
+        isEnabled = true
+        Log.info("Multitouch monitoring started after device connection", category: .device)
+
+        // Notify UI so menu bar icon updates from disabled → enabled
+        NotificationCenter.default.post(name: .middleDragDeviceConnected, object: nil)
     }
 
     /// Internal stop without removing sleep/wake observers
@@ -384,6 +548,22 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Toggle enabled state
     func toggleEnabled() {
+        // If we're polling for devices, treat toggle as "stop trying"
+        if isPollingForDevices {
+            stopDevicePolling()
+            removeSleepWakeObservers()
+            isEnabled = false
+            return
+        }
+
+        // If user is trying to enable while not monitoring,
+        // attempt to start monitoring. This handles the case where the app launched
+        // before a Bluetooth trackpad connected and the user manually tries to enable.
+        if !isEnabled && !isMonitoring {
+            start()
+            return
+        }
+
         isEnabled.toggle()
 
         if !isEnabled {

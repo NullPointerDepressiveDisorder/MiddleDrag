@@ -34,6 +34,22 @@ public class MenuBarController: NSObject {
         super.init()
 
         setupStatusItem()
+
+        // Listen for late device connections (e.g., Bluetooth trackpad connecting after boot)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(deviceDidConnect),
+            name: .middleDragDeviceConnected,
+            object: nil
+        )
+
+        // Listen for polling timeout (no device found within time limit)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(pollingDidTimeout),
+            name: .middleDragPollingTimedOut,
+            object: nil
+        )
     }
 
     deinit {
@@ -120,7 +136,15 @@ public class MenuBarController: NSObject {
 
     private func createStatusItem() -> NSMenuItem {
         let isEnabled = multitouchManager?.isEnabled ?? false
-        let title = isEnabled ? "MiddleDrag Active" : "MiddleDrag Disabled"
+        let isPolling = multitouchManager?.isPollingForDevices ?? false
+        let title: String
+        if isPolling {
+            title = "Waiting for Trackpad…"
+        } else if isEnabled {
+            title = "MiddleDrag Active"
+        } else {
+            title = "MiddleDrag Disabled"
+        }
         let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
@@ -435,6 +459,17 @@ public class MenuBarController: NSObject {
 
     // MARK: - Actions
 
+    @objc func deviceDidConnect() {
+        let isEnabled = multitouchManager?.isEnabled ?? false
+        updateStatusIcon(enabled: isEnabled)
+        buildMenu()
+    }
+
+    @objc func pollingDidTimeout() {
+        updateStatusIcon(enabled: false)
+        buildMenu()
+    }
+
     @objc func toggleEnabled() {
         multitouchManager?.toggleEnabled()
         let isEnabled = multitouchManager?.isEnabled ?? false
@@ -730,5 +765,9 @@ public class MenuBarController: NSObject {
 extension Notification.Name {
     public static let preferencesChanged = Notification.Name("MiddleDragPreferencesChanged")
     public static let launchAtLoginChanged = Notification.Name("MiddleDragLaunchAtLoginChanged")
+    /// Posted when a multitouch device connects after polling (e.g., Bluetooth trackpad at boot)
+    public static let middleDragDeviceConnected = Notification.Name("MiddleDragDeviceConnected")
+    /// Posted when device polling times out without finding a device
+    public static let middleDragPollingTimedOut = Notification.Name("MiddleDragPollingTimedOut")
 }
 
