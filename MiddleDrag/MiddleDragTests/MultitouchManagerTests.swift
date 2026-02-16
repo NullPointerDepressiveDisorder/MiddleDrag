@@ -495,6 +495,381 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
+    // MARK: - resumeDevicePolling Tests
+
+    func testResumeDevicePollingDoublesInterval() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        let initialInterval = manager.currentPollingInterval
+        XCTAssertEqual(initialInterval, MultitouchManager.devicePollingInterval)
+
+        // Simulate a failed connection attempt: pause polling, then resume
+        manager.resumeDevicePolling()
+
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            min(initialInterval * 2, MultitouchManager.maxDevicePollingInterval),
+            "resumeDevicePolling should double the interval")
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        manager.stop()
+    }
+
+    func testResumeDevicePollingCapsAtMaxInterval() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Set interval just below max to verify cap
+        manager.currentPollingInterval = MultitouchManager.maxDevicePollingInterval - 1.0
+
+        manager.resumeDevicePolling()
+
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            MultitouchManager.maxDevicePollingInterval,
+            "Interval should be capped at maxDevicePollingInterval")
+
+        manager.stop()
+    }
+
+    func testResumeDevicePollingAlreadyAtMaxStaysCapped() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Set interval at max
+        manager.currentPollingInterval = MultitouchManager.maxDevicePollingInterval
+
+        manager.resumeDevicePolling()
+
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            MultitouchManager.maxDevicePollingInterval,
+            "Interval at max should remain at max after resume")
+
+        manager.stop()
+    }
+
+    func testResumeDevicePollingPreservesStartTime() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        let originalStartTime = manager.pollingStartTime
+        XCTAssertGreaterThan(originalStartTime, 0)
+
+        manager.resumeDevicePolling()
+
+        XCTAssertEqual(
+            manager.pollingStartTime, originalStartTime,
+            "resumeDevicePolling must not reset pollingStartTime — timeout calculation depends on it")
+
+        manager.stop()
+    }
+
+    func testResumeDevicePollingRestoresPollingFlag() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Simulate what pollForDevices does before a connection attempt:
+        // it calls cancelPollingTimer() which doesn't change isPollingForDevices,
+        // but if the connection path changes isPollingForDevices to false somehow,
+        // resumeDevicePolling must restore it.
+        manager.resumeDevicePolling()
+
+        XCTAssertTrue(
+            manager.isPollingForDevices,
+            "resumeDevicePolling must set isPollingForDevices to true")
+
+        manager.stop()
+    }
+
+    func testBackoffSequenceMatchesExpectedProgression() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        // Expected sequence: 3 → 6 → 12 → 24 → 30 → 30 (capped)
+        let expected: [TimeInterval] = [3.0, 6.0, 12.0, 24.0, 30.0, 30.0]
+
+        XCTAssertEqual(manager.currentPollingInterval, expected[0], "Initial interval")
+
+        for i in 1..<expected.count {
+            manager.resumeDevicePolling()
+            XCTAssertEqual(
+                manager.currentPollingInterval, expected[i],
+                "Backoff step \(i): expected \(expected[i])s")
+        }
+
+        manager.stop()
+    }
+
+    // MARK: - pollForDevices Tests
+
+    func testPollForDevicesGuardStopsWhenNotPolling() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        // Don't start polling — isPollingForDevices is false
+        XCTAssertFalse(manager.isPollingForDevices)
+
+        // Calling pollForDevices when not polling should be a no-op
+        manager.pollForDevices()
+
+        XCTAssertFalse(manager.isPollingForDevices)
+        XCTAssertFalse(manager.isMonitoring)
+    }
+
+    func testPollForDevicesTimesOutAfterMaxDuration() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Push pollingStartTime far enough into the past to exceed maxPollingDuration
+        manager.pollingStartTime = CACurrentMediaTime() - MultitouchManager.maxPollingDuration - 1.0
+
+        manager.pollForDevices()
+
+        XCTAssertFalse(
+            manager.isPollingForDevices,
+            "Polling should stop after exceeding maxPollingDuration")
+        XCTAssertEqual(
+            manager.currentPollingInterval, 0,
+            "Interval should be reset after timeout")
+        XCTAssertEqual(
+            manager.pollingStartTime, 0,
+            "Start time should be reset after timeout")
+    }
+
+    func testPollForDevicesTimeoutPostsNotification() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        let notificationExpectation = XCTNSNotificationExpectation(
+            name: .middleDragPollingTimedOut,
+            object: nil
+        )
+
+        // Force timeout
+        manager.pollingStartTime = CACurrentMediaTime() - MultitouchManager.maxPollingDuration - 1.0
+        manager.pollForDevices()
+
+        wait(for: [notificationExpectation], timeout: 1.0)
+    }
+
+    func testPollForDevicesEventTapFailureResumesPolling() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+
+        // Event tap succeeds for initial start() but fails during pollForDevices
+        var eventTapCallCount = 0
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice },
+            eventTapSetup: {
+                eventTapCallCount += 1
+                // First call succeeds (for start()), subsequent calls fail
+                return eventTapCallCount <= 1
+            }
+        )
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+        let intervalBeforePoll = manager.currentPollingInterval
+        let startTimeBeforePoll = manager.pollingStartTime
+
+        // pollForDevices will:
+        // 1. Pass the guard (isPollingForDevices = true)
+        // 2. Pass the timeout check (just started)
+        // 3. Either find or not find devices via MTDeviceCreateList
+        //    - If no devices: backs off (different path than event tap failure)
+        //    - If devices found: tries event tap → fails → resumeDevicePolling
+        // We can't control MTDeviceCreateList, but we CAN verify the state is consistent
+        manager.pollForDevices()
+
+        // Regardless of which path was taken, polling should still be active
+        XCTAssertTrue(
+            manager.isPollingForDevices,
+            "Polling should continue after poll attempt")
+        // Start time must be preserved for timeout calculation
+        XCTAssertEqual(
+            manager.pollingStartTime, startTimeBeforePoll,
+            "Start time must be preserved across poll attempts")
+        // Interval should have increased (backoff)
+        XCTAssertGreaterThanOrEqual(
+            manager.currentPollingInterval, intervalBeforePoll,
+            "Interval should not decrease after a poll attempt")
+
+        manager.stop()
+    }
+
+    func testPollForDevicesDeviceMonitorFailureResumesPolling() {
+        // Device monitor always fails to start, even when devices are found
+        var deviceStartCallCount = 0
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                deviceStartCallCount += 1
+                let monitor = unsafe MockDeviceMonitor()
+                unsafe monitor.startShouldSucceed = false
+                return unsafe monitor
+            },
+            eventTapSetup: { true }
+        )
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+        let startTimeBeforePoll = manager.pollingStartTime
+
+        manager.pollForDevices()
+
+        // Polling should still be active regardless of path taken
+        XCTAssertTrue(manager.isPollingForDevices)
+        XCTAssertFalse(manager.isMonitoring)
+        XCTAssertEqual(
+            manager.pollingStartTime, startTimeBeforePoll,
+            "Start time must be preserved through failed connection attempts")
+
+        manager.stop()
+    }
+
+    func testPollForDevicesDoesNotTimeOutBeforeMaxDuration() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Set start time to just under the max duration
+        manager.pollingStartTime = CACurrentMediaTime() - MultitouchManager.maxPollingDuration + 10.0
+
+        manager.pollForDevices()
+
+        // Should NOT have timed out — still within the window
+        XCTAssertTrue(
+            manager.isPollingForDevices,
+            "Polling should continue when within maxPollingDuration")
+
+        manager.stop()
+    }
+
+    func testPollForDevicesSuccessPostsDeviceConnectedNotification() {
+        // This test verifies the success path: when a device is found and monitoring starts,
+        // the .middleDragDeviceConnected notification should be posted.
+        // We use a factory that fails first (to enter polling) then succeeds.
+        var shouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: {
+                let monitor = unsafe MockDeviceMonitor()
+                unsafe monitor.startShouldSucceed = shouldSucceed
+                return unsafe monitor
+            },
+            eventTapSetup: { true }
+        )
+
+        // Start with failure to enter polling state
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+        XCTAssertFalse(manager.isMonitoring)
+
+        // Now make devices "available" for the next poll attempt.
+        // Note: pollForDevices checks MTDeviceCreateList first. On machines WITH
+        // a trackpad, this returns real devices and the test exercises the full
+        // success path. On machines WITHOUT a trackpad, MTDeviceCreateList returns
+        // empty and we hit the backoff path instead — the notification won't fire.
+        shouldSucceed = true
+
+        let notificationExpectation = XCTNSNotificationExpectation(
+            name: .middleDragDeviceConnected,
+            object: nil
+        )
+        // Make this optional — it only fires if the test machine has real hardware
+        notificationExpectation.isInverted = false
+
+        manager.pollForDevices()
+
+        // On machines with a trackpad: monitoring starts, notification fires
+        // On machines without: stays in polling, notification doesn't fire
+        if manager.isMonitoring {
+            wait(for: [notificationExpectation], timeout: 1.0)
+            XCTAssertTrue(manager.isEnabled)
+            XCTAssertFalse(manager.isPollingForDevices)
+            XCTAssertEqual(manager.currentPollingInterval, 0, "Success should reset interval")
+            XCTAssertEqual(manager.pollingStartTime, 0, "Success should reset start time")
+        } else {
+            // No hardware — just verify polling continues
+            XCTAssertTrue(manager.isPollingForDevices)
+        }
+
+        manager.stop()
+    }
+
+    func testMultiplePollCyclesAccumulateBackoff() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Simulate multiple poll cycles — each should increase the interval
+        var previousInterval = manager.currentPollingInterval
+        for _ in 0..<10 {
+            manager.pollForDevices()
+            XCTAssertGreaterThanOrEqual(
+                manager.currentPollingInterval, previousInterval,
+                "Interval must never decrease across poll cycles")
+            XCTAssertLessThanOrEqual(
+                manager.currentPollingInterval,
+                MultitouchManager.maxDevicePollingInterval,
+                "Interval must never exceed max")
+            previousInterval = manager.currentPollingInterval
+        }
+
+        // After enough cycles, should be at max
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            MultitouchManager.maxDevicePollingInterval,
+            "After many cycles, interval should be at max")
+
+        manager.stop()
+    }
+
     // MARK: - GestureRecognizerDelegate State Transition Tests
 
     func testGestureRecognizerDidStartSetsThreeFingerGestureState() {

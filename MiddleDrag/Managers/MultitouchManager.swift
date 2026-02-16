@@ -419,7 +419,8 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Resume polling after a failed connection attempt, preserving backoff state.
     /// Unlike startDevicePolling(), this doesn't reset the interval or start time.
-    private func resumeDevicePolling() {
+    /// Internal access for testability.
+    internal func resumeDevicePolling() {
         isPollingForDevices = true
         currentPollingInterval = min(currentPollingInterval * 2, Self.maxDevicePollingInterval)
         Log.debug(
@@ -430,7 +431,8 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Check if any multitouch devices are now available.
     /// Called periodically by the polling timer with exponential backoff.
-    private func pollForDevices() {
+    /// Internal access for testability.
+    internal func pollForDevices() {
         guard isPollingForDevices else {
             stopDevicePolling()
             return
