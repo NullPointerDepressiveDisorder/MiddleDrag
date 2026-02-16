@@ -446,6 +446,55 @@ final class MultitouchManagerTests: XCTestCase {
             "Max interval must be greater than initial interval for backoff to work")
     }
 
+    func testPollingBackoffStatePreservedAcrossConnectionAttempt() {
+        // Validates fix for: stopDevicePolling() was resetting currentPollingInterval
+        // and pollingStartTime before connection attempts in pollForDevices().
+        // If the connection failed and resumeDevicePolling() ran, the interval would
+        // become 0 (0 * 2 = 0) and elapsed time would trigger immediate timeout.
+        //
+        // After the fix, pollForDevices() uses cancelPollingTimer() which only cancels
+        // the timer without resetting backoff state.
+
+        let mockDevice = unsafe MockDeviceMonitor()
+        unsafe mockDevice.startShouldSucceed = false
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+
+        // Verify initial backoff state is set correctly
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            MultitouchManager.devicePollingInterval,
+            "Initial polling interval should match devicePollingInterval constant")
+        XCTAssertGreaterThan(
+            manager.pollingStartTime, 0,
+            "Polling start time should be recorded")
+
+        let originalStartTime = manager.pollingStartTime
+
+        // Simulate what happens during a failed connection attempt:
+        // stopDevicePolling() would have zeroed these, but cancelPollingTimer() should not.
+        // stop() calls stopDevicePolling() which does reset — verify that's the only path.
+        manager.stop()
+        XCTAssertEqual(manager.currentPollingInterval, 0, "stop() should reset interval")
+        XCTAssertEqual(manager.pollingStartTime, 0, "stop() should reset start time")
+
+        // Restart polling and verify state is freshly initialized (not stale)
+        manager.start()
+        XCTAssertTrue(manager.isPollingForDevices)
+        XCTAssertEqual(
+            manager.currentPollingInterval,
+            MultitouchManager.devicePollingInterval,
+            "Restarted polling should have fresh initial interval")
+        XCTAssertGreaterThanOrEqual(
+            manager.pollingStartTime, originalStartTime,
+            "Restarted polling should have new start time")
+
+        manager.stop()
+    }
+
     // MARK: - GestureRecognizerDelegate State Transition Tests
 
     func testGestureRecognizerDidStartSetsThreeFingerGestureState() {

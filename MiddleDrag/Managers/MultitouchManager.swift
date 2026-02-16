@@ -111,8 +111,12 @@ public final class MultitouchManager: @unchecked Sendable {
 
     // Device polling for late-connecting devices (e.g., Bluetooth trackpads at login)
     private var devicePollingTimer: DispatchSourceTimer?
-    private var currentPollingInterval: TimeInterval = 0
-    private var pollingStartTime: TimeInterval = 0
+    /// Current polling interval — increases with exponential backoff.
+    /// Internal access for testability.
+    internal var currentPollingInterval: TimeInterval = 0
+    /// When polling started — used to enforce maxPollingDuration timeout.
+    /// Internal access for testability.
+    internal var pollingStartTime: TimeInterval = 0
     /// Whether we are actively polling for multitouch device connections.
     /// This is true when start() was called but no devices were found, so we're
     /// periodically checking for devices that may connect later (e.g., Bluetooth trackpad at boot).
@@ -385,12 +389,19 @@ public final class MultitouchManager: @unchecked Sendable {
     private func stopDevicePolling() {
         guard isPollingForDevices else { return }
 
-        devicePollingTimer?.cancel()
-        devicePollingTimer = nil
+        cancelPollingTimer()
         isPollingForDevices = false
         currentPollingInterval = 0
         pollingStartTime = 0
         Log.debug("Device polling stopped", category: .device)
+    }
+
+    /// Cancel the polling timer without resetting backoff state.
+    /// Used when pausing polling during a connection attempt so that if it fails,
+    /// resumeDevicePolling() can continue with the correct interval and elapsed time.
+    private func cancelPollingTimer() {
+        devicePollingTimer?.cancel()
+        devicePollingTimer = nil
     }
 
     /// Schedule the next poll with exponential backoff.
@@ -454,7 +465,9 @@ public final class MultitouchManager: @unchecked Sendable {
         Log.info(
             "Device poll: multitouch device(s) detected, attempting connection...",
             category: .device)
-        stopDevicePolling()
+        // Pause the timer but preserve backoff state — if connection fails,
+        // resumeDevicePolling() needs the current interval and start time intact.
+        cancelPollingTimer()
 
         // Attempt full connection
         applyConfiguration()
@@ -485,6 +498,9 @@ public final class MultitouchManager: @unchecked Sendable {
         // Success! Monitoring is now active.
         isMonitoring = true
         isEnabled = true
+        isPollingForDevices = false
+        currentPollingInterval = 0
+        pollingStartTime = 0
         Log.info("Multitouch monitoring started after device connection", category: .device)
 
         // Notify UI so menu bar icon updates from disabled → enabled

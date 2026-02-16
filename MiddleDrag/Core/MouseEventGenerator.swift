@@ -93,7 +93,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         guard shouldPostEvents else { return }
         let error = CGAssociateMouseAndMouseCursorPosition(1)
         if error != CGError.success {
-            Log.warning( "Failed to re-associate cursor: \(error.rawValue)", category: .gesture)
+            Log.warning("Failed to re-associate cursor: \(error.rawValue)", category: .gesture)
         }
         if let source = eventSource {
             source.localEventsSuppressionInterval = 0.25
@@ -146,7 +146,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         if shouldPostEvents {
             let error = CGAssociateMouseAndMouseCursorPosition(0)
             if error != CGError.success {
-                Log.warning( "Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
+                Log.warning("Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
             }
             // Zero the suppression interval so our high-frequency synthetic events
             // don't suppress each other (default is 0.25s which eats events)
