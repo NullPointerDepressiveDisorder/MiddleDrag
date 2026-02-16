@@ -31,7 +31,7 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/nullpointerdepressivedisorder/MiddleDrag/main/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/nullpointerdepressivedisorder/MiddleDrag/appcast/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>$(SPARKLE_PUBLIC_KEY)</string>
 </dict>
