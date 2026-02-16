@@ -2,7 +2,7 @@ name: Deploy Website
 
 on:
   push:
-    branches: ["main", "webpage"] # Targeting current working branches
+    branches: ["gh-pages"] # Targeting current working branches
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
