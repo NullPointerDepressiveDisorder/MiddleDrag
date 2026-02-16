@@ -81,38 +81,47 @@ jobs:
           PROJECT_VERSION=$(sed -nE 's/.*MARKETING_VERSION = ([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?);.*/\1/p' MiddleDrag.xcodeproj/project.pbxproj | head -n 1)
 
           if [ "$VERSION" != "$PROJECT_VERSION" ]; then
-            echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping..."
+            echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping on releases branch..."
             echo "kill-pipeline=true" >> $GITHUB_OUTPUT
 
-            # Determine the branch to update
-            if [[ "$GITHUB_REF" == refs/heads/* ]]; then
-              BRANCH_NAME=${GITHUB_REF#refs/heads/}
-            else
-              BRANCH_NAME="main"
-              echo "Tag push detected, using $BRANCH_NAME"
+            # Save the main branch commit SHA as the base
+            BASE_SHA=$(git rev-parse HEAD)
+
+            # Create a detached release commit based on current main content
+            git checkout --detach HEAD
+
+            # Bump version inline (replaces bump-version.sh for CI)
+            sed -i '' -E "s/MARKETING_VERSION = [0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?/MARKETING_VERSION = $VERSION/g" \
+              MiddleDrag.xcodeproj/project.pbxproj
+
+            COUNT=$(grep -c "MARKETING_VERSION = $VERSION" MiddleDrag.xcodeproj/project.pbxproj || echo "0")
+            if [ "$COUNT" -ne 2 ]; then
+              echo "Error: Expected exactly 2 MARKETING_VERSION updates, found $COUNT"
+              exit 1
             fi
 
-            git fetch origin "$BRANCH_NAME"
-            git checkout -b "version-bump-$VERSION"
+            git add MiddleDrag.xcodeproj/project.pbxproj
+            git commit -m "Release v$VERSION"
 
+            NEW_SHA=$(git rev-parse HEAD)
+
+            # Point the releases branch at this commit
+            git branch -f releases HEAD
+            git push origin releases --force
+
+            # Re-create the tag to point to the release commit
             NOTES="${{ inputs.notes }}"
-            ./bump-version.sh "$VERSION" "$NOTES"
-
-            # Rebase on latest main in case of new commits
-            git fetch origin "$BRANCH_NAME"
-            git rebase "origin/$BRANCH_NAME"
-
-            # Update main branch to point to new commit
-            git checkout "$BRANCH_NAME"
-            git reset --hard "version-bump-$VERSION"
-
-            # Re-create the tag to point to HEAD after rebase
-            git tag -f -a "v$VERSION" -m "$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "Release v$VERSION")"
-
-            git push origin "$BRANCH_NAME" --force-with-lease
+            TAG_MSG=$(git tag -l --format='%(contents)' "v$VERSION" 2>/dev/null || echo "")
+            if [ -n "$NOTES" ]; then
+              TAG_MSG="$NOTES"
+            elif [ -z "$TAG_MSG" ]; then
+              TAG_MSG="Release v$VERSION"
+            fi
+            git tag -f -a "v$VERSION" -m "$TAG_MSG"
             git push origin "v$VERSION" --force
 
-            echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+            echo "NEW_SHA=$NEW_SHA" >> $GITHUB_OUTPUT
+            echo "✓ Release commit created on 'releases' branch (main untouched)"
           else
             echo "Version matches. Proceeding..."
             echo "NEW_SHA=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
