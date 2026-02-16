@@ -471,7 +471,15 @@ public final class MultitouchManager: @unchecked Sendable {
         // resumeDevicePolling() needs the current interval and start time intact.
         cancelPollingTimer()
 
-        // Attempt full connection
+        attemptDeviceConnection()
+    }
+
+    /// Attempt to connect to a detected multitouch device.
+    /// Called by pollForDevices() after MTDeviceCreateList confirms a device exists.
+    /// On failure, resumes polling with backoff. On success, transitions to monitoring.
+    /// Internal access for testability — allows tests to exercise connection logic
+    /// without depending on real hardware via MTDeviceCreateList.
+    internal func attemptDeviceConnection() {
         applyConfiguration()
         let eventTapSuccess = eventTapSetupFactory()
 
