@@ -84,9 +84,6 @@ jobs:
             echo "Version mismatch ($PROJECT_VERSION vs $VERSION). Bumping on releases branch..."
             echo "kill-pipeline=true" >> $GITHUB_OUTPUT
 
-            # Save the main branch commit SHA as the base
-            BASE_SHA=$(git rev-parse HEAD)
-
             # Create a detached release commit based on current main content
             git checkout --detach HEAD
 
