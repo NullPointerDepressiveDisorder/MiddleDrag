@@ -74,6 +74,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             multitouchManager.start()
             if multitouchManager.isMonitoring {
                 Log.info("Multitouch manager started", category: .app)
+            } else if multitouchManager.isPollingForDevices {
+                Log.info(
+                    "Multitouch manager polling for device connections (e.g., Bluetooth trackpad)",
+                    category: .device)
             } else {
                 Log.warning(
                     "Multitouch manager inactive: no compatible multitouch hardware detected.",
