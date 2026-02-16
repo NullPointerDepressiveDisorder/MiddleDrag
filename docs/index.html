@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiddleDrag - Unlock Middle Click on your Mac Trackpad</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description"
+        content="Add native middle-click to your Mac trackpad with three-finger gestures. Essential for CAD, 3D modeling, and power users who want to close tabs and open links effortlessly.">
+    <meta name="keywords"
+        content="mac trackpad middle click, three finger drag, freecad mac, fusion 360 middle mouse, blender mac trackpad, open link in new tab mac, close tab middle click">
+    <meta name="author" content="NullPointerDepressiveDisorder">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MiddleDrag - Native Middle-Click for macOS">
+    <meta property="og:description"
+        content="Unlock the hidden power of your trackpad. Three-finger tap to middle-click, three-finger drag to pan/orbit.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://nullpointerdepressivedisorder.github.io/MiddleDrag/">
+    <meta property="og:image" content="https://nullpointerdepressivedisorder.github.io/MiddleDrag/assets/logo.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/logo.png">
+
+    <!-- Custom CSS (Tailwind Build) -->
+    <link href="style.css" rel="stylesheet">
+</head>
+
+<body class="antialiased min-h-screen flex flex-col bg-dark-bg text-dark-text font-sans">
+
+    <!-- Navbar -->
+    <nav class="border-b border-dark-border bg-dark-bg/80 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0 flex items-center gap-3">
+                    <img src="assets/logo.png" alt="MiddleDrag Logo" class="h-8 w-8">
+                    <span class="font-bold text-white text-xl">MiddleDrag</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#features"
+                            class="text-dark-text hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Features</a>
+                        <a href="#comparison"
+                            class="text-dark-text hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Compare</a>
+                        <a href="#install"
+                            class="text-dark-text hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Install</a>
+                        <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag"
+                            class="text-dark-text hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">GitHub</a>
+                    </div>
+                </div>
+                <!-- Mobile menu button -->
+                <div class="-mr-2 flex md:hidden">
+                    <button type="button" onclick="document.getElementById('mobile-menu').classList.toggle('hidden')"
+                        class="bg-dark-card inline-flex items-center justify-center p-2 rounded-md text-dark-muted hover:text-white hover:bg-dark-border focus:outline-none"
+                        aria-controls="mobile-menu" aria-expanded="false">
+                        <span class="sr-only">Open main menu</span>
+                        <svg class="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu, show/hide based on menu state. -->
+        <div class="hidden md:hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t border-dark-border bg-dark-bg">
+                <a href="#features"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Features</a>
+                <a href="#comparison"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Compare</a>
+                <a href="#install"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">Install</a>
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag"
+                    class="text-dark-text hover:text-white block px-3 py-2 rounded-md text-base font-medium">GitHub</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative overflow-hidden pt-16 pb-24 lg:pt-32">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="text-center">
+                <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-white mb-6">
+                    <span class="block">Unlock Middle Click</span>
+                    <span class="block text-brand-purple">on your Mac Trackpad</span>
+                </h1>
+                <p class="mt-4 max-w-2xl mx-auto text-xl text-dark-muted">
+                    Stop using awkward key combinations. Experience native three-finger gestures for middle-click and
+                    middle-drag. Essential for CAD, productivity, and browsing.
+                </p>
+                <div class="mt-10 flex justify-center gap-4">
+                    <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/latest"
+                        class="px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-brand-green hover:bg-brand-greenHover md:text-lg md:px-10 transition-all shadow-lg shadow-brand-green/20">
+                        Download Now
+                    </a>
+                    <a href="#install"
+                        class="px-8 py-3 border border-dark-border text-base font-medium rounded-md text-dark-text bg-dark-card hover:bg-dark-border md:text-lg md:px-10 transition-all">
+                        Installation Guide
+                    </a>
+                </div>
+
+                <!-- Homebrew Badge -->
+                <div class="mt-4 flex justify-center">
+                    <a href="https://formulae.brew.sh/cask/middledrag" target="_blank" 
+                       class="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-900/20 border border-amber-600/30 rounded-full text-amber-400 text-sm font-medium hover:bg-amber-900/30 transition-colors">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M7.938 0a.214.214 0 0 0-.206.156c-.316 1.104.179 2.15.838 2.935.153.181.313.347.476.501a2.039 2.039 0 0 0-.665.02c-1.184.233-2.193.985-2.74 2.532a3.893 3.893 0 0 0-.2 1.466 1.565 1.565 0 0 0-1.156 1.504 1.59 1.59 0 0 0 1.227 1.541l.026 12.046c0 .195.1.377.264.482a.214.214 0 0 0 .008.005c.537.31 2.047.812 5.21.812 3.238 0 4.7-.678 5.181-1.04a.214.214 0 0 0 .008-.007.571.571 0 0 0 .206-.439c.002-.344.002-1.136.002-1.604a.143.143 0 0 1 .147-.144c.397.006.869.006 1.318.005a1.826 1.826 0 0 0 1.832-1.825v-5.804a1.826 1.826 0 0 0-1.825-1.826H16.56a.14.14 0 0 1-.143-.144V10.6h.007v-.001a1.573 1.573 0 0 0 1.356-1.556c0-.816-.627-1.489-1.424-1.563-.025-1.438-.437-2.126-.736-2.58a.214.214 0 0 0-.005-.007c-.364-.51-1.193-1.282-2.275-1.316-.503-.016-.842.124-1.125.254-.217.1-.42.177-.67.22.002-1.286.945-1.981.945-1.981a.214.214 0 0 0 .05-.298s-.087-.122-.21-.26c-.121-.136-.269-.294-.47-.378a.214.214 0 0 0-.079-.017.214.214 0 0 0-.145.055 4.308 4.308 0 0 0-.875 1.101 3.42 3.42 0 0 0-.133.273 3.497 3.497 0 0 0-.381-.846C9.794.978 9.063.436 8.017.016A.214.214 0 0 0 7.939 0zm.156.524c.85.378 1.43.83 1.79 1.403.274.438.426.962.484 1.584a3.07 3.07 0 0 0-.012.462 6.897 6.897 0 0 1-.168-.052 5.487 5.487 0 0 1-1.29-1.106c-.551-.657-.935-1.46-.804-2.291zM11.8 1.618c.07.054.141.101.212.18.034.039.032.04.058.073-.332.308-1.07 1.144-.952 2.453a.214.214 0 0 0 .222.195c.469-.017.782-.172 1.056-.299.273-.126.508-.228.931-.214.875.027 1.639.715 1.939 1.134.295.449.65 1 .663 2.36a1.66 1.66 0 0 0-.41.142 1.938 1.938 0 0 0-1.77-1.16 1.94 1.94 0 0 0-1.87 1.448 1.783 1.783 0 0 0-1.356-.64c-.484 0-.91.205-1.233.517a1.873 1.873 0 0 0-1.85-1.625c-.649 0-1.218.335-1.552.84a3.1 3.1 0 0 1 .157-.735c.51-1.437 1.355-2.045 2.42-2.254.367-.073.664-.011.99.095.325.106.671.262 1.094.342a.214.214 0 0 0 .252-.245c-.112-.67.073-1.266.336-1.744a3.71 3.71 0 0 1 .663-.863zM7.44 6.611a1.442 1.442 0 0 1 1.363 1.925.214.214 0 0 0 .168.283h.005a.214.214 0 0 0 .238-.146 1.373 1.373 0 0 1 2.613-.01.214.214 0 0 0 .417-.09 1.509 1.509 0 0 1 1.504-1.664c.678 0 1.249.445 1.442 1.056a.214.214 0 0 0 .259.143l.15-.04a.214.214 0 0 0 .051-.02 1.139 1.139 0 0 1 1.702.995 1.14 1.14 0 0 1-.985 1.131.214.214 0 0 0-.001 0 2.215 2.215 0 0 0-.485.126 10.65 10.65 0 0 1-1.176.365.214.214 0 0 0-.162.186 1.276 1.276 0 0 1-.146.478 2.07 2.07 0 0 0-.239 1.111l.001.151a.438.438 0 0 1-.16.36.665.665 0 0 1-.43.14.586.586 0 0 1-.588-.59.803.803 0 0 0-.38-.681.214.214 0 0 0-.002-.002c-.24-.145-.43-.37-.532-.636a.214.214 0 0 0-.207-.138 19.469 19.469 0 0 1-5.37-.6l-.003-.002a9.007 9.007 0 0 0-.838-.194h.003a1.16 1.16 0 0 1-.937-1.134c0-.619.488-1.118 1.101-1.14a.214.214 0 0 0 .204-.176 1.443 1.443 0 0 1 1.42-1.187zm8.549 4.106v.455c0 .314.259.573.572.573h1.329a1.397 1.397 0 0 1 1.397 1.397v5.804a1.396 1.396 0 0 1-1.402 1.396.214.214 0 0 0-.002 0c-.448.002-.918 0-1.31-.005a.573.573 0 0 0-.584.573c0 .468 0 1.262-.002 1.603a.214.214 0 0 0 0 .001c0 .042-.019.08-.05.107-.346.26-1.75.95-4.915.95-3.107 0-4.587-.52-4.99-.752a.143.143 0 0 1-.065-.118l-.025-11.955c.145.033.288.07.431.11a.214.214 0 0 0 .003 0c.115.031.246.064.383.097v10.37c0 .129.069.247.18.31.453.217 1.767.732 4.071.732 2.32 0 3.595-.626 4.022-.884a.357.357 0 0 0 .164-.3l.001-10.21c.267-.075.531-.158.792-.254zm-7.99.894a.493.493 0 0 1 .494.493v8.578a.493.493 0 0 1-.493.493.493.493 0 0 1-.494-.493v-8.578A.493.493 0 0 1 8 11.611zm8.652 1.14a.663.663 0 0 0-.662.662v5.208a.663.663 0 0 0 .662.662h1.14a.663.663 0 0 0 .662-.662v-5.209a.663.663 0 0 0-.662-.662zm0 .428h1.14a.233.233 0 0 1 .233.233v5.21a.233.233 0 0 1-.233.232h-1.14a.233.233 0 0 1-.233-.233v-5.209a.233.233 0 0 1 .233-.233z"/>
+                        </svg>
+                        Now in Official Homebrew
+                    </a>
+                </div>
+
+                <!-- Brew Command -->
+                <div class="mt-4 flex justify-center">
+                    <div
+                        class="bg-dark-bg border border-dark-border rounded-lg p-3 font-mono text-sm text-dark-muted flex items-center gap-3 relative group">
+                        <span class="select-all">brew install --cask middledrag</span>
+                        <button onclick="copyBrewCommand(this)" class="hover:text-white transition-colors p-1 rounded"
+                            aria-label="Copy to clipboard" title="Copy to clipboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+                function copyBrewCommand(btn) {
+                    const text = 'brew install --cask middledrag';
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Success feedback
+                        const originalContent = btn.innerHTML;
+                        btn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        `;
+                        setTimeout(() => {
+                            btn.innerHTML = originalContent;
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        alert('Failed to copy to clipboard. Please select and copy manually.');
+                    });
+                }
+            </script>
+            <div class="mt-20 relative max-w-4xl mx-auto">
+                <div class="rounded-xl overflow-hidden shadow-2xl border border-dark-border bg-dark-card">
+                    <img src="assets/demo.gif" alt="MiddleDrag Demonstration" class="w-full h-auto" loading="lazy">
+                </div>
+                <!-- Decorative blurred glow behind image -->
+                <div class="absolute -inset-4 bg-brand-purple/20 blur-3xl -z-10 rounded-full opacity-50"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Use Cases / Value Props -->
+    <div id="features" class="py-24 bg-dark-card border-y border-dark-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-extrabold text-white">More than just CAD</h2>
+                <p class="mt-4 text-lg text-dark-muted">Middle-click enables powerful workflows across macOS.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+                <!-- Card 1: CAD -->
+                <div
+                    class="p-6 bg-dark-bg rounded-xl border border-dark-border hover:border-brand-purple/50 transition-colors">
+                    <div class="w-12 h-12 bg-blue-900/30 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-brand-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">CAD & 3D Modeling</h3>
+                    <p class="text-dark-muted">Pan and orbit effortlessly in Fusion 360, Blender, OnShape, FreeCAD, and
+                        SketchUp without carrying a mouse.</p>
+                </div>
+
+                <!-- Card 2: Browsing -->
+                <div
+                    class="p-6 bg-dark-bg rounded-xl border border-dark-border hover:border-brand-purple/50 transition-colors">
+                    <div class="w-12 h-12 bg-purple-900/30 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Web Power User</h3>
+                    <p class="text-dark-muted">Open links in background tabs, close tabs instantly, and auto-scroll long
+                        pages with a simple three-finger tap.</p>
+                </div>
+
+                <!-- Card 3: Terminal & Code -->
+                <div
+                    class="p-6 bg-dark-bg rounded-xl border border-dark-border hover:border-brand-purple/50 transition-colors">
+                    <div class="w-12 h-12 bg-green-900/30 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2">Coding & Terminal</h3>
+                    <p class="text-dark-muted">Paste selection in Terminal (Linux style) and interact with VS Code
+                        multi-cursor features naturally.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Section -->
+    <div id="comparison" class="py-24">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-extrabold text-white text-center mb-12">Why MiddleDrag?</h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr>
+                            <th class="p-4 border-b border-dark-border text-dark-muted font-normal w-1/4">Feature</th>
+                            <th
+                                class="p-4 border-b border-dark-border text-white font-bold text-lg bg-brand-green/10 rounded-t-lg">
+                                MiddleDrag</th>
+                            <th class="p-4 border-b border-dark-border text-dark-muted font-normal">BetterTouchTool</th>
+                            <th class="p-4 border-b border-dark-border text-dark-muted font-normal">Middle</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-dark-text">
+                        <tr>
+                            <td class="p-4 border-b border-dark-border font-medium">Price</td>
+                            <td class="p-4 border-b border-dark-border text-brand-purple font-bold bg-brand-green/5">
+                                Free
+                                & Open Source</td>
+                            <td class="p-4 border-b border-dark-border">$10 - $24</td>
+                            <td class="p-4 border-b border-dark-border">$8</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border-b border-dark-border font-medium">Three-Finger Drag</td>
+                            <td class="p-4 border-b border-dark-border text-green-400 font-bold bg-brand-green/5">✓
+                                Native Feel</td>
+                            <td class="p-4 border-b border-dark-border">Complex Setup</td>
+                            <td class="p-4 border-b border-dark-border">Limited</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border-b border-dark-border font-medium">Mission Control</td>
+                            <td class="p-4 border-b border-dark-border text-green-400 font-bold bg-brand-green/5">✓
+                                Plays Nice</td>
+                            <td class="p-4 border-b border-dark-border">Conflicts</td>
+                            <td class="p-4 border-b border-dark-border">Conflicts</td>
+                        </tr>
+                        <tr>
+                            <td class="p-4 border-b border-dark-border font-medium">Weight/Size</td>
+                            <td class="p-4 border-b border-dark-border text-green-400 font-bold bg-brand-green/5">~2 MB
+                            </td>
+                            <td class="p-4 border-b border-dark-border">~50 MB</td>
+                            <td class="p-4 border-b border-dark-border">~15 MB</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Installation Section -->
+    <div id="install" class="py-24 bg-dark-card border-t border-dark-border">
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-3xl font-extrabold text-white mb-8">Get Started in Seconds</h2>
+
+            <div class="bg-dark-bg border border-dark-border rounded-xl p-8 text-left mb-8">
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span
+                        class="bg-brand-purple rounded-full w-6 h-6 flex items-center justify-center text-xs text-black">1</span>
+                    Install via Homebrew
+                </h3>
+                <div class="bg-black/50 rounded p-4 font-mono text-sm text-brand-purple mb-6">
+                    brew install --cask middledrag
+                </div>
+
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span
+                        class="bg-brand-purple rounded-full w-6 h-6 flex items-center justify-center text-xs text-black">2</span>
+                    Install via MacPorts
+                </h3>
+                <div class="bg-black/50 rounded p-4 font-mono text-sm text-brand-purple mb-6">
+                    sudo port install middledrag
+                </div>
+
+                <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span
+                        class="bg-brand-purple rounded-full w-6 h-6 flex items-center justify-center text-xs text-black">3</span>
+                    Grant Permissions
+                </h3>
+                <p class="text-dark-muted mb-2">Like all gesture apps on macOS, MiddleDrag needs Accessibility
+                    permissions to see your trackpad touches.</p>
+                <p class="text-dark-muted text-sm italic">System Settings > Privacy & Security > Accessibility >
+                    MiddleDrag</p>
+            </div>
+
+            <p class="text-dark-muted mb-8">
+                Or download the manual installer from GitHub Releases.<br>
+                Requires macOS 15 Sequoia or later.
+            </p>
+
+            <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/latest"
+                class="inline-flex items-center gap-2 text-brand-purple hover:text-white transition-colors font-medium">
+                View All Releases on GitHub
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark-bg border-t border-dark-border py-12">
+        <div
+            class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-dark-muted text-sm">
+                &copy; 2026 MiddleDrag. Open Source under MIT License.
+            </div>
+            <div class="flex gap-6 items-center">
+                <a href="https://www.saashub.com/middledrag?utm_source=badge&utm_campaign=badge&utm_content=middledrag&badge_variant=color&badge_kind=approved" target="_blank"><img src="https://cdn-b.saashub.com/img/badges/approved-color.png?v=1" alt="MiddleDrag badge" style="max-width: 150px;"/></a>
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag"
+                    class="text-dark-muted hover:text-brand-purple transition-colors">GitHub</a>
+                <a href="https://formulae.brew.sh/cask/middledrag"
+                    class="text-dark-muted hover:text-brand-purple transition-colors">Homebrew</a>
+                <a href="https://ports.macports.org/port/middledrag/"
+                    class="text-dark-muted hover:text-brand-purple transition-colors">MacPorts</a>
+                <a href="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/issues"
+                    class="text-dark-muted hover:text-brand-purple transition-colors">Report Issue</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+
+</html>
