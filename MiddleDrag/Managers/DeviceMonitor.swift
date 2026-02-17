@@ -226,8 +226,21 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe DeviceMonitor.lifecycleLock.lock()
         unsafe stateLock.lock()
 
-        // Safe to call when not running - just return early
+        // If not running, clean up global reference if we own it, then return.
+        // This handles the case where start() failed (no device found) so isRunning
+        // was never set to true, but init() already set gDeviceMonitor = self.
+        // Without this cleanup, the stale global reference prevents a subsequent
+        // DeviceMonitor from registering itself, causing callbacks to be dispatched
+        // to this dead instance (which silently drops them because isRunning = false).
         guard unsafe isRunning else {
+            if unsafe ownsGlobalReference {
+                unsafe os_unfair_lock_lock(&gCallbackLock)
+                if unsafe gDeviceMonitor === self {
+                    unsafe gDeviceMonitor = nil
+                }
+                unsafe ownsGlobalReference = false
+                unsafe os_unfair_lock_unlock(&gCallbackLock)
+            }
             unsafe stateLock.unlock()
             unsafe DeviceMonitor.lifecycleLock.unlock()
             return
