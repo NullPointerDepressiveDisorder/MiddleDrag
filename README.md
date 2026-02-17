@@ -19,7 +19,7 @@ The middle mouse button your Mac trackpad is missing.
 </div>
 
 <p align="center">
-  <img src="docs/assets/demo.gif" alt="MiddleDrag Demo" width="600">
+  <img src="https://raw.githubusercontent.com/NullPointerDepressiveDisorder/MiddleDrag/gh-pages/docs/assets/demo.gif" alt="MiddleDrag Demo" width="600">
 </p>
 
 ## The Problem
