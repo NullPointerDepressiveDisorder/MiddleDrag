@@ -212,7 +212,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 3.0)
+        wait(for: [expectation], timeout: 2.0)
 
         XCTAssertFalse(manager.isMonitoring)
         XCTAssertFalse(manager.isEnabled)
