@@ -54,6 +54,13 @@ import os
     }
     unsafe os_unfair_lock_unlock(&gCallbackLock)
     
+    // Additional safety check: Verify the monitor instance is still valid and running.
+    unsafe monitor.stateLock.lock()
+    let monitorIsRunning = unsafe monitor.isRunning
+    unsafe monitor.stateLock.unlock()
+    
+    guard monitorIsRunning else { return 0 }
+    
     #if DEBUG
         unsafe touchCount += 1
         // Log sparingly to avoid performance impact
@@ -90,11 +97,7 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Delay between unregistering callbacks and stopping devices.
     /// This allows the MultitouchSupport framework's internal thread (mt_ThreadedMTEntry)
     /// to complete any in-flight callback processing before we stop devices.
-    /// Value determined empirically: 500ms is sufficient to avoid CFRelease(NULL) crashes
-    /// and EXC_BREAKPOINT exceptions during rapid connectivity changes (wifi ↔ none).
-    /// Increased from 100ms to handle rapid connectivity toggling that triggers multiple
-    /// restart cycles in quick succession.
-    static let frameworkCleanupDelay: TimeInterval = 0.5
+    static let frameworkCleanupDelay: TimeInterval = 1.0
 
     // MARK: - Properties
 
@@ -103,10 +106,10 @@ class DeviceMonitor: TouchDeviceProviding {
 
     nonisolated(unsafe) private var device: MTDeviceRef?
     nonisolated(unsafe) private var registeredDevices: Set<UnsafeMutableRawPointer> = unsafe []
-    private var isRunning = false
+    fileprivate var isRunning = false
 
     /// Lock to protect concurrent access to device state during stop/start operations
-    private let stateLock = NSLock()
+    fileprivate let stateLock = NSLock()
 
     /// Tracks whether this instance owns the global callback reference
     private var ownsGlobalReference = false

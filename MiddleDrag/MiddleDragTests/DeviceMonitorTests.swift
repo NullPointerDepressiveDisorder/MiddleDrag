@@ -267,7 +267,7 @@ import XCTest
             DeviceMonitor.frameworkCleanupDelay, 0,
             "frameworkCleanupDelay should be positive")
         unsafe XCTAssertLessThanOrEqual(
-            DeviceMonitor.frameworkCleanupDelay, 0.5,
+            DeviceMonitor.frameworkCleanupDelay, 1.0,
             "frameworkCleanupDelay should not be excessive")
     }
 
