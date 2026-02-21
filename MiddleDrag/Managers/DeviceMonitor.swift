@@ -54,7 +54,7 @@ import os
     }
     unsafe os_unfair_lock_unlock(&gCallbackLock)
     
-    // Aditional safety check: Verify the monitor instace is still valid and running.
+    // Additional safety check: Verify the monitor instance is still valid and running.
     unsafe monitor.stateLock.lock()
     let monitorIsRunning = unsafe monitor.isRunning
     unsafe monitor.stateLock.unlock()
