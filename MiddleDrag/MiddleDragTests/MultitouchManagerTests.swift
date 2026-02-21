@@ -212,7 +212,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         XCTAssertFalse(manager.isMonitoring)
         XCTAssertFalse(manager.isEnabled)
@@ -303,7 +303,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         // We expect:
         // 1 initial creation
@@ -339,7 +339,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         // Verify manager is still stopped
         XCTAssertFalse(manager.isMonitoring, "Manager should remain stopped")
@@ -1688,7 +1688,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         // After restart, monitoring should still be active
         XCTAssertTrue(manager.isMonitoring)
@@ -1722,7 +1722,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         XCTAssertFalse(manager.isEnabled)
         XCTAssertTrue(manager.isMonitoring)
@@ -1767,7 +1767,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             restartExpectation.fulfill()
         }
-        wait(for: [restartExpectation], timeout: 1.0)
+        wait(for: [restartExpectation], timeout: 3.0)
 
         XCTAssertTrue(manager.isMonitoring)
 
@@ -1806,7 +1806,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         unsafe XCTAssertEqual(mockDevice.startCallCount, 2)  // Now restarted
 
@@ -1819,7 +1819,7 @@ final class MultitouchManagerTests: XCTestCase {
             MultitouchManager.restartCleanupDelay, 0,
             "restartCleanupDelay should be positive")
         XCTAssertLessThanOrEqual(
-            MultitouchManager.restartCleanupDelay, 0.5,
+            MultitouchManager.restartCleanupDelay, 1.0,
             "restartCleanupDelay should not be excessive")
     }
 
@@ -1829,7 +1829,7 @@ final class MultitouchManagerTests: XCTestCase {
             MultitouchManager.minimumRestartInterval, 0,
             "minimumRestartInterval should be positive")
         XCTAssertLessThanOrEqual(
-            MultitouchManager.minimumRestartInterval, 1.0,
+            MultitouchManager.minimumRestartInterval, 2.5,
             "minimumRestartInterval should not be excessive")
     }
 
@@ -1863,7 +1863,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 2.0)
+        wait(for: [expectation], timeout: 5.0)
 
         // We expect far fewer than 10 device creations due to:
         // 1. The first restart being in progress blocks subsequent ones
@@ -1903,7 +1903,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 1.0)
+        wait(for: [expectation], timeout: 3.0)
 
         // Only 2 device creations: initial start + one restart
         // The duplicate restart calls while in progress should have been skipped
@@ -1933,7 +1933,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             expectation.fulfill()
         }
-        wait(for: [expectation], timeout: 3.0)
+        wait(for: [expectation], timeout: 5.0)
 
         // Should still be monitoring after all restarts
         XCTAssertTrue(manager.isMonitoring)
@@ -1980,7 +1980,7 @@ final class MultitouchManagerTests: XCTestCase {
         ) {
             restartExpectation.fulfill()
         }
-        wait(for: [restartExpectation], timeout: 1.0)
+        wait(for: [restartExpectation], timeout: 3.0)
 
         XCTAssertTrue(manager.isMonitoring)
 

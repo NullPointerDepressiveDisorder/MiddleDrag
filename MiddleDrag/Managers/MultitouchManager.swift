@@ -11,18 +11,14 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Delay after stopping before restarting devices during wake-from-sleep.
     /// This allows the MultitouchSupport framework's internal thread (mt_ThreadedMTEntry)
     /// to fully complete cleanup before we start new devices.
-    /// Value determined empirically: 500ms is sufficient to avoid CFRelease(NULL) crashes
-    /// and EXC_BREAKPOINT exceptions during rapid connectivity changes (wifi ↔ none).
-    /// Increased from 250ms to handle rapid connectivity toggling that triggers multiple
-    /// restart cycles in quick succession.
-    static let restartCleanupDelay: TimeInterval = 0.5
+    static let restartCleanupDelay: TimeInterval = 1.0
 
     /// Minimum delay between restart operations to prevent race conditions.
     /// When multiple restart triggers occur in rapid succession (e.g., rapid connectivity
     /// changes wifi ↔ none), we debounce them by waiting at least this long after the
     /// last restart completed. This prevents overlapping restart attempts that can expose
     /// race conditions in the MultitouchSupport framework's internal thread.
-    static let minimumRestartInterval: TimeInterval = 0.6
+    static let minimumRestartInterval: TimeInterval = 2.5
 
     /// Initial interval between polling attempts when no multitouch device is found at launch.
     /// This handles Bluetooth trackpads that connect after login (common during boot).
