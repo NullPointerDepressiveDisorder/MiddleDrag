@@ -855,25 +855,27 @@ extension MultitouchManager: DeviceMonitorDelegate {
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
         // The touches pointer is only valid for the duration of this callback.
-        // Copy touch data via raw memcpy — much cheaper than Swift Array allocation
-        // + map closure that was causing per-frame GC pressure and jitter at 100Hz+.
+        // Copy touch data into a Data value — Swift manages its lifetime automatically,
+        // eliminating the use-after-free / double-free risk of manual raw pointer
+        // allocation that can occur when rapid sleep/wake cycles cause concurrent
+        // restart() calls while async closures are still queued on gestureQueue.
         let touchCount = Int(count)
-        nonisolated(unsafe) let touchesPtr: UnsafeMutableRawPointer?
+        let touchData: Data?
         if touchCount > 0 {
             let byteCount = touchCount * MemoryLayout<MTTouch>.stride
-            let buffer = UnsafeMutableRawPointer.allocate(
-                byteCount: byteCount, alignment: MemoryLayout<MTTouch>.alignment)
-            unsafe buffer.copyMemory(from: touches, byteCount: byteCount)
-            unsafe touchesPtr = unsafe buffer
+            touchData = unsafe Data(bytes: touches, count: byteCount)
         } else {
-            unsafe touchesPtr = nil
+            touchData = nil
         }
 
         gestureQueue.async { [weak self] in
-            if let buffer = unsafe touchesPtr {
-                defer { unsafe buffer.deallocate() }
-                unsafe self?.gestureRecognizer.processTouches(
-                    buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+            if let data = touchData {
+                data.withUnsafeBytes { rawBuffer in
+                    guard let baseAddress = rawBuffer.baseAddress else { return }
+                    let buffer = UnsafeMutableRawPointer(mutating: baseAddress)
+                    unsafe self?.gestureRecognizer.processTouches(
+                        buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
+                }
             } else {
                 // Zero touches — still notify so gesture recognizer can end via stableFrameCount
                 unsafe self?.gestureRecognizer.processTouches(
