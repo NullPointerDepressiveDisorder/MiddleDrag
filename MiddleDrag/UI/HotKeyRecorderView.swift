@@ -37,7 +37,7 @@ final class HotKeyRecorderView: NSButton {
         fatalError("init(coder:) not implemented")
     }
 
-    deinit {
+    func invalidate() {
         // Safety net: ensure the local monitor is removed even if stopRecording
         // was never called (e.g. alert dismissed without resignFirstResponder)
         if let monitor = localMonitor {

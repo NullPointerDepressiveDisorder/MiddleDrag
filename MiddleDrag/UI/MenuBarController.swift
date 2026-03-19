@@ -18,7 +18,7 @@ public class MenuBarController: NSObject {
     }
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
-    private var isMenuBarVisible = true
+    private(set) var isMenuBarVisible = true
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {

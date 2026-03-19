@@ -57,7 +57,7 @@ final class GestureRecognizerTests: XCTestCase {
         let count = touches.count
         guard count > 0 else {
             // Non-null placeholder; processTouches won't dereference when count == 0.
-            return (UnsafeMutableRawPointer(bitPattern: 1)!, 0, {})
+            return unsafe (UnsafeMutableRawPointer(bitPattern: 1)!, 0, {})
         }
 
         let pointer = UnsafeMutablePointer<MTTouch>.allocate(capacity: count)

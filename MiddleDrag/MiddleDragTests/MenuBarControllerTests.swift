@@ -610,4 +610,76 @@ import XCTest
         let selector = #selector(MenuBarController.forceReleaseStuckDrag)
         unsafe XCTAssertTrue(controller.responds(to: selector))
     }
+
+    // MARK: - Menu Bar Visibility Tests
+
+    func testMenuBarVisibleByDefault() {
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
+
+    func testHideMenuBarIcon() {
+        unsafe controller.hideMenuBarIcon()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+    }
+
+    func testToggleMenuBarVisibilityHides() {
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+    }
+
+    func testToggleMenuBarVisibilityRestores() {
+        unsafe controller.hideMenuBarIcon()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
+
+    func testToggleMenuBarVisibilityRoundTrip() {
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
+
+    func testHideMenuBarIconMultipleTimes() {
+        // Hiding when already hidden should be safe
+        unsafe controller.hideMenuBarIcon()
+        unsafe controller.hideMenuBarIcon()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+    }
+
+    func testHideMenuBarIconSelectorExists() {
+        let selector = #selector(MenuBarController.hideMenuBarIcon)
+        unsafe XCTAssertTrue(controller.responds(to: selector))
+    }
+
+    func testToggleMenuBarVisibilityDoesNotCrash() {
+        // Rapid toggling should be safe
+        for _ in 0..<10 {
+            unsafe XCTAssertNoThrow(controller.toggleMenuBarVisibility())
+        }
+    }
+
+    func testHideMenuBarIconThenBuildMenu() {
+        unsafe controller.hideMenuBarIcon()
+        // Building the menu while hidden should not crash
+        unsafe XCTAssertNoThrow(controller.buildMenu())
+    }
+
+    func testToggleMenuBarVisibilityWhileManagerRunning() {
+        unsafe manager.start()
+
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+
+        unsafe controller.toggleMenuBarVisibility()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+
+        unsafe manager.stop()
+    }
 }

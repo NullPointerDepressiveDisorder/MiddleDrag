@@ -675,7 +675,7 @@ final class MultitouchManagerTests: XCTestCase {
     }
 
     func testAttemptDeviceConnectionDeviceMonitorFailureResumesPolling() {
-        var deviceStartShouldSucceed = false
+        let deviceStartShouldSucceed = false
         let manager = MultitouchManager(
             deviceProviderFactory: {
                 let monitor = unsafe MockDeviceMonitor()

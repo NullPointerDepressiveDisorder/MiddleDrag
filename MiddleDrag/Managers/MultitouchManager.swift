@@ -870,9 +870,9 @@ extension MultitouchManager: DeviceMonitorDelegate {
 
         gestureQueue.async { [weak self] in
             if let data = touchData {
-                data.withUnsafeBytes { rawBuffer in
+                unsafe data.withUnsafeBytes { rawBuffer in
                     guard let baseAddress = rawBuffer.baseAddress else { return }
-                    let buffer = UnsafeMutableRawPointer(mutating: baseAddress)
+                    let buffer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
                     unsafe self?.gestureRecognizer.processTouches(
                         buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
                 }
