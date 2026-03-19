@@ -167,6 +167,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        menuBarController?.toggleMenuBarVisibility()
+        return false
+    }
+
     // MARK: - Setup
 
     private func setupNotifications() {

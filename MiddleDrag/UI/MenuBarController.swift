@@ -131,7 +131,7 @@ public class MenuBarController: NSObject {
 
         // Actions
         menu.addItem(createMenuItem(title: "Quick Setup", action: #selector(showQuickSetup)))
-        menu.addItem(createMenuItem(title: "Hide Menu Bar Icon (⌘⇧M to restore)", action: #selector(hideMenuBarIcon)))
+        menu.addItem(createMenuItem(title: "Hide Menu Bar Icon (⌘⇧M or Spotlight to restore)", action: #selector(hideMenuBarIcon)))
         menu.addItem(createMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
 
         statusItem.menu = menu
