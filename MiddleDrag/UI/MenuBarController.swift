@@ -608,6 +608,12 @@ public class MenuBarController: NSObject {
         NSApp.activate(ignoringOtherApps: true)
 
         let response = alert.runModal()
+
+        // Ensure the recorder's local keyboard monitor is cleaned up regardless
+        // of how the alert was dismissed (clicking OK/Cancel without pressing a key
+        // does not trigger resignFirstResponder on the accessory view)
+        recorder.cancelRecording()
+
         if response == .alertFirstButtonReturn {
             onAccept(recorder.binding)
         }

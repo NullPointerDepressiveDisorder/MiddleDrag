@@ -37,6 +37,14 @@ final class HotKeyRecorderView: NSButton {
         fatalError("init(coder:) not implemented")
     }
 
+    deinit {
+        // Safety net: ensure the local monitor is removed even if stopRecording
+        // was never called (e.g. alert dismissed without resignFirstResponder)
+        if let monitor = localMonitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+
     private func updateLabel() {
         title = isRecording ? "Press a key…" : binding.displayString
     }
@@ -50,6 +58,12 @@ final class HotKeyRecorderView: NSButton {
             self?.handleKeyDown(event)
             return nil // swallow the event
         }
+    }
+
+    /// Cancel any in-progress recording and remove the keyboard monitor.
+    /// Call this when the hosting UI is being dismissed to prevent leaked monitors.
+    func cancelRecording() {
+        if isRecording { stopRecording() }
     }
 
     private func stopRecording() {
