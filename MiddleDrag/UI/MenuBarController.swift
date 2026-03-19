@@ -330,6 +330,25 @@ public class MenuBarController: NSObject {
         )
         forceReleaseItem.target = self
         submenu.addItem(forceReleaseItem)
+        
+        submenu.addItem(NSMenuItem.separator())
+
+        // Hotkey rebinding
+        let hotkeyItem = NSMenuItem(
+            title: "Change Toggle Hotkey (\(preferences.toggleHotKey.displayString))…",
+            action: #selector(rebindToggleHotKey),
+            keyEquivalent: ""
+        )
+        hotkeyItem.target = self
+        submenu.addItem(hotkeyItem)
+
+        let menuBarHotkeyItem = NSMenuItem(
+            title: "Change Menu Bar Hotkey (\(preferences.menuBarHotKey.displayString))…",
+            action: #selector(rebindMenuBarHotKey),
+            keyEquivalent: ""
+        )
+        menuBarHotkeyItem.target = self
+        submenu.addItem(menuBarHotkeyItem)
 
         submenu.addItem(NSMenuItem.separator())
 
@@ -545,6 +564,52 @@ public class MenuBarController: NSObject {
             } else {
                 AlertHelper.showGestureConfigurationFailure()
             }
+        }
+    }
+    
+    @objc func rebindToggleHotKey() {
+        showHotKeyRecorderPanel(
+            title: "Toggle MiddleDrag Hotkey",
+            current: preferences.toggleHotKey
+        ) { [weak self] newBinding in
+            self?.preferences.toggleHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self?.preferences)
+            self?.buildMenu()
+        }
+    }
+
+    @objc func rebindMenuBarHotKey() {
+        showHotKeyRecorderPanel(
+            title: "Menu Bar Visibility Hotkey",
+            current: preferences.menuBarHotKey
+        ) { [weak self] newBinding in
+            self?.preferences.menuBarHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self?.preferences)
+            self?.buildMenu()
+        }
+    }
+
+    private func showHotKeyRecorderPanel(
+        title: String,
+        current: HotKeyBinding,
+        onAccept: @escaping (HotKeyBinding) -> Void
+    ) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = "Press a new key combination (with at least one modifier). Press Escape to cancel."
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+
+        let recorder = HotKeyRecorderView(binding: current)
+        recorder.frame = NSRect(x: 0, y: 0, width: 200, height: 24)
+        alert.accessoryView = recorder
+
+        // Bring app to front so the alert can receive key events
+        NSApp.activate(ignoringOtherApps: true)
+
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            onAccept(recorder.binding)
         }
     }
 

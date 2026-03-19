@@ -1,4 +1,5 @@
 import Foundation
+import Carbon
 
 /// Manages user preferences persistence
 /// Thread-safe: UserDefaults is internally synchronized
@@ -37,6 +38,11 @@ public final class PreferencesManager: @unchecked Sendable {
         static let allowReliftDuringDrag = "allowReliftDuringDrag"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
+        // Hotkey binding keys
+        static let toggleHotKeyCode = "toggleHotKeyCode"
+        static let toggleHotKeyModifiers = "toggleHotKeyModifiers"
+        static let menuBarHotKeyCode = "menuBarHotKeyCode"
+        static let menuBarHotKeyModifiers = "menuBarHotKeyModifiers"
     }
 
     /// Production initializer using UserDefaults.standard
@@ -81,6 +87,12 @@ public final class PreferencesManager: @unchecked Sendable {
             Keys.allowReliftDuringDrag: false,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
+            // Hotkey defaults
+            Keys.toggleHotKeyCode: UInt32(kVK_ANSI_E),
+            Keys.toggleHotKeyModifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            Keys.menuBarHotKeyCode: UInt32(kVK_ANSI_M),
+            Keys.menuBarHotKeyModifiers: UInt32(cmdKey) | UInt32(shiftKey),
+            
         ])
     }
 
@@ -115,6 +127,14 @@ public final class PreferencesManager: @unchecked Sendable {
         prefs.passThroughTitleBar = userDefaults.bool(forKey: Keys.passThroughTitleBar)
         prefs.titleBarHeight = userDefaults.double(forKey: Keys.titleBarHeight)
         prefs.allowReliftDuringDrag = userDefaults.bool(forKey: Keys.allowReliftDuringDrag)
+        prefs.toggleHotKey = HotKeyBinding(
+            keyCode: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyCode)),
+            carbonModifiers: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyModifiers))
+        )
+        prefs.menuBarHotKey = HotKeyBinding(
+            keyCode: UInt32(userDefaults.integer(forKey: Keys.menuBarHotKeyCode)),
+            carbonModifiers: UInt32(userDefaults.integer(forKey: Keys.menuBarHotKeyModifiers))
+        )
 
         return prefs
     }
@@ -148,6 +168,11 @@ public final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.titleBarHeight, forKey: Keys.titleBarHeight)
         // Relift during drag
         userDefaults.set(preferences.allowReliftDuringDrag, forKey: Keys.allowReliftDuringDrag)
+        // Hotkey bindings
+        userDefaults.set(Int(preferences.toggleHotKey.keyCode), forKey: Keys.toggleHotKeyCode)
+        userDefaults.set(Int(preferences.toggleHotKey.carbonModifiers), forKey: Keys.toggleHotKeyModifiers)
+        userDefaults.set(Int(preferences.menuBarHotKey.keyCode), forKey: Keys.menuBarHotKeyCode)
+        userDefaults.set(Int(preferences.menuBarHotKey.carbonModifiers), forKey: Keys.menuBarHotKeyModifiers)
     }
 
     // MARK: - Gesture Configuration Prompt Tracking

@@ -110,7 +110,7 @@ public final class GlobalHotKeyManager {
     }
 
     /// Unregister a previously registered hotkey by ID
-    func unregister(id: UInt32) {
+    public func unregister(id: UInt32) {
         if let ref = unsafe hotKeyRefs[id] {
             if let ref = unsafe ref { unsafe UnregisterEventHotKey(ref) }
             unsafe hotKeyRefs[id] = nil
