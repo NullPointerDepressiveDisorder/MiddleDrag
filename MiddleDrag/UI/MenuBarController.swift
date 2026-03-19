@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon.HIToolbox
 
 /// Manages the menu bar UI and user interactions
 @MainActor
@@ -17,6 +18,7 @@ public class MenuBarController: NSObject {
     }
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
+    private var isMenuBarVisible = true
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {
@@ -129,6 +131,7 @@ public class MenuBarController: NSObject {
 
         // Actions
         menu.addItem(createMenuItem(title: "Quick Setup", action: #selector(showQuickSetup)))
+        menu.addItem(createMenuItem(title: "Hide Menu Bar Icon (⌘⇧M to restore)", action: #selector(hideMenuBarIcon)))
         menu.addItem(createMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
 
         statusItem.menu = menu
@@ -470,7 +473,7 @@ public class MenuBarController: NSObject {
         buildMenu()
     }
 
-    @objc func toggleEnabled() {
+    @objc public func toggleEnabled() {
         multitouchManager?.toggleEnabled()
         let isEnabled = multitouchManager?.isEnabled ?? false
 
@@ -757,6 +760,34 @@ public class MenuBarController: NSObject {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Menu Bar Visibility
+
+    @objc func hideMenuBarIcon() {
+        setMenuBarVisible(false)
+    }
+
+    /// Toggle menu bar icon visibility. Called from the global hotkey (⌘⇧M).
+    public func toggleMenuBarVisibility() {
+        setMenuBarVisible(!isMenuBarVisible)
+    }
+
+    private func setMenuBarVisible(_ visible: Bool) {
+        isMenuBarVisible = visible
+        statusItem.isVisible = visible
+
+        if visible {
+            // Rebuild menu and update icon to reflect current state
+            let isEnabled = multitouchManager?.isEnabled ?? false
+            updateStatusIcon(enabled: isEnabled)
+            buildMenu()
+
+            // Pop the menu open so the user knows it's back
+            if let button = statusItem.button {
+                button.performClick(nil)
+            }
+        }
     }
 }
 

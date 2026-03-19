@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon.HIToolbox
 import MiddleDragCore
 
 /// Main application delegate
@@ -110,6 +111,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             preferences: preferences
         )
         Log.info("Menu bar controller initialized", category: .app)
+
+        // Register global hotkey ⌘⇧E to toggle MiddleDrag
+        GlobalHotKeyManager.shared.register(
+            keyCode: UInt32(kVK_ANSI_E),
+            modifiers: GlobalHotKeyManager.carbonModifiers(from: [.command, .shift])
+        ) { [weak self] in
+            self?.menuBarController?.toggleEnabled()
+        }
+
+        // Register global hotkey ⌘⇧M to toggle menu bar icon visibility
+        GlobalHotKeyManager.shared.register(
+            keyCode: UInt32(kVK_ANSI_M),
+            modifiers: GlobalHotKeyManager.carbonModifiers(from: [.command, .shift])
+        ) { [weak self] in
+            self?.menuBarController?.toggleMenuBarVisibility()
+        }
 
         // Set up notification observers
         setupNotifications()

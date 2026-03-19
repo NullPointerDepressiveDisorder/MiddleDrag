@@ -72,6 +72,7 @@
 				UI/AlertHelper.swift,
 				UI/MenuBarController.swift,
 				Utilities/AnalyticsManager.swift,
+				Utilities/GlobalHotKeyManager.swift,
 				Utilities/LaunchAtLoginManager.swift,
 				Utilities/PreferencesManager.swift,
 				Utilities/ScreenHelper.swift,
@@ -109,7 +110,6 @@
 			membershipExceptions = (
 				Debug.xcconfig,
 				Release.xcconfig,
-				Secrets.xcconfig,
 			);
 			target = 1A0000011 /* MiddleDrag */;
 		};
@@ -147,6 +147,7 @@
 				UI/AlertHelper.swift,
 				UI/MenuBarController.swift,
 				Utilities/AnalyticsManager.swift,
+				Utilities/GlobalHotKeyManager.swift,
 				Utilities/LaunchAtLoginManager.swift,
 				Utilities/PreferencesManager.swift,
 				Utilities/ScreenHelper.swift,
