@@ -839,6 +839,12 @@ public class MenuBarController: NSObject {
         setMenuBarVisible(false)
     }
 
+    /// Show the menu bar icon (no-op if already visible). Called from Spotlight reopen.
+    public func showMenuBarIcon() {
+        guard !isMenuBarVisible else { return }
+        setMenuBarVisible(true)
+    }
+
     /// Toggle menu bar icon visibility. Called from the global hotkey (⌘⇧M).
     public func toggleMenuBarVisibility() {
         setMenuBarVisible(!isMenuBarVisible)

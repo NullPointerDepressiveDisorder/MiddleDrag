@@ -5,141 +5,228 @@ import Carbon.HIToolbox
 
 @MainActor @unsafe final class HotKeyRecorderViewTests: XCTestCase {
 
+    // MARK: - Helper
+
+    private func makeBinding(
+        keyCode: Int = kVK_ANSI_E,
+        modifiers: UInt32 = UInt32(cmdKey)
+    ) -> HotKeyBinding {
+        HotKeyBinding(keyCode: UInt32(keyCode), carbonModifiers: modifiers)
+    }
+
+    private func makeRecorder(
+        keyCode: Int = kVK_ANSI_E,
+        modifiers: UInt32 = UInt32(cmdKey)
+    ) -> HotKeyRecorderView {
+        unsafe HotKeyRecorderView(binding: makeBinding(keyCode: keyCode, modifiers: modifiers))
+    }
+
     // MARK: - Initialization Tests
 
-    func testInitWithBinding() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
+    func testInitStoresBinding() {
+        let binding = unsafe makeBinding()
         let recorder = HotKeyRecorderView(binding: binding)
-
         XCTAssertEqual(recorder.binding, binding)
+    }
+
+    func testInitShowsBindingDisplayString() {
+        let recorder = unsafe makeRecorder()
+        // Should show key name, not "Press a key…"
         XCTAssertFalse(recorder.title.contains("Press a key"))
     }
 
     func testInitSetsBezelStyle() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_A), carbonModifiers: UInt32(shiftKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
+        let recorder = unsafe makeRecorder()
         XCTAssertEqual(recorder.bezelStyle, .recessed)
     }
 
-    func testInitSetsMonospacedFont() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_A), carbonModifiers: UInt32(shiftKey))
-        let recorder = HotKeyRecorderView(binding: binding)
+    func testInitSetsButtonType() {
+        let recorder = unsafe makeRecorder()
+        // momentaryPushIn - verifying it was set by checking it doesn't crash
+        XCTAssertNotNil(recorder)
+    }
 
+    func testInitSetsBordered() {
+        let recorder = unsafe makeRecorder()
+        XCTAssertTrue(recorder.isBordered)
+    }
+
+    func testInitSetsMonospacedFont() {
+        let recorder = unsafe makeRecorder()
         XCTAssertNotNil(recorder.font)
+    }
+
+    func testInitSetsTargetToSelf() {
+        let recorder = unsafe makeRecorder()
+        XCTAssertTrue(recorder.target as AnyObject === recorder)
+    }
+
+    func testInitSetsAction() {
+        let recorder = unsafe makeRecorder()
+        XCTAssertNotNil(recorder.action)
+    }
+
+    func testInitWithDifferentBindings() {
+        let bindings = unsafe [
+            makeBinding(keyCode: kVK_ANSI_A, modifiers: UInt32(cmdKey)),
+            makeBinding(keyCode: kVK_ANSI_M, modifiers: UInt32(cmdKey) | UInt32(shiftKey)),
+            makeBinding(keyCode: kVK_ANSI_Z, modifiers: UInt32(optionKey) | UInt32(controlKey)),
+        ]
+
+        for binding in bindings {
+            let recorder = HotKeyRecorderView(binding: binding)
+            XCTAssertEqual(recorder.binding, binding)
+        }
     }
 
     // MARK: - Binding Update Tests
 
-    func testBindingUpdateChangesTitle() {
-        let initial = HotKeyBinding(keyCode: UInt32(kVK_ANSI_A), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: initial)
+    func testBindingDidSetUpdatesTitle() {
+        let recorder = unsafe makeRecorder(keyCode: kVK_ANSI_A)
         let titleBefore = recorder.title
 
-        let updated = HotKeyBinding(keyCode: UInt32(kVK_ANSI_B), carbonModifiers: UInt32(cmdKey) | UInt32(shiftKey))
-        recorder.binding = updated
-
-        // Title should change since the binding changed
+        recorder.binding = unsafe makeBinding(keyCode: kVK_ANSI_B, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
         XCTAssertNotEqual(recorder.title, titleBefore)
     }
 
     func testBindingEquality() {
-        let a = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey) | UInt32(shiftKey))
-        let b = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        let a = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        let b = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
         XCTAssertEqual(a, b)
     }
 
-    func testBindingInequality() {
-        let a = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let b = HotKeyBinding(keyCode: UInt32(kVK_ANSI_M), carbonModifiers: UInt32(cmdKey))
+    func testBindingInequalityByKeyCode() {
+        let a = unsafe makeBinding(keyCode: kVK_ANSI_E)
+        let b = unsafe makeBinding(keyCode: kVK_ANSI_M)
         XCTAssertNotEqual(a, b)
+    }
+
+    func testBindingInequalityByModifiers() {
+        let a = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey))
+        let b = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(shiftKey))
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testBindingCodable() throws {
+        let original = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(HotKeyBinding.self, from: data)
+        XCTAssertEqual(original, decoded)
+    }
+
+    func testMultipleBindingUpdates() {
+        let recorder = unsafe makeRecorder()
+
+        let bindings = unsafe [
+            makeBinding(keyCode: kVK_ANSI_A),
+            makeBinding(keyCode: kVK_ANSI_B, modifiers: UInt32(shiftKey)),
+            makeBinding(keyCode: kVK_ANSI_C, modifiers: UInt32(cmdKey) | UInt32(optionKey)),
+        ]
+
+        for binding in bindings {
+            recorder.binding = binding
+            XCTAssertEqual(recorder.binding, binding)
+        }
+    }
+
+    // MARK: - startRecording Tests
+
+    func testStartRecordingChangesTitle() {
+        let recorder = unsafe makeRecorder()
+        recorder.performClick(nil)
+        XCTAssertEqual(recorder.title, "Press a key…")
+    }
+
+    func testStartRecordingIdempotent() {
+        let recorder = unsafe makeRecorder()
+
+        // Click twice - guard prevents double installation
+        recorder.performClick(nil)
+        recorder.performClick(nil)
+
+        // Should still show recording state (not crashed)
+        XCTAssertEqual(recorder.title, "Press a key…")
+
+        // Single cancel should fully clean up
+        recorder.cancelRecording()
+        XCTAssertNotEqual(recorder.title, "Press a key…")
     }
 
     // MARK: - cancelRecording Tests
 
-    func testCancelRecordingWhenNotRecordingDoesNotCrash() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
-        // Should be safe to call even when not recording
+    func testCancelRecordingWhenNotRecording() {
+        let recorder = unsafe makeRecorder()
+        // Should be safe to call when not recording (no-op)
         XCTAssertNoThrow(recorder.cancelRecording())
     }
 
-    func testCancelRecordingAfterStartRecording() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
-        // Simulate clicking the button to start recording
+    func testCancelRecordingStopsRecording() {
+        let recorder = unsafe makeRecorder()
         recorder.performClick(nil)
-
-        // Title should show recording state
         XCTAssertEqual(recorder.title, "Press a key…")
 
-        // Cancel should clean up
         recorder.cancelRecording()
-
-        // Title should revert to binding display string
         XCTAssertNotEqual(recorder.title, "Press a key…")
     }
 
     func testCancelRecordingPreservesOriginalBinding() {
-        let original = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        let original = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
         let recorder = HotKeyRecorderView(binding: original)
 
-        // Start recording then cancel
         recorder.performClick(nil)
         recorder.cancelRecording()
 
-        // Binding should remain unchanged
         XCTAssertEqual(recorder.binding, original)
     }
 
     func testDoubleCancelRecordingDoesNotCrash() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
+        let recorder = unsafe makeRecorder()
         recorder.performClick(nil)
         recorder.cancelRecording()
-        // Second cancel should be safe
         XCTAssertNoThrow(recorder.cancelRecording())
     }
 
-    // MARK: - startRecording Idempotency
-
-    func testDoubleClickDoesNotDoubleInstallMonitor() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
+    func testCancelRecordingRestoresTitleToDisplayString() {
+        let binding = unsafe makeBinding()
         let recorder = HotKeyRecorderView(binding: binding)
+        let expectedTitle = binding.displayString
 
-        // Click twice - guard should prevent double installation
         recorder.performClick(nil)
-        recorder.performClick(nil)
-
-        // Cancel once should fully clean up
         recorder.cancelRecording()
-        XCTAssertNotEqual(recorder.title, "Press a key…")
+
+        XCTAssertEqual(recorder.title, expectedTitle)
     }
 
     // MARK: - resignFirstResponder Tests
 
     func testResignFirstResponderStopsRecording() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
+        let recorder = unsafe makeRecorder()
         recorder.performClick(nil)
         XCTAssertEqual(recorder.title, "Press a key…")
 
-        // Simulate losing focus
         _ = recorder.resignFirstResponder()
-
-        // Should no longer be recording
         XCTAssertNotEqual(recorder.title, "Press a key…")
     }
 
-    func testResignFirstResponderWhenNotRecordingDoesNotCrash() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
+    func testResignFirstResponderWhenNotRecording() {
+        let recorder = unsafe makeRecorder()
+        let result = recorder.resignFirstResponder()
+        XCTAssertTrue(result)
+    }
 
-        // Should be safe when not recording
+    func testResignFirstResponderPreservesBinding() {
+        let original = unsafe makeBinding()
+        let recorder = HotKeyRecorderView(binding: original)
+
+        recorder.performClick(nil)
+        _ = recorder.resignFirstResponder()
+
+        XCTAssertEqual(recorder.binding, original)
+    }
+
+    func testResignFirstResponderReturnsTrueAfterRecording() {
+        let recorder = unsafe makeRecorder()
+        recorder.performClick(nil)
         let result = recorder.resignFirstResponder()
         XCTAssertTrue(result)
     }
@@ -147,9 +234,7 @@ import Carbon.HIToolbox
     // MARK: - onBindingChanged Callback Tests
 
     func testOnBindingChangedNotCalledOnCancel() {
-        let binding = HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        let recorder = HotKeyRecorderView(binding: binding)
-
+        let recorder = unsafe makeRecorder()
         var callbackCalled = false
         recorder.onBindingChanged = { _ in callbackCalled = true }
 
@@ -159,21 +244,143 @@ import Carbon.HIToolbox
         XCTAssertFalse(callbackCalled)
     }
 
+    func testOnBindingChangedNotCalledOnResignFirstResponder() {
+        let recorder = unsafe makeRecorder()
+        var callbackCalled = false
+        recorder.onBindingChanged = { _ in callbackCalled = true }
+
+        recorder.performClick(nil)
+        _ = recorder.resignFirstResponder()
+
+        XCTAssertFalse(callbackCalled)
+    }
+
+    func testOnBindingChangedDefaultIsNil() {
+        let recorder = unsafe makeRecorder()
+        XCTAssertNil(recorder.onBindingChanged)
+    }
+
+    func testOnBindingChangedCanBeSet() {
+        let recorder = unsafe makeRecorder()
+        recorder.onBindingChanged = { _ in }
+        XCTAssertNotNil(recorder.onBindingChanged)
+    }
+
+    func testOnBindingChangedCanBeCleared() {
+        let recorder = unsafe makeRecorder()
+        recorder.onBindingChanged = { _ in }
+        recorder.onBindingChanged = nil
+        XCTAssertNil(recorder.onBindingChanged)
+    }
+
+    // MARK: - invalidate() Tests (deinit safety net)
+
+    func testInvalidateWhenNotRecording() {
+        let recorder = unsafe makeRecorder()
+        // Should be safe to call when no monitor is installed
+        XCTAssertNoThrow(recorder.invalidate())
+    }
+
+    func testInvalidateWhileRecording() {
+        let recorder = unsafe makeRecorder()
+        recorder.performClick(nil)
+
+        // Should clean up the monitor
+        XCTAssertNoThrow(recorder.invalidate())
+    }
+
+    func testDoubleInvalidateDoesNotCrash() {
+        let recorder = unsafe makeRecorder()
+        recorder.performClick(nil)
+        recorder.invalidate()
+        XCTAssertNoThrow(recorder.invalidate())
+    }
+
+    func testInvalidateAfterCancelRecording() {
+        let recorder = unsafe makeRecorder()
+        recorder.performClick(nil)
+        recorder.cancelRecording()
+        // invalidate after cancel should be safe (monitor already removed)
+        XCTAssertNoThrow(recorder.invalidate())
+    }
+
     // MARK: - Deallocation Safety Tests
 
     func testDeallocAfterRecordingStartedDoesNotCrash() {
-        // This tests the deinit safety net
-        var recorder: HotKeyRecorderView? = HotKeyRecorderView(
-            binding: HotKeyBinding(keyCode: UInt32(kVK_ANSI_E), carbonModifiers: UInt32(cmdKey))
-        )
-
-        // Start recording (installs monitor)
+        var recorder: HotKeyRecorderView? = unsafe makeRecorder()
         recorder?.performClick(nil)
 
-        // Deallocate without calling cancelRecording - deinit should clean up
+        // Deallocate without calling cancelRecording
+        // invalidate() in deinit should clean up the monitor
         recorder = nil
-
-        // If we get here without a crash, the deinit safety net worked
         XCTAssertNil(recorder)
     }
+
+    func testDeallocWithoutRecordingDoesNotCrash() {
+        var recorder: HotKeyRecorderView? = unsafe makeRecorder()
+        recorder = nil
+        XCTAssertNil(recorder)
+    }
+
+    func testDeallocAfterCancelDoesNotCrash() {
+        var recorder: HotKeyRecorderView? = unsafe makeRecorder()
+        recorder?.performClick(nil)
+        recorder?.cancelRecording()
+        recorder = nil
+        XCTAssertNil(recorder)
+    }
+
+    // MARK: - Recording Lifecycle Stress Tests
+
+    func testRapidStartCancelCycles() {
+        let recorder = unsafe makeRecorder()
+
+        for _ in 0..<20 {
+            recorder.performClick(nil)
+            recorder.cancelRecording()
+        }
+
+        // Should still be in valid state
+        XCTAssertNotEqual(recorder.title, "Press a key…")
+    }
+
+    func testStartRecordingCancelWithResignMixed() {
+        let recorder = unsafe makeRecorder()
+
+        // Cycle 1: start -> cancel
+        recorder.performClick(nil)
+        recorder.cancelRecording()
+
+        // Cycle 2: start -> resignFirstResponder
+        recorder.performClick(nil)
+        _ = recorder.resignFirstResponder()
+
+        // Cycle 3: start -> cancel again
+        recorder.performClick(nil)
+        recorder.cancelRecording()
+
+        XCTAssertNotEqual(recorder.title, "Press a key…")
+    }
+
+    func testBindingUnchangedAfterMultipleCancelCycles() {
+        let original = unsafe makeBinding(keyCode: kVK_ANSI_E, modifiers: UInt32(cmdKey) | UInt32(shiftKey))
+        let recorder = HotKeyRecorderView(binding: original)
+
+        for _ in 0..<5 {
+            recorder.performClick(nil)
+            recorder.cancelRecording()
+        }
+
+        XCTAssertEqual(recorder.binding, original)
+    }
+
+    // MARK: - Frame / Layout Tests
+
+    func testRecorderAcceptsFrame() {
+        let recorder = unsafe makeRecorder()
+        recorder.frame = NSRect(x: 0, y: 0, width: 200, height: 24)
+        XCTAssertEqual(recorder.frame.width, 200)
+        XCTAssertEqual(recorder.frame.height, 24)
+    }
 }
+

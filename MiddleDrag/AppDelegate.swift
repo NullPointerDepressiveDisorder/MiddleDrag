@@ -168,7 +168,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
-        menuBarController?.toggleMenuBarVisibility()
+        menuBarController?.showMenuBarIcon()
         return false
     }
 

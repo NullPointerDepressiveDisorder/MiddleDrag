@@ -682,4 +682,32 @@ import XCTest
 
         unsafe manager.stop()
     }
+
+    // MARK: - showMenuBarIcon Tests
+
+    func testShowMenuBarIconWhenHidden() {
+        unsafe controller.hideMenuBarIcon()
+        unsafe XCTAssertFalse(controller.isMenuBarVisible)
+
+        unsafe controller.showMenuBarIcon()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
+
+    func testShowMenuBarIconWhenAlreadyVisibleIsNoOp() {
+        // Already visible by default
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+
+        // Should not crash or change state
+        unsafe controller.showMenuBarIcon()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
+
+    func testShowMenuBarIconDoesNotHide() {
+        // This is the key behavioral test: show can only restore, never hide
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+        unsafe controller.showMenuBarIcon()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+        unsafe controller.showMenuBarIcon()
+        unsafe XCTAssertTrue(controller.isMenuBarVisible)
+    }
 }

@@ -42,6 +42,7 @@ final class HotKeyRecorderView: NSButton {
         // was never called (e.g. alert dismissed without resignFirstResponder)
         if let monitor = localMonitor {
             NSEvent.removeMonitor(monitor)
+            localMonitor = nil
         }
     }
 
