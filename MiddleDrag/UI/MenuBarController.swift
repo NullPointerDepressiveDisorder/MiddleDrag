@@ -861,7 +861,9 @@ public class MenuBarController: NSObject {
             buildMenu()
 
             // Pop the menu open so the user knows it's back
-            if let button = statusItem.button {
+            // Skip during tests — performClick opens a modal menu loop that stalls CI
+            let isRunningTests = NSClassFromString("XCTestCase") != nil
+            if !isRunningTests, let button = statusItem.button {
                 button.performClick(nil)
             }
         }
