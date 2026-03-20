@@ -1144,7 +1144,7 @@ final class MouseEventGeneratorTests: XCTestCase {
         
         // The new start position should NOT be posAfterFirstDrag (550, 550)
         // It should be re-seeded from the current cursor position
-        let distFromOldPos = abs(newStart.x - posAfterFirstDrag.x) + abs(newStart.y - posAfterFirstDrag.y)
+        _ = abs(newStart.x - posAfterFirstDrag.x) + abs(newStart.y - posAfterFirstDrag.y)
         // If the position was carried over it would be (550, 550) — check it's different
         // (unless the cursor happens to be exactly there, which is astronomically unlikely)
         
@@ -1169,7 +1169,7 @@ final class MouseEventGeneratorTests: XCTestCase {
         let bounds = MouseEventGenerator.globalDisplayBounds
         // Start near the right edge
         generator.startDrag(at: CGPoint(x: 100, y: 100))
-        let startPos = generator.lastDragPosition
+        _ = generator.lastDragPosition
         
         // Try to drag far beyond the right edge
         let hugeOvershoot: CGFloat = 50000

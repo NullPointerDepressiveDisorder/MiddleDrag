@@ -46,15 +46,15 @@ final class AlertHelperTests: XCTestCase {
         AlertHelper.presenter = mockPresenter
 
         // Save and replace SystemGestureHelper settings provider
-        originalSettingsProvider = SystemGestureHelper.settingsProvider
+        originalSettingsProvider = unsafe SystemGestureHelper.settingsProvider
         mockSettingsProvider = MockTrackpadSettingsProvider()
-        SystemGestureHelper.settingsProvider = mockSettingsProvider
+        unsafe SystemGestureHelper.settingsProvider = mockSettingsProvider
     }
 
     override func tearDown() {
         // Restore originals
         AlertHelper.presenter = originalPresenter
-        SystemGestureHelper.settingsProvider = originalSettingsProvider
+        unsafe SystemGestureHelper.settingsProvider = originalSettingsProvider
         mockPresenter = nil
         mockSettingsProvider = nil
         super.tearDown()

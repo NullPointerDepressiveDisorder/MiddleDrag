@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon.HIToolbox
 import MiddleDragCore
 
 /// Main application delegate
@@ -18,6 +19,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferences: UserPreferences!
 
     private var accessibilityMonitor: AccessibilityMonitor?
+    
+    private var toggleHotKeyID: UInt32 = 0
+    private var menuBarHotKeyID: UInt32 = 0
 
     // MARK: - Application Lifecycle
 
@@ -111,6 +115,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
         Log.info("Menu bar controller initialized", category: .app)
 
+        // Register global hotkeys
+        registerHotKeys()
+
         // Set up notification observers
         setupNotifications()
 
@@ -160,6 +167,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        menuBarController?.showMenuBarIcon()
+        return false
+    }
+
     // MARK: - Setup
 
     private func setupNotifications() {
@@ -177,6 +189,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
     }
+    
+    /// Register (or re-register) global hotkeys from current preferences
+    private func registerHotKeys() {
+        // Unregister existing
+        if toggleHotKeyID != 0 {
+            GlobalHotKeyManager.shared.unregister(id: toggleHotKeyID)
+        }
+        if menuBarHotKeyID != 0 {
+            GlobalHotKeyManager.shared.unregister(id: menuBarHotKeyID)
+        }
+
+        // Register from preferences
+        toggleHotKeyID = GlobalHotKeyManager.shared.register(
+            keyCode: preferences.toggleHotKey.keyCode,
+            modifiers: preferences.toggleHotKey.carbonModifiers
+        ) { [weak self] in
+            self?.menuBarController?.toggleEnabled()
+        }
+
+        menuBarHotKeyID = GlobalHotKeyManager.shared.register(
+            keyCode: preferences.menuBarHotKey.keyCode,
+            modifiers: preferences.menuBarHotKey.carbonModifiers
+        ) { [weak self] in
+            self?.menuBarController?.toggleMenuBarVisibility()
+        }
+    }
 
     // MARK: - Notification Handlers
 
@@ -185,6 +223,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             preferences = newPreferences
             PreferencesManager.shared.savePreferences(preferences)
             multitouchManager.updateConfiguration(preferences.gestureConfig)
+            registerHotKeys()
             Log.info("Preferences updated", category: .app)
         }
     }

@@ -80,7 +80,7 @@ import XCTest
     }
 
     func testStartStopStartDoesNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Should be able to restart the monitor
         unsafe XCTAssertNoThrow(monitor.start())
         unsafe XCTAssertNoThrow(monitor.stop())
@@ -122,7 +122,7 @@ import XCTest
     // MARK: - Multiple Instance Tests
 
     func testMultipleInstancesDoNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Create multiple monitors - only first should own global reference
         let monitor2 = unsafe DeviceMonitor()
         let monitor3 = unsafe DeviceMonitor()
@@ -208,7 +208,7 @@ import XCTest
     }
 
     func testRapidStartStopCyclesDoNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Simulates the race condition scenario where rapid restart cycles
         // could cause the framework's internal thread to access deallocated resources.
         // The fix adds delays to prevent this, so rapid cycles should be safe.
@@ -222,7 +222,7 @@ import XCTest
     }
 
     func testStopSeparatesCallbackUnregistrationFromDeviceStop() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // This test exercises the code path where:
         // 1. Callbacks are unregistered first (MTUnregisterContactFrameCallback)
         // 2. A delay occurs (Thread.sleep)
@@ -241,7 +241,7 @@ import XCTest
     }
 
     func testConcurrentStopDoesNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Test that even if something tries to access the monitor during stop,
         // it doesn't crash. This simulates what happens when the framework's
         // internal thread is still processing while we stop.
@@ -287,7 +287,7 @@ import XCTest
     }
 
     func testRapidRestartCyclesWithDelayDoNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Simulates the exact scenario from the bug report:
         // Rapid restart cycles during connectivity changes causing
         // gDeviceMonitor to become nil while callbacks are still in-flight.
@@ -318,7 +318,7 @@ import XCTest
     }
 
     func testConcurrentStartStopDoesNotCrash() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Test that concurrent start/stop operations on the same instance don't crash.
         // NOTE: Concurrent start/stop on the same instance may leave it in an inconsistent
         // state, but it should NOT crash due to the locking mechanism protecting global state.
@@ -353,7 +353,7 @@ import XCTest
     }
 
     func testMultipleMonitorCreationDuringCleanup() throws {
-        try requireUnsafeMultitouchTestsEnabled()
+        try unsafe requireUnsafeMultitouchTestsEnabled()
         // Test that creating new monitors while the old one is being cleaned up
         // doesn't cause a crash. This tests the gPendingCleanup mechanism.
         unsafe monitor.start()

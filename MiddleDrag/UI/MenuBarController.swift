@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon.HIToolbox
 
 /// Manages the menu bar UI and user interactions
 @MainActor
@@ -17,6 +18,7 @@ public class MenuBarController: NSObject {
     }
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
+    private(set) var isMenuBarVisible = true
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {
@@ -129,6 +131,7 @@ public class MenuBarController: NSObject {
 
         // Actions
         menu.addItem(createMenuItem(title: "Quick Setup", action: #selector(showQuickSetup)))
+        menu.addItem(createMenuItem(title: "Hide Menu Bar Icon (⌘⇧M or Spotlight to restore)", action: #selector(hideMenuBarIcon)))
         menu.addItem(createMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
 
         statusItem.menu = menu
@@ -327,6 +330,25 @@ public class MenuBarController: NSObject {
         )
         forceReleaseItem.target = self
         submenu.addItem(forceReleaseItem)
+        
+        submenu.addItem(NSMenuItem.separator())
+
+        // Hotkey rebinding
+        let hotkeyItem = NSMenuItem(
+            title: "Change Toggle Hotkey (\(preferences.toggleHotKey.displayString))…",
+            action: #selector(rebindToggleHotKey),
+            keyEquivalent: ""
+        )
+        hotkeyItem.target = self
+        submenu.addItem(hotkeyItem)
+
+        let menuBarHotkeyItem = NSMenuItem(
+            title: "Change Menu Bar Hotkey (\(preferences.menuBarHotKey.displayString))…",
+            action: #selector(rebindMenuBarHotKey),
+            keyEquivalent: ""
+        )
+        menuBarHotkeyItem.target = self
+        submenu.addItem(menuBarHotkeyItem)
 
         submenu.addItem(NSMenuItem.separator())
 
@@ -470,7 +492,7 @@ public class MenuBarController: NSObject {
         buildMenu()
     }
 
-    @objc func toggleEnabled() {
+    @objc public func toggleEnabled() {
         multitouchManager?.toggleEnabled()
         let isEnabled = multitouchManager?.isEnabled ?? false
 
@@ -542,6 +564,60 @@ public class MenuBarController: NSObject {
             } else {
                 AlertHelper.showGestureConfigurationFailure()
             }
+        }
+    }
+    
+    @objc func rebindToggleHotKey() {
+        showHotKeyRecorderPanel(
+            title: "Toggle MiddleDrag Hotkey",
+            current: preferences.toggleHotKey
+        ) { [weak self] newBinding in
+            guard let self else { return }
+            self.preferences.toggleHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self.preferences)
+            self.buildMenu()
+        }
+    }
+
+    @objc func rebindMenuBarHotKey() {
+        showHotKeyRecorderPanel(
+            title: "Menu Bar Visibility Hotkey",
+            current: preferences.menuBarHotKey
+        ) { [weak self] newBinding in
+            guard let self else { return }
+            self.preferences.menuBarHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self.preferences)
+            self.buildMenu()
+        }
+    }
+
+    private func showHotKeyRecorderPanel(
+        title: String,
+        current: HotKeyBinding,
+        onAccept: @escaping (HotKeyBinding) -> Void
+    ) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = "Press a new key combination (with at least one modifier). Press Escape to cancel."
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+
+        let recorder = HotKeyRecorderView(binding: current)
+        recorder.frame = NSRect(x: 0, y: 0, width: 200, height: 24)
+        alert.accessoryView = recorder
+
+        // Bring app to front so the alert can receive key events
+        NSApp.activate(ignoringOtherApps: true)
+
+        let response = alert.runModal()
+
+        // Ensure the recorder's local keyboard monitor is cleaned up regardless
+        // of how the alert was dismissed (clicking OK/Cancel without pressing a key
+        // does not trigger resignFirstResponder on the accessory view)
+        recorder.cancelRecording()
+
+        if response == .alertFirstButtonReturn {
+            onAccept(recorder.binding)
         }
     }
 
@@ -757,6 +833,42 @@ public class MenuBarController: NSObject {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    // MARK: - Menu Bar Visibility
+
+    @objc func hideMenuBarIcon() {
+        setMenuBarVisible(false)
+    }
+
+    /// Show the menu bar icon (no-op if already visible). Called from Spotlight reopen.
+    public func showMenuBarIcon() {
+        guard !isMenuBarVisible else { return }
+        setMenuBarVisible(true)
+    }
+
+    /// Toggle menu bar icon visibility. Called from the global hotkey (⌘⇧M).
+    public func toggleMenuBarVisibility() {
+        setMenuBarVisible(!isMenuBarVisible)
+    }
+
+    private func setMenuBarVisible(_ visible: Bool) {
+        isMenuBarVisible = visible
+        statusItem.isVisible = visible
+
+        if visible {
+            // Rebuild menu and update icon to reflect current state
+            let isEnabled = multitouchManager?.isEnabled ?? false
+            updateStatusIcon(enabled: isEnabled)
+            buildMenu()
+
+            // Pop the menu open so the user knows it's back
+            // Skip during tests — performClick opens a modal menu loop that stalls CI
+            let isRunningTests = NSClassFromString("XCTestCase") != nil
+            if !isRunningTests, let button = statusItem.button {
+                button.performClick(nil)
+            }
+        }
     }
 }
 

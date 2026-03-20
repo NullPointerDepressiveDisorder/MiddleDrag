@@ -70,8 +70,10 @@
 				Models/GestureModels.swift,
 				Models/TouchModels.swift,
 				UI/AlertHelper.swift,
+				UI/HotKeyRecorderView.swift,
 				UI/MenuBarController.swift,
 				Utilities/AnalyticsManager.swift,
+				Utilities/GlobalHotKeyManager.swift,
 				Utilities/LaunchAtLoginManager.swift,
 				Utilities/PreferencesManager.swift,
 				Utilities/ScreenHelper.swift,
@@ -90,6 +92,8 @@
 				MiddleDragTests/DeviceMonitorTests.swift,
 				MiddleDragTests/GestureModelsTests.swift,
 				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/GlobalHotKeyManagerTests.swift,
+				MiddleDragTests/HotKeyRecorderViewTests.swift,
 				MiddleDragTests/LaunchAtLoginManagerTests.swift,
 				MiddleDragTests/MenuBarControllerTests.swift,
 				MiddleDragTests/Mocks/MockDeviceMonitor.swift,
@@ -109,7 +113,6 @@
 			membershipExceptions = (
 				Debug.xcconfig,
 				Release.xcconfig,
-				Secrets.xcconfig,
 			);
 			target = 1A0000011 /* MiddleDrag */;
 		};
@@ -131,6 +134,8 @@
 				MiddleDragTests/DeviceMonitorTests.swift,
 				MiddleDragTests/GestureModelsTests.swift,
 				MiddleDragTests/GestureRecognizerTests.swift,
+				MiddleDragTests/GlobalHotKeyManagerTests.swift,
+				MiddleDragTests/HotKeyRecorderViewTests.swift,
 				MiddleDragTests/LaunchAtLoginManagerTests.swift,
 				MiddleDragTests/MenuBarControllerTests.swift,
 				MiddleDragTests/Mocks/MockDeviceMonitor.swift,
@@ -145,8 +150,10 @@
 				Models/GestureModels.swift,
 				Models/TouchModels.swift,
 				UI/AlertHelper.swift,
+				UI/HotKeyRecorderView.swift,
 				UI/MenuBarController.swift,
 				Utilities/AnalyticsManager.swift,
+				Utilities/GlobalHotKeyManager.swift,
 				Utilities/LaunchAtLoginManager.swift,
 				Utilities/PreferencesManager.swift,
 				Utilities/ScreenHelper.swift,
