@@ -6,6 +6,20 @@
     <description>Most recent updates to MiddleDrag</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.3</title>
+      <pubDate>Fri, 20 Mar 2026 02:00:26 +0000</pubDate>
+      <sparkle:version>1.4.3</sparkle:version>
+      <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
+      <description><![CDATA[Release v1.4.3
+---
+**SHA256:** `0996f5f2c53446f4ec689f41493849789bff1abff4ea3864749f46b7fa6ac99e`
+
+
+[![Download MiddleDrag](https://a.fsdn.com/con/app/sf-download-button)](https://sourceforge.net/projects/middledrag.mirror/files/v1.4.3/MiddleDrag-1.4.3.pkg/download)]]></description>
+      <enclosure url="https://github.com/NullPointerDepressiveDisorder/MiddleDrag/releases/download/v1.4.3/MiddleDrag-1.4.3.pkg" sparkle:edSignature="kqMe8numZhttnSdNZJDFqkaFKGJtwutMUQwfQLdraCAXPOeWhJ4OMr6csOwe5eK+q1alAWfKfM9ggcn8un/ZCA==" length="3782618" type="application/octet-stream" />
+      <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+    </item>
+    <item>
       <title>Version 1.4.2.5</title>
       <pubDate>Fri, 06 Mar 2026 03:52:00 +0000</pubDate>
       <sparkle:version>1.4.2.5</sparkle:version>
