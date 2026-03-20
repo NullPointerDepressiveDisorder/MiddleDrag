@@ -572,9 +572,10 @@ public class MenuBarController: NSObject {
             title: "Toggle MiddleDrag Hotkey",
             current: preferences.toggleHotKey
         ) { [weak self] newBinding in
-            self?.preferences.toggleHotKey = newBinding
-            NotificationCenter.default.post(name: .preferencesChanged, object: self?.preferences)
-            self?.buildMenu()
+            guard let self else { return }
+            self.preferences.toggleHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self.preferences)
+            self.buildMenu()
         }
     }
 
@@ -583,9 +584,10 @@ public class MenuBarController: NSObject {
             title: "Menu Bar Visibility Hotkey",
             current: preferences.menuBarHotKey
         ) { [weak self] newBinding in
-            self?.preferences.menuBarHotKey = newBinding
-            NotificationCenter.default.post(name: .preferencesChanged, object: self?.preferences)
-            self?.buildMenu()
+            guard let self else { return }
+            self.preferences.menuBarHotKey = newBinding
+            NotificationCenter.default.post(name: .preferencesChanged, object: self.preferences)
+            self.buildMenu()
         }
     }
 
