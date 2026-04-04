@@ -1,4 +1,5 @@
 import CoreFoundation
+import Darwin
 import Foundation
 import os
 
@@ -99,14 +100,24 @@ class DeviceMonitor: TouchDeviceProviding {
     /// to complete any in-flight callback processing before we stop devices.
     static let frameworkCleanupDelay: TimeInterval = 1.0
 
+    /// Interval for refreshing the connected device list while running.
+    /// This picks up late-connected devices (for example, a Magic Trackpad).
+    static let deviceRefreshInterval: TimeInterval = 2.0
+
     // MARK: - Properties
 
     /// Delegate to receive touch events
     weak var delegate: DeviceMonitorDelegate?
 
     nonisolated(unsafe) private var device: MTDeviceRef?
-    nonisolated(unsafe) private var registeredDevices: Set<UnsafeMutableRawPointer> = unsafe []
+    /// Registered devices keyed by stable device ID.
+    /// Value stores all pointer forms observed for that ID so stop() can unregister safely.
+    private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = [:]
     fileprivate var isRunning = false
+    private var deviceRefreshTimer: DispatchSourceTimer?
+    private let deviceRefreshQueue = DispatchQueue(
+        label: "com.middledrag.device-monitor.refresh",
+        qos: .utility)
 
     /// Lock to protect concurrent access to device state during stop/start operations
     fileprivate let stateLock = NSLock()
@@ -118,6 +129,13 @@ class DeviceMonitor: TouchDeviceProviding {
     /// This prevents concurrent MTDeviceStart/MTDeviceStop calls, which can crash
     /// the MultitouchSupport framework under parallel test execution.
     private static let lifecycleLock = NSLock()
+
+    /// Result of attempting to register/start a device.
+    private enum DeviceRegistrationResult {
+        case registered
+        case alreadyRegistered
+        case invalid
+    }
 
     // MARK: - Lifecycle
 
@@ -155,58 +173,24 @@ class DeviceMonitor: TouchDeviceProviding {
         defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
 
         unsafe stateLock.lock()
-        defer { unsafe stateLock.unlock() }
-
-        guard unsafe !isRunning else { return true }
+        guard unsafe !isRunning else {
+            unsafe stateLock.unlock()
+            return true
+        }
 
         Log.info("DeviceMonitor starting...", category: .device)
 
-        var deviceCount = 0
-        unsafe registeredDevices.removeAll()  // Clear any previous registrations
+        registeredDevicesByID.removeAll()
+        unsafe device = nil
 
-        // Try to get all devices
-        if let deviceList = MTDeviceCreateList() {
-            let count = CFArrayGetCount(deviceList)
-            Log.info("Found \(count) multitouch device(s)", category: .device)
-
-            for i in 0..<count {
-                let devicePtr = unsafe CFArrayGetValueAtIndex(deviceList, i)
-                if let dev = unsafe devicePtr {
-                    let deviceRef = unsafe UnsafeMutableRawPointer(mutating: dev)
-                    unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
-                    unsafe MTDeviceStart(deviceRef, 0)
-                    unsafe registeredDevices.insert(deviceRef)
-                    deviceCount += 1
-
-                    if unsafe device == nil {
-                        unsafe device = unsafe deviceRef
-                    }
-                }
-            }
-        } else {
-            Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
-        }
-
-        // Also try the default device if not already registered
-        if let defaultDevice = unsafe MultitouchFramework.shared.getDefaultDevice() {
-            if unsafe !registeredDevices.contains(defaultDevice) {
-                unsafe MTRegisterContactFrameCallback(defaultDevice, deviceContactCallback)
-                unsafe MTDeviceStart(defaultDevice, 0)
-                unsafe registeredDevices.insert(defaultDevice)
-                deviceCount += 1
-
-                if unsafe device == nil {
-                    unsafe device = unsafe defaultDevice
-                }
-            } else {
-                Log.debug("Default device already registered from device list", category: .device)
-            }
-        }
+        let registrationResult = registerAvailableDevices(logDeviceCount: true)
+        let deviceCount = registrationResult.addedCount
 
         guard unsafe device != nil else {
             Log.warning(
                 "No multitouch device found. MiddleDrag requires a built-in trackpad or Magic Trackpad.",
                 category: .device)
+            unsafe stateLock.unlock()
             return false
         }
 
@@ -219,6 +203,10 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = true
         unsafe os_unfair_lock_unlock(&gCallbackLock)
+
+        unsafe stateLock.unlock()
+
+        startDeviceRefreshTimer()
         
         return true
     }
@@ -228,6 +216,8 @@ class DeviceMonitor: TouchDeviceProviding {
     @unsafe func stop() {
         unsafe DeviceMonitor.lifecycleLock.lock()
         unsafe stateLock.lock()
+
+        stopDeviceRefreshTimerLocked()
 
         // If not running, clean up global reference if we own it, then return.
         // This handles the case where start() failed (no device found) so isRunning
@@ -253,8 +243,8 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe isRunning = false
 
         // Copy the registered devices to a local variable so we can unlock before sleeping
-        let devicesToStop = unsafe registeredDevices
-        unsafe registeredDevices.removeAll()
+        let devicesToStop = Set(registeredDevicesByID.values.flatMap { $0 })
+        registeredDevicesByID.removeAll()
         unsafe self.device = nil
 
         unsafe stateLock.unlock()
@@ -313,6 +303,158 @@ class DeviceMonitor: TouchDeviceProviding {
         }
 
         Log.info("DeviceMonitor stopped", category: .device)
+    }
+
+    // MARK: - Device Refresh
+
+    /// Starts a periodic refresh that registers newly connected multitouch devices.
+    private func startDeviceRefreshTimer() {
+        unsafe stateLock.lock()
+        defer { unsafe stateLock.unlock() }
+
+        guard unsafe isRunning, unsafe deviceRefreshTimer == nil else { return }
+
+        let timer = DispatchSource.makeTimerSource(queue: deviceRefreshQueue)
+        timer.schedule(
+            deadline: .now() + Self.deviceRefreshInterval,
+            repeating: Self.deviceRefreshInterval)
+        timer.setEventHandler { [weak self] in
+            self?.refreshConnectedDevices()
+        }
+        timer.resume()
+        deviceRefreshTimer = timer
+    }
+
+    /// Stops and clears the device refresh timer.
+    /// Must be called while holding stateLock.
+    private func stopDeviceRefreshTimerLocked() {
+        guard let timer = deviceRefreshTimer else { return }
+        deviceRefreshTimer = nil
+        timer.cancel()
+    }
+
+    /// Finds newly connected devices and registers callbacks for them.
+    private func refreshConnectedDevices() {
+        unsafe DeviceMonitor.lifecycleLock.lock()
+        defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
+
+        unsafe stateLock.lock()
+        defer { unsafe stateLock.unlock() }
+
+        guard unsafe isRunning else { return }
+
+        let registrationResult = registerAvailableDevices(logDeviceCount: false)
+        let addedCount = registrationResult.addedCount
+
+        if addedCount > 0 {
+            Log.info(
+                "Registered \(addedCount) newly connected multitouch device(s)",
+                category: .device)
+        }
+    }
+
+    /// Enumerates currently available devices and registers any that are not already active.
+    /// Must be called while holding `stateLock` and `lifecycleLock`.
+    private func registerAvailableDevices(logDeviceCount: Bool) -> (addedCount: Int, hadAnyDevice: Bool) {
+        var addedCount = 0
+        var hadAnyDevice = false
+        var currentlyConnectedIDs: Set<Int64> = []
+
+        if let deviceList = MTDeviceCreateList() {
+            let count = CFArrayGetCount(deviceList)
+            hadAnyDevice = count > 0
+
+            if logDeviceCount {
+                Log.info("Found \(count) multitouch device(s)", category: .device)
+            }
+
+            for i in 0..<count {
+                let devicePtr = unsafe CFArrayGetValueAtIndex(deviceList, i)
+                let deviceRef = unsafe devicePtr.map { UnsafeMutableRawPointer(mutating: $0) }
+                let deviceID = deviceRef.map(deviceIdentifier(for:))
+
+                if let deviceID {
+                    currentlyConnectedIDs.insert(deviceID)
+                }
+
+                switch registerDeviceIfNeeded(deviceRef, deviceID: deviceID) {
+                case .registered:
+                    addedCount += 1
+                case .alreadyRegistered, .invalid:
+                    break
+                }
+            }
+        } else if logDeviceCount {
+            Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
+        }
+
+        if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
+            hadAnyDevice = true
+            let defaultDeviceID = deviceIdentifier(for: defaultDevice)
+            currentlyConnectedIDs.insert(defaultDeviceID)
+
+            switch registerDeviceIfNeeded(defaultDevice, deviceID: defaultDeviceID) {
+            case .registered:
+                addedCount += 1
+            case .alreadyRegistered:
+                if logDeviceCount {
+                    Log.debug("Default device already registered from device list", category: .device)
+                }
+            case .invalid:
+                break
+            }
+        }
+
+        pruneDisconnectedDevices(keepingDeviceIDs: currentlyConnectedIDs)
+
+        return (addedCount, hadAnyDevice)
+    }
+
+    /// Registers callbacks and starts a device if we are not already monitoring it.
+    ///
+    /// Note: The framework may hand out non-stable pointer identities across list refreshes
+    /// for the same physical device, so registration deduping is primarily ID-based.
+    private func registerDeviceIfNeeded(
+        _ deviceRef: MTDeviceRef?,
+        deviceID: Int64?
+    ) -> DeviceRegistrationResult {
+        guard let deviceRef else { return .invalid }
+
+        let resolvedDeviceID = deviceID ?? deviceIdentifier(for: deviceRef)
+
+        if var knownPointers = registeredDevicesByID[resolvedDeviceID], !knownPointers.isEmpty {
+            knownPointers.insert(deviceRef)
+            registeredDevicesByID[resolvedDeviceID] = knownPointers
+            return .alreadyRegistered
+        }
+
+        if unsafe MTDeviceIsRunning(deviceRef) {
+            registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
+            return .alreadyRegistered
+        }
+
+        unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
+        unsafe MTDeviceStart(deviceRef, 0)
+        registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
+
+        if unsafe device == nil {
+            unsafe device = unsafe deviceRef
+        }
+
+        return .registered
+    }
+
+    /// Best-effort stable device identifier.
+    /// Falls back to pointer identity if the private ID symbol is unavailable.
+    private func deviceIdentifier(for deviceRef: MTDeviceRef) -> Int64 {
+        return Int64(UInt(bitPattern: deviceRef))
+    }
+
+    /// Removes device IDs (and associated pointers) that are no longer present.
+    private func pruneDisconnectedDevices(keepingDeviceIDs connectedIDs: Set<Int64>) {
+        registeredDevicesByID = registeredDevicesByID.filter { id, _ in
+            connectedIDs.contains(id)
+        }
     }
 
     // MARK: - Internal
