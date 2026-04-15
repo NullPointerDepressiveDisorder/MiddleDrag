@@ -12,11 +12,12 @@ repos:
     hooks:
       - id: swift-debug-prints
         name: Check for debug print() statements
-        entry: bash -c 'git diff --cached -U0 -- "$@" | grep -E "^\+.*\bprint\(" | grep -v "^\+\+\+" && echo "⚠ Consider using os_log instead of print() in production code" && exit 0 || exit 0'
+        entry: bash -c 'FOUND=0; for f in "$@"; do HITS=$(git diff --cached -U0 -- "$f" | grep -v "^+++" | grep "^+" | grep "print("); if [ -n "$HITS" ]; then echo "$f:"; echo "$HITS"; FOUND=1; fi; done; if [ "$FOUND" -eq 1 ]; then echo ""; echo "⚠ Use Log.debug()/Log.info()/Log.error() instead of print() — see MiddleDrag/Utilities/AnalyticsManager.swift"; exit 1; fi' --
         language: system
         files: '\.swift$'
         exclude: '(Tests/|Test\.swift$)'
         stages: [pre-commit]
+        verbose: true
 
       - id: xcodebuild
         name: Build MiddleDrag (Debug)
