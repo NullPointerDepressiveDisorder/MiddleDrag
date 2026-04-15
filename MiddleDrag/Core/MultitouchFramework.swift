@@ -60,6 +60,67 @@ func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContact
 @_silgen_name("MTUnregisterContactFrameCallback")
 func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
 
+// MARK: - Device Enumeration Protocol
+
+/// Abstracts MultitouchSupport framework calls for dependency injection and testability.
+@unsafe protocol DeviceEnumerating: AnyObject {
+    /// Returns all currently connected multitouch device references.
+    func enumerateDevices() -> [MTDeviceRef]
+    /// Returns the default (built-in) multitouch device, if available.
+    func getDefaultDevice() -> MTDeviceRef?
+    /// Checks whether a device handle is currently started.
+    func isDeviceRunning(_ device: MTDeviceRef) -> Bool
+    /// Start a multitouch device.
+    func startDevice(_ device: MTDeviceRef)
+    /// Stop a multitouch device.
+    func stopDevice(_ device: MTDeviceRef)
+    /// Register a touch-frame callback on a device.
+    func registerContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction)
+    /// Unregister a previously registered callback.
+    func unregisterContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
+}
+
+// MARK: - System Device Enumerator
+
+/// Production implementation that calls the private MultitouchSupport framework.
+@unsafe final class SystemDeviceEnumerator: DeviceEnumerating {
+    func enumerateDevices() -> [MTDeviceRef] {
+        guard let deviceList = MTDeviceCreateList() else { return [] }
+        let count = CFArrayGetCount(deviceList)
+        var devices: [MTDeviceRef] = []
+        for i in 0..<count {
+            if let ptr = unsafe CFArrayGetValueAtIndex(deviceList, i) {
+                unsafe devices.append(UnsafeMutableRawPointer(mutating: ptr))
+            }
+        }
+        return devices
+    }
+
+    func getDefaultDevice() -> MTDeviceRef? {
+        return unsafe MTDeviceCreateDefault()
+    }
+
+    func isDeviceRunning(_ device: MTDeviceRef) -> Bool {
+        return unsafe MTDeviceIsRunning(device)
+    }
+
+    func startDevice(_ device: MTDeviceRef) {
+        unsafe MTDeviceStart(device, 0)
+    }
+
+    func stopDevice(_ device: MTDeviceRef) {
+        unsafe MTDeviceStop(device)
+    }
+
+    func registerContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction) {
+        unsafe MTRegisterContactFrameCallback(device, callback)
+    }
+
+    func unregisterContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?) {
+        unsafe MTUnregisterContactFrameCallback(device, callback)
+    }
+}
+
 // MARK: - Framework Helper
 
 /// Helper class to manage MultitouchSupport framework access

@@ -108,6 +108,13 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Delegate to receive touch events
     weak var delegate: DeviceMonitorDelegate?
 
+    /// Abstracts all MultitouchSupport framework calls for testability.
+    let enumerator: DeviceEnumerating
+
+    /// Instance-level cleanup delay; defaults to the static constant.
+    /// Tests can pass 0 to avoid sleeping.
+    private let cleanupDelay: TimeInterval
+
     nonisolated(unsafe) private var device: MTDeviceRef?
     /// Registered devices keyed by pointer-based device ID.
     /// IDs are only stable within a single MTDeviceCreateList() call; cross-refresh
@@ -116,11 +123,14 @@ class DeviceMonitor: TouchDeviceProviding {
     fileprivate var isRunning = false
     /// Tracks the device count from the last successful enumeration.
     /// Used to skip redundant re-registration when the count is unchanged.
-    private var lastKnownDeviceCount: Int = 0
+    private(set) var lastKnownDeviceCount: Int = 0
     private var deviceRefreshTimer: DispatchSourceTimer?
     private let deviceRefreshQueue = DispatchQueue(
         label: "com.middledrag.device-monitor.refresh",
         qos: .utility)
+
+    /// Whether the periodic device-refresh timer is currently active.
+    var hasActiveRefreshTimer: Bool { unsafe deviceRefreshTimer != nil }
 
     /// Lock to protect concurrent access to device state during stop/start operations
     fileprivate let stateLock = NSLock()
@@ -142,7 +152,10 @@ class DeviceMonitor: TouchDeviceProviding {
 
     // MARK: - Lifecycle
 
-    init() {
+    init(enumerator: DeviceEnumerating? = nil, cleanupDelay: TimeInterval = frameworkCleanupDelay) {
+        self.enumerator = unsafe enumerator ?? SystemDeviceEnumerator()
+        self.cleanupDelay = cleanupDelay
+
         // Acquire lock to safely update global state
         unsafe os_unfair_lock_lock(&gCallbackLock)
 
@@ -277,7 +290,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // This prevents the framework's internal thread (mt_ThreadedMTEntry)
         // from receiving NEW callbacks while we're stopping devices.
         for unsafe deviceRef in unsafe devicesToStop {
-            unsafe MTUnregisterContactFrameCallback(deviceRef, deviceContactCallback)
+            unsafe enumerator.unregisterContactCallback(deviceRef, deviceContactCallback)
         }
 
         // Release lifecycle lock before sleeping so other start/stop callers don't
@@ -289,7 +302,9 @@ class DeviceMonitor: TouchDeviceProviding {
         // Even with callbacks disabled, we still need to wait for any callback
         // that was already dispatched but hasn't checked the flag yet.
         // This sleep is intentionally done with lock unlocked to avoid blocking other threads.
-        unsafe Thread.sleep(forTimeInterval: Self.frameworkCleanupDelay)
+        if cleanupDelay > 0 {
+            unsafe Thread.sleep(forTimeInterval: cleanupDelay)
+        }
 
         // Reacquire lifecycle lock to serialize MTDeviceStop with MTDeviceStart/MTDeviceStop
         // from any other DeviceMonitor instance.
@@ -302,7 +317,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // from the framework trying to release device resources concurrently.
         for unsafe deviceRef in unsafe devicesToStop {
             unsafe os_unfair_lock_lock(&gCallbackLock)
-            unsafe MTDeviceStop(deviceRef)
+            unsafe enumerator.stopDevice(deviceRef)
             unsafe os_unfair_lock_unlock(&gCallbackLock)
         }
 
@@ -338,7 +353,7 @@ class DeviceMonitor: TouchDeviceProviding {
     }
 
     /// Finds newly connected devices and registers callbacks for them.
-    private func refreshConnectedDevices() {
+    func refreshConnectedDevices() {
         unsafe DeviceMonitor.lifecycleLock.lock()
         defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
 
@@ -351,14 +366,13 @@ class DeviceMonitor: TouchDeviceProviding {
         // MTDeviceCreateList() returns new pointers each call, so pointer-based
         // IDs always look new. Comparing counts avoids redundant re-registration
         // while still detecting connect/disconnect events.
-        if let deviceList = MTDeviceCreateList() {
-            let currentCount = CFArrayGetCount(deviceList)
-            if currentCount == lastKnownDeviceCount && currentCount > 0 {
-                return
-            }
+        let devices = unsafe enumerator.enumerateDevices()
+        if devices.count == lastKnownDeviceCount && devices.count > 0 {
+            return
         }
 
-        let registrationResult = unsafe registerAvailableDevices(logDeviceCount: false)
+        let registrationResult = unsafe registerAvailableDevices(
+            logDeviceCount: false, prefetchedDevices: devices)
         let addedCount = registrationResult.addedCount
 
         if addedCount > 0 {
@@ -370,41 +384,35 @@ class DeviceMonitor: TouchDeviceProviding {
 
     /// Enumerates currently available devices and registers any that are not already active.
     /// Must be called while holding `stateLock` and `lifecycleLock`.
-    private func registerAvailableDevices(logDeviceCount: Bool) -> (addedCount: Int, hadAnyDevice: Bool) {
+    private func registerAvailableDevices(
+        logDeviceCount: Bool,
+        prefetchedDevices: [MTDeviceRef]? = nil
+    ) -> (addedCount: Int, hadAnyDevice: Bool) {
         var addedCount = 0
         var hadAnyDevice = false
         var currentlyConnectedIDs: Set<Int64> = []
 
-        if let deviceList = MTDeviceCreateList() {
-            let count = CFArrayGetCount(deviceList)
-            hadAnyDevice = count > 0
-            lastKnownDeviceCount = count
+        let devices = unsafe prefetchedDevices ?? enumerator.enumerateDevices()
+        hadAnyDevice = !devices.isEmpty
+        lastKnownDeviceCount = devices.count
 
-            if logDeviceCount {
-                Log.info("Found \(count) multitouch device(s)", category: .device)
-            }
-
-            for i in 0..<count {
-                let devicePtr = unsafe CFArrayGetValueAtIndex(deviceList, i)
-                let deviceRef = unsafe devicePtr.map { unsafe UnsafeMutableRawPointer(mutating: $0) }
-                let deviceID = unsafe deviceRef.map(deviceIdentifier(for:))
-
-                if let deviceID {
-                    currentlyConnectedIDs.insert(deviceID)
-                }
-
-                switch unsafe registerDeviceIfNeeded(deviceRef, deviceID: deviceID) {
-                case .registered:
-                    addedCount += 1
-                case .alreadyRegistered, .invalid:
-                    break
-                }
-            }
-        } else if logDeviceCount {
-            Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
+        if logDeviceCount {
+            Log.info("Found \(devices.count) multitouch device(s)", category: .device)
         }
 
-        if let defaultDevice = unsafe MultitouchFramework.shared.getDefaultDevice() {
+        for deviceRef in devices {
+            let deviceID = unsafe deviceIdentifier(for: deviceRef)
+            currentlyConnectedIDs.insert(deviceID)
+
+            switch unsafe registerDeviceIfNeeded(deviceRef, deviceID: deviceID) {
+            case .registered:
+                addedCount += 1
+            case .alreadyRegistered, .invalid:
+                break
+            }
+        }
+
+        if let defaultDevice = unsafe enumerator.getDefaultDevice() {
             hadAnyDevice = true
             let defaultDeviceID = unsafe deviceIdentifier(for: defaultDevice)
             currentlyConnectedIDs.insert(defaultDeviceID)
@@ -448,9 +456,9 @@ class DeviceMonitor: TouchDeviceProviding {
         // already running (e.g., started by a previous monitor or another process).
         // Without this, we'd miss touch events on devices that are running but don't
         // have our callback registered.
-        unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
-        if unsafe !MTDeviceIsRunning(deviceRef) {
-            unsafe MTDeviceStart(deviceRef, 0)
+        unsafe enumerator.registerContactCallback(deviceRef, deviceContactCallback)
+        if unsafe !enumerator.isDeviceRunning(deviceRef) {
+            unsafe enumerator.startDevice(deviceRef)
         }
         unsafe registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
 

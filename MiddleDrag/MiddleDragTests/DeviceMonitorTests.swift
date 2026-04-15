@@ -494,6 +494,252 @@ import XCTest
     }
 }
 
+// MARK: - Refresh Timer & Registration Tests (mock-backed)
+
+/// Tests that exercise the device-refresh timer lifecycle and the
+/// `refreshConnectedDevices` / `registerAvailableDevices` path using
+/// a mock enumerator so they run deterministically without hardware.
+@unsafe final class DeviceMonitorRefreshTests: XCTestCase {
+
+    // MARK: - Helpers
+
+    /// Creates a fake MTDeviceRef for testing. Caller must deallocate.
+    private func makeFakeDevice() -> MTDeviceRef {
+        UnsafeMutableRawPointer.allocate(byteCount: 1, alignment: 1)
+    }
+
+    /// Creates a DeviceMonitor backed by the given mock, with zero cleanup delay.
+    private func makeMonitor(enumerator: MockDeviceEnumerator) -> DeviceMonitor {
+        unsafe DeviceMonitor(enumerator: enumerator, cleanupDelay: 0)
+    }
+
+    // MARK: - Timer Lifecycle
+
+    func testStartCreatesRefreshTimer() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+
+        unsafe XCTAssertTrue(monitor.start())
+        unsafe XCTAssertTrue(monitor.hasActiveRefreshTimer)
+    }
+
+    func testStopCancelsRefreshTimer() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        unsafe monitor.start()
+        unsafe monitor.stop()
+        unsafe XCTAssertFalse(monitor.hasActiveRefreshTimer)
+    }
+
+    func testTimerNotCreatedWhenNoDeviceFound() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+
+        unsafe XCTAssertFalse(monitor.start())
+        unsafe XCTAssertFalse(monitor.hasActiveRefreshTimer)
+    }
+
+    // MARK: - Refresh Skip / Register
+
+    func testRefreshSkipsWhenDeviceCountUnchanged() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+
+        let callsBefore = unsafe enumerator.registeredCallbackDevices.count
+        unsafe monitor.refreshConnectedDevices()
+        let callsAfter = unsafe enumerator.registeredCallbackDevices.count
+
+        XCTAssertEqual(callsBefore, callsAfter,
+                       "Refresh should skip registration when device count is unchanged")
+    }
+
+    func testRefreshRegistersWhenDeviceCountIncreases() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device1 = makeFakeDevice()
+        let device2 = makeFakeDevice()
+        defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
+        unsafe enumerator.devices = [device1]
+        unsafe enumerator.defaultDevice = device1
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+
+        // Simulate connecting a second device
+        unsafe enumerator.devices = [device1, device2]
+        let callsBefore = unsafe enumerator.registeredCallbackDevices.count
+        unsafe monitor.refreshConnectedDevices()
+        let callsAfter = unsafe enumerator.registeredCallbackDevices.count
+
+        XCTAssertGreaterThan(callsAfter, callsBefore,
+                             "Refresh should register devices when count increases")
+    }
+
+    func testRefreshHandlesDeviceDisconnect() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device1 = makeFakeDevice()
+        let device2 = makeFakeDevice()
+        defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
+        unsafe enumerator.devices = [device1, device2]
+        unsafe enumerator.defaultDevice = device1
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+        unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 2)
+
+        // Simulate disconnecting device2
+        unsafe enumerator.devices = [device1]
+        unsafe monitor.refreshConnectedDevices()
+
+        unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 1,
+                              "Count should update after device disconnect")
+    }
+
+    func testRefreshUpdatesLastKnownDeviceCount() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device1 = makeFakeDevice()
+        let device2 = makeFakeDevice()
+        defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
+        unsafe enumerator.devices = [device1]
+        unsafe enumerator.defaultDevice = device1
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+        unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 1)
+
+        // Connect second device, trigger refresh
+        unsafe enumerator.devices = [device1, device2]
+        unsafe monitor.refreshConnectedDevices()
+        unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 2)
+    }
+
+    func testRefreshAfterStopIsNoop() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        unsafe monitor.start()
+        unsafe monitor.stop()
+
+        let callsBefore = unsafe enumerator.registeredCallbackDevices.count
+        unsafe monitor.refreshConnectedDevices()
+        let callsAfter = unsafe enumerator.registeredCallbackDevices.count
+
+        XCTAssertEqual(callsBefore, callsAfter,
+                       "Refresh after stop should not register anything")
+    }
+
+    // MARK: - Registration Behavior
+
+    func testRegisterCallsCallbackAndStartsDevice() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+
+        unsafe XCTAssertTrue(enumerator.registeredCallbackDevices.contains(device),
+                             "Callback should be registered for the device")
+        unsafe XCTAssertTrue(enumerator.startedDevices.contains(device),
+                             "Device should be started")
+    }
+
+    func testRegisterSkipsStartForAlreadyRunningDevice() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+        unsafe enumerator.runningDevices.insert(device)
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+
+        unsafe XCTAssertTrue(enumerator.registeredCallbackDevices.contains(device),
+                             "Callback should still be registered even if device is running")
+        unsafe XCTAssertFalse(enumerator.startedDevices.contains(device),
+                              "Already-running device should not be started again")
+    }
+
+    func testStopUnregistersAndStopsDevices() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        unsafe monitor.start()
+        unsafe monitor.stop()
+
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(device),
+                             "Callback should be unregistered on stop")
+        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(device),
+                             "Device should be stopped on stop")
+    }
+
+    // MARK: - Start / Stop Invariants
+
+    func testStartStopCycleWithMockDoesNotCrash() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        for _ in 0..<5 {
+            let monitor = unsafe makeMonitor(enumerator: enumerator)
+            unsafe XCTAssertTrue(monitor.start())
+            unsafe monitor.stop()
+        }
+    }
+
+    func testSecondInstanceStartsAfterFirstStopsWithMock() {
+        let enumerator = unsafe MockDeviceEnumerator()
+        let device = makeFakeDevice()
+        defer { unsafe device.deallocate() }
+        unsafe enumerator.devices = [device]
+        unsafe enumerator.defaultDevice = device
+
+        let monitor1 = unsafe makeMonitor(enumerator: enumerator)
+        unsafe monitor1.start()
+        unsafe monitor1.stop()
+
+        let monitor2 = unsafe makeMonitor(enumerator: enumerator)
+        unsafe XCTAssertTrue(monitor2.start())
+        unsafe monitor2.stop()
+    }
+}
+
 // MARK: - Mock Delegate
 
 /// Mock delegate for testing DeviceMonitor delegate callbacks
@@ -511,5 +757,56 @@ class MockDeviceMonitorDelegate: DeviceMonitorDelegate {
         didReceiveTouchesCalled = true
         receivedTouchCount = count
         receivedTimestamp = timestamp
+    }
+}
+
+// MARK: - Mock Device Enumerator
+
+/// Mock implementation of DeviceEnumerating for deterministic testing
+/// without the private MultitouchSupport framework.
+@unsafe final class MockDeviceEnumerator: DeviceEnumerating {
+    /// Devices returned by `enumerateDevices()`.
+    var devices: [MTDeviceRef] = []
+    /// Device returned by `getDefaultDevice()`.
+    var defaultDevice: MTDeviceRef?
+    /// Set of devices that report as running.
+    var runningDevices: Set<UnsafeMutableRawPointer> = unsafe []
+
+    // Call tracking
+    var enumerateCallCount = 0
+    var registeredCallbackDevices: [MTDeviceRef] = []
+    var unregisteredCallbackDevices: [MTDeviceRef] = []
+    var startedDevices: [MTDeviceRef] = []
+    var stoppedDevices: [MTDeviceRef] = []
+
+    func enumerateDevices() -> [MTDeviceRef] {
+        unsafe enumerateCallCount += 1
+        return unsafe devices
+    }
+
+    func getDefaultDevice() -> MTDeviceRef? {
+        return unsafe defaultDevice
+    }
+
+    func isDeviceRunning(_ device: MTDeviceRef) -> Bool {
+        return unsafe runningDevices.contains(device)
+    }
+
+    func startDevice(_ device: MTDeviceRef) {
+        unsafe startedDevices.append(device)
+        unsafe runningDevices.insert(device)
+    }
+
+    func stopDevice(_ device: MTDeviceRef) {
+        unsafe stoppedDevices.append(device)
+        unsafe runningDevices.remove(device)
+    }
+
+    func registerContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction) {
+        unsafe registeredCallbackDevices.append(device)
+    }
+
+    func unregisterContactCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?) {
+        unsafe unregisteredCallbackDevices.append(device)
     }
 }
