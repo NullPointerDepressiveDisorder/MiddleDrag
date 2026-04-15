@@ -109,8 +109,9 @@ class DeviceMonitor: TouchDeviceProviding {
     weak var delegate: DeviceMonitorDelegate?
 
     nonisolated(unsafe) private var device: MTDeviceRef?
-    /// Registered devices keyed by stable device ID.
-    /// Value stores all pointer forms observed for that ID so stop() can unregister safely.
+    /// Registered devices keyed by pointer-based device ID.
+    /// IDs are only stable within a single MTDeviceCreateList() call; cross-refresh
+    /// deduplication relies on the count-based check in refreshConnectedDevices().
     private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
     fileprivate var isRunning = false
     /// Tracks the device count from the last successful enumeration.
@@ -427,8 +428,8 @@ class DeviceMonitor: TouchDeviceProviding {
 
     /// Registers callbacks and starts a device if we are not already monitoring it.
     ///
-    /// Note: The framework may hand out non-stable pointer identities across list refreshes
-    /// for the same physical device, so registration deduping is primarily ID-based.
+    /// Note: Device identity is pointer-based and not stable across MTDeviceCreateList() calls.
+    /// Cross-refresh deduplication is handled by the count-based check in refreshConnectedDevices().
     private func registerDeviceIfNeeded(
         _ deviceRef: MTDeviceRef?,
         deviceID: Int64?
@@ -443,13 +444,14 @@ class DeviceMonitor: TouchDeviceProviding {
             return .alreadyRegistered
         }
 
-        if unsafe MTDeviceIsRunning(deviceRef) {
-            unsafe registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
-            return .alreadyRegistered
-        }
-
+        // Always register our callback, even if the framework reports the device as
+        // already running (e.g., started by a previous monitor or another process).
+        // Without this, we'd miss touch events on devices that are running but don't
+        // have our callback registered.
         unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
-        unsafe MTDeviceStart(deviceRef, 0)
+        if unsafe !MTDeviceIsRunning(deviceRef) {
+            unsafe MTDeviceStart(deviceRef, 0)
+        }
         unsafe registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
 
         if unsafe device == nil {
