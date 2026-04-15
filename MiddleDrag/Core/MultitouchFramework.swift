@@ -60,22 +60,29 @@ func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContact
 @_silgen_name("MTUnregisterContactFrameCallback")
 func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
 
+// MARK: - Device Identification
+
+/// Get the stable hardware device ID for a multitouch device.
+/// Returns an OSStatus (0 on success) and writes the ID to the out-parameter.
+@_silgen_name("MTDeviceGetDeviceID")
+func MTDeviceGetDeviceID(_ device: MTDeviceRef, _ outDeviceID: UnsafeMutablePointer<UInt64>) -> Int32
+
 // MARK: - Framework Helper
 
 /// Helper class to manage MultitouchSupport framework access
 /// Thread-safe: contains no mutable state, just wraps C function calls
 final class MultitouchFramework: @unchecked Sendable {
-    
+
     /// Shared instance
     static let shared = MultitouchFramework()
-    
+
     private init() {}
-    
+
     /// Check if the multitouch framework is available
     var isAvailable: Bool {
         return unsafe MTDeviceCreateDefault() != nil
     }
-    
+
     /// Get the default multitouch device (built-in trackpad)
     /// - Returns: Device reference, or nil if no device available
     func getDefaultDevice() -> MTDeviceRef? {

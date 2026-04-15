@@ -1,5 +1,4 @@
 import CoreFoundation
-import Darwin
 import Foundation
 import os
 
@@ -37,7 +36,7 @@ import os
 
 @unsafe private let deviceContactCallback: MTContactCallbackFunction = {
     device, touches, numTouches, timestamp, frame in
-    
+
     // CRITICAL: Check the enabled flag FIRST, before accessing gDeviceMonitor.
     // This prevents accessing a nil or dangling pointer during teardown.
     // We use the lock to synchronize with stop() which sets the flag to false.
@@ -54,14 +53,14 @@ import os
         return 0
     }
     unsafe os_unfair_lock_unlock(&gCallbackLock)
-    
+
     // Additional safety check: Verify the monitor instance is still valid and running.
     unsafe monitor.stateLock.lock()
     let monitorIsRunning = unsafe monitor.isRunning
     unsafe monitor.stateLock.unlock()
-    
+
     guard monitorIsRunning else { return 0 }
-    
+
     #if DEBUG
         unsafe touchCount += 1
         // Log sparingly to avoid performance impact
@@ -112,7 +111,7 @@ class DeviceMonitor: TouchDeviceProviding {
     nonisolated(unsafe) private var device: MTDeviceRef?
     /// Registered devices keyed by stable device ID.
     /// Value stores all pointer forms observed for that ID so stop() can unregister safely.
-    private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = [:]
+    private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
     fileprivate var isRunning = false
     private var deviceRefreshTimer: DispatchSourceTimer?
     private let deviceRefreshQueue = DispatchQueue(
@@ -142,18 +141,18 @@ class DeviceMonitor: TouchDeviceProviding {
     init() {
         // Acquire lock to safely update global state
         unsafe os_unfair_lock_lock(&gCallbackLock)
-        
+
         // Release any previous pending cleanup reference
         // The old instance has had time to complete cleanup by now
         unsafe gPendingCleanup = nil
-        
+
         // Only take ownership of the global reference if no other instance owns it
         // This prevents test interference when multiple DeviceMonitor instances are created
         if unsafe gDeviceMonitor == nil {
             unsafe gDeviceMonitor = unsafe self
             unsafe ownsGlobalReference = true
         }
-        
+
         unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
@@ -180,10 +179,10 @@ class DeviceMonitor: TouchDeviceProviding {
 
         Log.info("DeviceMonitor starting...", category: .device)
 
-        registeredDevicesByID.removeAll()
+        unsafe registeredDevicesByID.removeAll()
         unsafe device = nil
 
-        let registrationResult = registerAvailableDevices(logDeviceCount: true)
+        let registrationResult = unsafe registerAvailableDevices(logDeviceCount: true)
         let deviceCount = registrationResult.addedCount
 
         guard unsafe device != nil else {
@@ -197,7 +196,7 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
 
         unsafe isRunning = true
-        
+
         // Enable callbacks AFTER all devices are registered.
         // This ensures gDeviceMonitor is fully set up before callbacks can access it.
         unsafe os_unfair_lock_lock(&gCallbackLock)
@@ -206,8 +205,8 @@ class DeviceMonitor: TouchDeviceProviding {
 
         unsafe stateLock.unlock()
 
-        startDeviceRefreshTimer()
-        
+        unsafe startDeviceRefreshTimer()
+
         return true
     }
 
@@ -217,7 +216,7 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe DeviceMonitor.lifecycleLock.lock()
         unsafe stateLock.lock()
 
-        stopDeviceRefreshTimerLocked()
+        unsafe stopDeviceRefreshTimerLocked()
 
         // If not running, clean up global reference if we own it, then return.
         // This handles the case where start() failed (no device found) so isRunning
@@ -243,8 +242,8 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe isRunning = false
 
         // Copy the registered devices to a local variable so we can unlock before sleeping
-        let devicesToStop = Set(registeredDevicesByID.values.flatMap { $0 })
-        registeredDevicesByID.removeAll()
+        let devicesToStop = unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
+        unsafe registeredDevicesByID.removeAll()
         unsafe self.device = nil
 
         unsafe stateLock.unlock()
@@ -257,7 +256,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // accessing gDeviceMonitor while we're tearing down.
         unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = false
-        
+
         // Handle global cleanup: if this instance owns the global reference,
         // move it to gPendingCleanup to keep it alive until the next DeviceMonitor
         // is created. This prevents EXC_BAD_ACCESS if the framework's internal
@@ -314,22 +313,22 @@ class DeviceMonitor: TouchDeviceProviding {
 
         guard unsafe isRunning, unsafe deviceRefreshTimer == nil else { return }
 
-        let timer = DispatchSource.makeTimerSource(queue: deviceRefreshQueue)
-        timer.schedule(
+        let timer = unsafe DispatchSource.makeTimerSource(queue: deviceRefreshQueue)
+        unsafe timer.schedule(
             deadline: .now() + Self.deviceRefreshInterval,
             repeating: Self.deviceRefreshInterval)
-        timer.setEventHandler { [weak self] in
-            self?.refreshConnectedDevices()
+        unsafe timer.setEventHandler { [weak self] in
+            unsafe self?.refreshConnectedDevices()
         }
         timer.resume()
-        deviceRefreshTimer = timer
+        unsafe deviceRefreshTimer = timer
     }
 
     /// Stops and clears the device refresh timer.
     /// Must be called while holding stateLock.
     private func stopDeviceRefreshTimerLocked() {
-        guard let timer = deviceRefreshTimer else { return }
-        deviceRefreshTimer = nil
+        guard let timer = unsafe deviceRefreshTimer else { return }
+        unsafe deviceRefreshTimer = nil
         timer.cancel()
     }
 
@@ -343,7 +342,7 @@ class DeviceMonitor: TouchDeviceProviding {
 
         guard unsafe isRunning else { return }
 
-        let registrationResult = registerAvailableDevices(logDeviceCount: false)
+        let registrationResult = unsafe registerAvailableDevices(logDeviceCount: false)
         let addedCount = registrationResult.addedCount
 
         if addedCount > 0 {
@@ -370,14 +369,14 @@ class DeviceMonitor: TouchDeviceProviding {
 
             for i in 0..<count {
                 let devicePtr = unsafe CFArrayGetValueAtIndex(deviceList, i)
-                let deviceRef = unsafe devicePtr.map { UnsafeMutableRawPointer(mutating: $0) }
-                let deviceID = deviceRef.map(deviceIdentifier(for:))
+                let deviceRef = unsafe devicePtr.map { unsafe UnsafeMutableRawPointer(mutating: $0) }
+                let deviceID = unsafe deviceRef.map(deviceIdentifier(for:))
 
                 if let deviceID {
                     currentlyConnectedIDs.insert(deviceID)
                 }
 
-                switch registerDeviceIfNeeded(deviceRef, deviceID: deviceID) {
+                switch unsafe registerDeviceIfNeeded(deviceRef, deviceID: deviceID) {
                 case .registered:
                     addedCount += 1
                 case .alreadyRegistered, .invalid:
@@ -388,12 +387,12 @@ class DeviceMonitor: TouchDeviceProviding {
             Log.warning("MTDeviceCreateList returned nil, trying default device", category: .device)
         }
 
-        if let defaultDevice = MultitouchFramework.shared.getDefaultDevice() {
+        if let defaultDevice = unsafe MultitouchFramework.shared.getDefaultDevice() {
             hadAnyDevice = true
-            let defaultDeviceID = deviceIdentifier(for: defaultDevice)
+            let defaultDeviceID = unsafe deviceIdentifier(for: defaultDevice)
             currentlyConnectedIDs.insert(defaultDeviceID)
 
-            switch registerDeviceIfNeeded(defaultDevice, deviceID: defaultDeviceID) {
+            switch unsafe registerDeviceIfNeeded(defaultDevice, deviceID: defaultDeviceID) {
             case .registered:
                 addedCount += 1
             case .alreadyRegistered:
@@ -405,7 +404,7 @@ class DeviceMonitor: TouchDeviceProviding {
             }
         }
 
-        pruneDisconnectedDevices(keepingDeviceIDs: currentlyConnectedIDs)
+        unsafe pruneDisconnectedDevices(keepingDeviceIDs: currentlyConnectedIDs)
 
         return (addedCount, hadAnyDevice)
     }
@@ -418,24 +417,24 @@ class DeviceMonitor: TouchDeviceProviding {
         _ deviceRef: MTDeviceRef?,
         deviceID: Int64?
     ) -> DeviceRegistrationResult {
-        guard let deviceRef else { return .invalid }
+        guard let deviceRef = unsafe deviceRef else { return .invalid }
 
-        let resolvedDeviceID = deviceID ?? deviceIdentifier(for: deviceRef)
+        let resolvedDeviceID = unsafe deviceID ?? deviceIdentifier(for: deviceRef)
 
-        if var knownPointers = registeredDevicesByID[resolvedDeviceID], !knownPointers.isEmpty {
-            knownPointers.insert(deviceRef)
-            registeredDevicesByID[resolvedDeviceID] = knownPointers
+        if var knownPointers = unsafe registeredDevicesByID[resolvedDeviceID], unsafe !knownPointers.isEmpty {
+            unsafe knownPointers.insert(deviceRef)
+            unsafe registeredDevicesByID[resolvedDeviceID] = unsafe knownPointers
             return .alreadyRegistered
         }
 
         if unsafe MTDeviceIsRunning(deviceRef) {
-            registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
+            unsafe registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
             return .alreadyRegistered
         }
 
         unsafe MTRegisterContactFrameCallback(deviceRef, deviceContactCallback)
         unsafe MTDeviceStart(deviceRef, 0)
-        registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
+        unsafe registeredDevicesByID[resolvedDeviceID, default: []].insert(deviceRef)
 
         if unsafe device == nil {
             unsafe device = unsafe deviceRef
@@ -445,14 +444,19 @@ class DeviceMonitor: TouchDeviceProviding {
     }
 
     /// Best-effort stable device identifier.
-    /// Falls back to pointer identity if the private ID symbol is unavailable.
+    /// Uses MTDeviceGetDeviceID for a hardware-stable ID that persists across
+    /// MTDeviceCreateList() calls. Falls back to pointer identity if unavailable.
     private func deviceIdentifier(for deviceRef: MTDeviceRef) -> Int64 {
+        var deviceID: UInt64 = 0
+        if unsafe MTDeviceGetDeviceID(deviceRef, &deviceID) == 0, deviceID != 0 {
+            return Int64(bitPattern: deviceID)
+        }
         return Int64(UInt(bitPattern: deviceRef))
     }
 
     /// Removes device IDs (and associated pointers) that are no longer present.
     private func pruneDisconnectedDevices(keepingDeviceIDs connectedIDs: Set<Int64>) {
-        registeredDevicesByID = registeredDevicesByID.filter { id, _ in
+        unsafe registeredDevicesByID = unsafe registeredDevicesByID.filter { id, _ in
             connectedIDs.contains(id)
         }
     }
