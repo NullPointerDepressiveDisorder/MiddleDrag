@@ -1,0 +1,27 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: swift-debug-prints
+        name: Check for debug print() statements
+        entry: bash -c 'git diff --cached -U0 -- "$@" | grep -E "^\+.*\bprint\(" | grep -v "^\+\+\+" && echo "⚠ Consider using os_log instead of print() in production code" && exit 0 || exit 0'
+        language: system
+        files: '\.swift$'
+        exclude: '(Tests/|Test\.swift$)'
+        stages: [pre-commit]
+
+      - id: xcodebuild
+        name: Build MiddleDrag (Debug)
+        entry: bash -c 'xcodebuild build -project MiddleDrag.xcodeproj -scheme MiddleDrag -configuration Debug -destination "platform=macOS" -quiet CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES'
+        language: system
+        files: '\.swift$'
+        pass_filenames: false
+        stages: [pre-commit]

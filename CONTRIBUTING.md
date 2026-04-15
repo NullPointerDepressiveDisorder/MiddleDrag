@@ -19,15 +19,22 @@ Thanks for your interest in contributing to MiddleDrag! This project aims to bri
    cd MiddleDrag
    ```
 
-2. Open the project in Xcode:
+2. Install pre-commit hooks:
+
+   ```bash
+   brew install pre-commit
+   pre-commit install
+   ```
+
+3. Open the project in Xcode:
 
    ```bash
    open MiddleDrag.xcodeproj
    ```
 
-3. Select your signing team in project settings (for local development, you can use "Sign to Run Locally")
+4. Select your signing team in project settings (for local development, you can use "Sign to Run Locally")
 
-4. Build and run (⌘R)
+5. Build and run (⌘R)
 
 ### Building from Command Line
 
