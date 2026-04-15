@@ -85,15 +85,15 @@ func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTConta
 /// Production implementation that calls the private MultitouchSupport framework.
 @unsafe final class SystemDeviceEnumerator: DeviceEnumerating {
     func enumerateDevices() -> [MTDeviceRef] {
-        guard let deviceList = MTDeviceCreateList() else { return [] }
+        guard let deviceList = MTDeviceCreateList() else { return unsafe [] }
         let count = CFArrayGetCount(deviceList)
-        var devices: [MTDeviceRef] = []
+        var devices: [MTDeviceRef] = unsafe []
         for i in 0..<count {
             if let ptr = unsafe CFArrayGetValueAtIndex(deviceList, i) {
                 unsafe devices.append(UnsafeMutableRawPointer(mutating: ptr))
             }
         }
-        return devices
+        return unsafe devices
     }
 
     func getDefaultDevice() -> MTDeviceRef? {

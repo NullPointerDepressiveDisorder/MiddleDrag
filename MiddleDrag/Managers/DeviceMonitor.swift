@@ -153,8 +153,8 @@ class DeviceMonitor: TouchDeviceProviding {
     // MARK: - Lifecycle
 
     init(enumerator: DeviceEnumerating? = nil, cleanupDelay: TimeInterval = frameworkCleanupDelay) {
-        self.enumerator = unsafe enumerator ?? SystemDeviceEnumerator()
-        self.cleanupDelay = cleanupDelay
+        unsafe self.enumerator = unsafe enumerator ?? SystemDeviceEnumerator()
+        unsafe self.cleanupDelay = cleanupDelay
 
         // Acquire lock to safely update global state
         unsafe os_unfair_lock_lock(&gCallbackLock)
@@ -197,7 +197,7 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor starting...", category: .device)
 
         unsafe registeredDevicesByID.removeAll()
-        lastKnownDeviceCount = 0
+        unsafe lastKnownDeviceCount = 0
         unsafe device = nil
 
         let registrationResult = unsafe registerAvailableDevices(logDeviceCount: true)
@@ -302,7 +302,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // Even with callbacks disabled, we still need to wait for any callback
         // that was already dispatched but hasn't checked the flag yet.
         // This sleep is intentionally done with lock unlocked to avoid blocking other threads.
-        if cleanupDelay > 0 {
+        if unsafe cleanupDelay > 0 {
             unsafe Thread.sleep(forTimeInterval: cleanupDelay)
         }
 
@@ -367,7 +367,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // IDs always look new. Comparing counts avoids redundant re-registration
         // while still detecting connect/disconnect events.
         let devices = unsafe enumerator.enumerateDevices()
-        if devices.count == lastKnownDeviceCount && devices.count > 0 {
+        if unsafe devices.count == lastKnownDeviceCount && devices.count > 0 {
             return
         }
 
@@ -393,14 +393,14 @@ class DeviceMonitor: TouchDeviceProviding {
         var currentlyConnectedIDs: Set<Int64> = []
 
         let devices = unsafe prefetchedDevices ?? enumerator.enumerateDevices()
-        hadAnyDevice = !devices.isEmpty
-        lastKnownDeviceCount = devices.count
+        hadAnyDevice = unsafe !devices.isEmpty
+        unsafe lastKnownDeviceCount = unsafe devices.count
 
         if logDeviceCount {
-            Log.info("Found \(devices.count) multitouch device(s)", category: .device)
+            Log.info(unsafe "Found \(devices.count) multitouch device(s)", category: .device)
         }
 
-        for deviceRef in devices {
+        for unsafe deviceRef in unsafe devices {
             let deviceID = unsafe deviceIdentifier(for: deviceRef)
             currentlyConnectedIDs.insert(deviceID)
 
