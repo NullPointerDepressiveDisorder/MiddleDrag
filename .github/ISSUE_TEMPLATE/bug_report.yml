@@ -1,0 +1,115 @@
+name: Bug Report
+description: Report a bug with MiddleDrag
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the details below so we can investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of the bug.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Open MiddleDrag
+        2. Three-finger tap on...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: gesture-type
+    attributes:
+      label: Gesture Type Affected
+      description: Which gesture is affected by this bug?
+      options:
+        - Three-finger tap (middle-click)
+        - Three-finger drag (middle-drag)
+        - Both
+        - Not gesture-related
+    validations:
+      required: true
+
+  - type: input
+    id: app-used-with
+    attributes:
+      label: Application Used With
+      description: Which app were you using when the bug occurred?
+      placeholder: e.g. Blender, Figma, Firefox, VS Code
+
+  - type: input
+    id: middledrag-version
+    attributes:
+      label: MiddleDrag Version
+      description: Found in the menu bar dropdown.
+      placeholder: e.g. 1.2.0
+    validations:
+      required: true
+
+  - type: input
+    id: macos-version
+    attributes:
+      label: macOS Version
+      description: Found in Apple menu > About This Mac.
+      placeholder: e.g. macOS 15.3 Sequoia
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mac-type
+    attributes:
+      label: Mac Type
+      description: What type of Mac are you using?
+      options:
+        - MacBook (built-in trackpad)
+        - Desktop Mac with Magic Trackpad
+        - Other
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: accessibility
+    attributes:
+      label: Accessibility Permission
+      description: MiddleDrag requires Accessibility access to function.
+      options:
+        - label: I have granted MiddleDrag Accessibility permission in System Settings > Privacy & Security > Accessibility
+          required: true
+
+  - type: input
+    id: sentry-event
+    attributes:
+      label: Sentry Event ID or Link
+      description: If MiddleDrag showed a crash report dialog, paste the Sentry event ID or link here. This helps us find the exact crash details.
+      placeholder: e.g. abc123def456 or https://sentry.io/...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Screen Recordings
+      description: If applicable, add visuals to help explain the problem.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other details — e.g. Mission Control settings, third-party trackpad tools, external monitors.
