@@ -1,0 +1,28 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: check-yaml
+
+  - repo: local
+    hooks:
+      - id: swift-debug-prints
+        name: Check for debug print() statements
+        entry: bash -c 'FOUND=0; for f in "$@"; do HITS=$(git diff --cached -U0 -- "$f" | grep -v "^+++" | grep "^+" | grep "print("); if [ -n "$HITS" ]; then echo "$f:"; echo "$HITS"; FOUND=1; fi; done; if [ "$FOUND" -eq 1 ]; then echo ""; echo "⚠ Use Log.debug()/Log.info()/Log.error() instead of print() — see MiddleDrag/Utilities/AnalyticsManager.swift"; exit 1; fi' --
+        language: system
+        files: '\.swift$'
+        exclude: '(Tests/|Test\.swift$)'
+        stages: [pre-commit]
+        verbose: true
+
+      - id: xcodebuild
+        name: Build MiddleDrag (Debug)
+        entry: bash -c 'xcodebuild build -project MiddleDrag.xcodeproj -scheme MiddleDrag -configuration Debug -destination "platform=macOS" -quiet CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO ONLY_ACTIVE_ARCH=YES'
+        language: system
+        files: '\.swift$'
+        pass_filenames: false
+        stages: [pre-commit]
