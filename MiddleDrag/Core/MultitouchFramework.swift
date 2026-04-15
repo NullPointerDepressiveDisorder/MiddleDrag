@@ -60,13 +60,6 @@ func MTRegisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContact
 @_silgen_name("MTUnregisterContactFrameCallback")
 func MTUnregisterContactFrameCallback(_ device: MTDeviceRef, _ callback: MTContactCallbackFunction?)
 
-// MARK: - Device Identification
-
-/// Get the stable hardware device ID for a multitouch device.
-/// Returns an OSStatus (0 on success) and writes the ID to the out-parameter.
-@_silgen_name("MTDeviceGetDeviceID")
-func MTDeviceGetDeviceID(_ device: MTDeviceRef, _ outDeviceID: UnsafeMutablePointer<UInt64>) -> Int32
-
 // MARK: - Framework Helper
 
 /// Helper class to manage MultitouchSupport framework access

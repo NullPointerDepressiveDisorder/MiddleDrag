@@ -113,6 +113,9 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Value stores all pointer forms observed for that ID so stop() can unregister safely.
     private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
     fileprivate var isRunning = false
+    /// Tracks the device count from the last successful enumeration.
+    /// Used to skip redundant re-registration when the count is unchanged.
+    private var lastKnownDeviceCount: Int = 0
     private var deviceRefreshTimer: DispatchSourceTimer?
     private let deviceRefreshQueue = DispatchQueue(
         label: "com.middledrag.device-monitor.refresh",
@@ -180,6 +183,7 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor starting...", category: .device)
 
         unsafe registeredDevicesByID.removeAll()
+        lastKnownDeviceCount = 0
         unsafe device = nil
 
         let registrationResult = unsafe registerAvailableDevices(logDeviceCount: true)
@@ -342,6 +346,17 @@ class DeviceMonitor: TouchDeviceProviding {
 
         guard unsafe isRunning else { return }
 
+        // Quick check: if device count hasn't changed, skip re-registration.
+        // MTDeviceCreateList() returns new pointers each call, so pointer-based
+        // IDs always look new. Comparing counts avoids redundant re-registration
+        // while still detecting connect/disconnect events.
+        if let deviceList = MTDeviceCreateList() {
+            let currentCount = CFArrayGetCount(deviceList)
+            if currentCount == lastKnownDeviceCount && currentCount > 0 {
+                return
+            }
+        }
+
         let registrationResult = unsafe registerAvailableDevices(logDeviceCount: false)
         let addedCount = registrationResult.addedCount
 
@@ -362,6 +377,7 @@ class DeviceMonitor: TouchDeviceProviding {
         if let deviceList = MTDeviceCreateList() {
             let count = CFArrayGetCount(deviceList)
             hadAnyDevice = count > 0
+            lastKnownDeviceCount = count
 
             if logDeviceCount {
                 Log.info("Found \(count) multitouch device(s)", category: .device)
@@ -444,13 +460,8 @@ class DeviceMonitor: TouchDeviceProviding {
     }
 
     /// Best-effort stable device identifier.
-    /// Uses MTDeviceGetDeviceID for a hardware-stable ID that persists across
-    /// MTDeviceCreateList() calls. Falls back to pointer identity if unavailable.
+    /// Falls back to pointer identity if the private ID symbol is unavailable.
     private func deviceIdentifier(for deviceRef: MTDeviceRef) -> Int64 {
-        var deviceID: UInt64 = 0
-        if unsafe MTDeviceGetDeviceID(deviceRef, &deviceID) == 0, deviceID != 0 {
-            return Int64(bitPattern: deviceID)
-        }
         return Int64(UInt(bitPattern: deviceRef))
     }
 
