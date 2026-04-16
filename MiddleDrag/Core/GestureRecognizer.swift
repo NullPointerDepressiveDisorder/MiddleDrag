@@ -3,7 +3,7 @@ import CoreGraphics
 import Foundation
 
 /// Manages gesture recognition from touch input
-class GestureRecognizer {
+class GestureRecognizer: @unchecked Sendable {
 
     // MARK: - Properties
 

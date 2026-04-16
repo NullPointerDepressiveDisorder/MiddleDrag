@@ -119,7 +119,7 @@ class DeviceMonitor: TouchDeviceProviding {
     /// Registered devices tracked by pointer identity.
     /// The current device identifier logic is pointer-derived, so a simple set
     /// accurately represents the registration state without redundant ID bucketing.
-    private var registeredDevicesByID: Set<UnsafeMutableRawPointer> = unsafe []
+    private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
     fileprivate var isRunning = false
     /// Tracks the device count from the last successful enumeration.
     /// Used to skip redundant re-registration when the count is unchanged.
@@ -260,7 +260,7 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe isRunning = false
 
         // Copy the registered devices to a local variable so we can unlock before sleeping
-        let devicesToStop = unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
+        let devicesToStop: Set<UnsafeMutableRawPointer> = unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
         unsafe registeredDevicesByID.removeAll()
         unsafe self.device = nil
 
