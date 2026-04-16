@@ -1,4 +1,5 @@
 import XCTest
+import Synchronization
 
 @testable import MiddleDragCore
 
@@ -24,7 +25,7 @@ import XCTest
 ///
 /// The critical race condition fix (gCallbackEnabled flag + os_unfair_lock) is validated
 /// by crash-safety tests that would fail if the synchronization was broken.
-@unsafe final class DeviceMonitorTests: XCTestCase {
+@unsafe final class DeviceMonitorTests: XCTestCase, @unchecked Sendable {
 
     // Note: DeviceMonitor uses a global variable (gDeviceMonitor) for C callback compatibility
     // This limits testing options since only one instance can be active at a time
@@ -325,13 +326,13 @@ import XCTest
         // This tests crash-safety of the synchronization, not correctness of final state.
         let expectation = XCTestExpectation(description: "Concurrent operations complete")
         expectation.expectedFulfillmentCount = 2
-        var startCount = 0
-        var stopCount = 0
+        let startCount = Mutex(0)
+        let stopCount = Mutex(0)
 
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.start()
-                startCount += 1
+                startCount.withLock { $0 += 1 }
                 Thread.sleep(forTimeInterval: 0.01)
             }
             expectation.fulfill()
@@ -340,16 +341,20 @@ import XCTest
         DispatchQueue.global().async {
             for _ in 0..<5 {
                 unsafe self.monitor.stop()
-                stopCount += 1
+                stopCount.withLock { $0 += 1 }
                 Thread.sleep(forTimeInterval: 0.01)
             }
             expectation.fulfill()
         }
 
         unsafe wait(for: [expectation], timeout: 5.0)
+
+        let finalStart = startCount.withLock { $0 }
+        let finalStop = stopCount.withLock { $0 }
+
         // Verify operations completed (crash-safety check)
-        XCTAssertEqual(startCount, 5, "All start operations should complete")
-        XCTAssertEqual(stopCount, 5, "All stop operations should complete")
+        XCTAssertEqual(finalStart, 5, "All start operations should complete")
+        XCTAssertEqual(finalStop, 5, "All stop operations should complete")
     }
 
     func testMultipleMonitorCreationDuringCleanup() throws {
@@ -517,7 +522,7 @@ import XCTest
 
     func testStartCreatesRefreshTimer() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -531,7 +536,7 @@ import XCTest
 
     func testStopCancelsRefreshTimer() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -555,7 +560,7 @@ import XCTest
 
     func testRefreshSkipsWhenDeviceCountUnchanged() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -574,8 +579,8 @@ import XCTest
 
     func testRefreshRegistersWhenDeviceCountIncreases() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device1 = makeFakeDevice()
-        let device2 = makeFakeDevice()
+        let device1 = unsafe makeFakeDevice()
+        let device2 = unsafe makeFakeDevice()
         defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
         unsafe enumerator.devices = [device1]
         unsafe enumerator.defaultDevice = device1
@@ -596,8 +601,8 @@ import XCTest
 
     func testRefreshHandlesDeviceDisconnect() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device1 = makeFakeDevice()
-        let device2 = makeFakeDevice()
+        let device1 = unsafe makeFakeDevice()
+        let device2 = unsafe makeFakeDevice()
         defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
         unsafe enumerator.devices = [device1, device2]
         unsafe enumerator.defaultDevice = device1
@@ -617,8 +622,8 @@ import XCTest
 
     func testRefreshUpdatesLastKnownDeviceCount() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device1 = makeFakeDevice()
-        let device2 = makeFakeDevice()
+        let device1 = unsafe makeFakeDevice()
+        let device2 = unsafe makeFakeDevice()
         defer { unsafe device1.deallocate(); unsafe device2.deallocate() }
         unsafe enumerator.devices = [device1]
         unsafe enumerator.defaultDevice = device1
@@ -636,7 +641,7 @@ import XCTest
 
     func testRefreshAfterStopIsNoop() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -657,7 +662,7 @@ import XCTest
 
     func testRegisterCallsCallbackAndStartsDevice() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -674,7 +679,7 @@ import XCTest
 
     func testRegisterSkipsStartForAlreadyRunningDevice() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -692,7 +697,7 @@ import XCTest
 
     func testStopUnregistersAndStopsDevices() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -711,7 +716,7 @@ import XCTest
 
     func testStartStopCycleWithMockDoesNotCrash() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -725,7 +730,7 @@ import XCTest
 
     func testSecondInstanceStartsAfterFirstStopsWithMock() {
         let enumerator = unsafe MockDeviceEnumerator()
-        let device = makeFakeDevice()
+        let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
@@ -766,7 +771,7 @@ class MockDeviceMonitorDelegate: DeviceMonitorDelegate {
 /// without the private MultitouchSupport framework.
 @unsafe final class MockDeviceEnumerator: DeviceEnumerating {
     /// Devices returned by `enumerateDevices()`.
-    var devices: [MTDeviceRef] = []
+    var devices: [MTDeviceRef] = unsafe []
     /// Device returned by `getDefaultDevice()`.
     var defaultDevice: MTDeviceRef?
     /// Set of devices that report as running.
@@ -774,10 +779,10 @@ class MockDeviceMonitorDelegate: DeviceMonitorDelegate {
 
     // Call tracking
     var enumerateCallCount = 0
-    var registeredCallbackDevices: [MTDeviceRef] = []
-    var unregisteredCallbackDevices: [MTDeviceRef] = []
-    var startedDevices: [MTDeviceRef] = []
-    var stoppedDevices: [MTDeviceRef] = []
+    var registeredCallbackDevices: [MTDeviceRef] = unsafe []
+    var unregisteredCallbackDevices: [MTDeviceRef] = unsafe []
+    var startedDevices: [MTDeviceRef] = unsafe []
+    var stoppedDevices: [MTDeviceRef] = unsafe []
 
     func enumerateDevices() -> [MTDeviceRef] {
         unsafe enumerateCallCount += 1
