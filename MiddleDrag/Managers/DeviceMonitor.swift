@@ -116,10 +116,10 @@ class DeviceMonitor: TouchDeviceProviding {
     private let cleanupDelay: TimeInterval
 
     nonisolated(unsafe) private var device: MTDeviceRef?
-    /// Registered devices keyed by pointer-based device ID.
-    /// IDs are only stable within a single MTDeviceCreateList() call; cross-refresh
-    /// deduplication relies on the count-based check in refreshConnectedDevices().
-    private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
+    /// Registered devices tracked by pointer identity.
+    /// The current device identifier logic is pointer-derived, so a simple set
+    /// accurately represents the registration state without redundant ID bucketing.
+    private var registeredDevicesByID: Set<UnsafeMutableRawPointer> = unsafe []
     fileprivate var isRunning = false
     /// Tracks the device count from the last successful enumeration.
     /// Used to skip redundant re-registration when the count is unchanged.
@@ -362,14 +362,11 @@ class DeviceMonitor: TouchDeviceProviding {
 
         guard unsafe isRunning else { return }
 
-        // Quick check: if device count hasn't changed, skip re-registration.
-        // MTDeviceCreateList() returns new pointers each call, so pointer-based
-        // IDs always look new. Comparing counts avoids redundant re-registration
-        // while still detecting connect/disconnect events.
+        // Do not skip refreshes based only on the number of devices.
+        // A disconnect/connect swap can keep the count unchanged while the
+        // actual device set changes, which would otherwise leave the newly
+        // connected device unregistered.
         let devices = unsafe enumerator.enumerateDevices()
-        if unsafe devices.count == lastKnownDeviceCount && devices.count > 0 {
-            return
-        }
 
         let registrationResult = unsafe registerAvailableDevices(
             logDeviceCount: false, prefetchedDevices: devices)
@@ -469,8 +466,9 @@ class DeviceMonitor: TouchDeviceProviding {
         return .registered
     }
 
-    /// Best-effort stable device identifier.
-    /// Falls back to pointer identity if the private ID symbol is unavailable.
+    /// Returns a pointer-based device identifier for the current `MTDeviceRef`.
+    /// This identifier is only valid for the lifetime of the underlying pointer
+    /// and is not stable across `MTDeviceCreateList()` refreshes.
     private func deviceIdentifier(for deviceRef: MTDeviceRef) -> Int64 {
         return Int64(UInt(bitPattern: deviceRef))
     }
