@@ -369,12 +369,12 @@ class DeviceMonitor: TouchDeviceProviding {
         guard unsafe isRunning else { return }
 
         let devices = unsafe enumerator.enumerateDevices()
-        let previousCount = lastKnownDeviceCount
+        let previousCount = unsafe lastKnownDeviceCount
 
         // --- tear down every old handle ---
         let oldDevices: Set<UnsafeMutableRawPointer> =
             unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
-        if !oldDevices.isEmpty {
+        if unsafe !oldDevices.isEmpty {
             // Unregister callbacks first (same ordering as stop()).
             for unsafe deviceRef in unsafe oldDevices {
                 unsafe enumerator.unregisterContactCallback(deviceRef, deviceContactCallback)
@@ -396,9 +396,9 @@ class DeviceMonitor: TouchDeviceProviding {
 
         // Only log when the set of devices actually changed, not on every
         // routine re-registration cycle.
-        if devices.count != previousCount {
+        if unsafe devices.count != previousCount {
             Log.info(
-                "Multitouch device count changed: \(previousCount) → \(devices.count)",
+                unsafe "Multitouch device count changed: \(previousCount) → \(devices.count)",
                 category: .device)
         }
 
