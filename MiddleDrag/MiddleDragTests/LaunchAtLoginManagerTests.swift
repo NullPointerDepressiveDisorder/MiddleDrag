@@ -118,9 +118,14 @@ final class LaunchAtLoginManagerTests: XCTestCase {
         let expectation = XCTestExpectation(description: "Concurrent operations completed")
         expectation.expectedFulfillmentCount = 10
 
+        guard let manager = self.manager else {
+            XCTFail("Manager was nil")
+            return
+        }
+
         for i in 0..<10 {
-            DispatchQueue.global().async {
-                self.manager.setLaunchAtLogin(i % 2 == 0)
+            DispatchQueue.global().async { [manager] in
+                manager.setLaunchAtLogin(i % 2 == 0)
                 expectation.fulfill()
             }
         }

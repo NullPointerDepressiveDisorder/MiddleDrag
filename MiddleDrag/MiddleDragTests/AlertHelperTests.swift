@@ -38,8 +38,9 @@ final class AlertHelperTests: XCTestCase {
     var mockSettingsProvider: MockTrackpadSettingsProvider!
     var originalSettingsProvider: TrackpadSettingsProvider!
 
-    override func setUp() {
-        super.setUp()
+    @MainActor
+    override func setUp() async throws {
+        try await super.setUp()
         // Save and replace AlertHelper presenter
         originalPresenter = AlertHelper.presenter
         mockPresenter = MockAlertPresenter()
@@ -51,13 +52,14 @@ final class AlertHelperTests: XCTestCase {
         unsafe SystemGestureHelper.settingsProvider = mockSettingsProvider
     }
 
-    override func tearDown() {
+    @MainActor
+    override func tearDown() async throws {
         // Restore originals
         AlertHelper.presenter = originalPresenter
         unsafe SystemGestureHelper.settingsProvider = originalSettingsProvider
         mockPresenter = nil
         mockSettingsProvider = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Existence Tests

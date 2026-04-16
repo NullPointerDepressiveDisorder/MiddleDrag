@@ -11,8 +11,9 @@ import XCTest
     var notificationExpectation: XCTestExpectation?
     var receivedNotificationObject: Any?
 
-    override func setUpWithError() throws {
-        try super.setUpWithError()
+    @MainActor
+    override func setUp() async throws {
+        try await super.setUp()
         unsafe mockDevice = unsafe MockDeviceMonitor()
         unsafe manager = MultitouchManager(
             deviceProviderFactory: { unsafe self.mockDevice }, eventTapSetup: { true })
@@ -20,14 +21,15 @@ import XCTest
         unsafe controller = unsafe MenuBarController(multitouchManager: manager, preferences: preferences)
     }
 
-    override func tearDown() {
+    @MainActor
+    override func tearDown() async throws {
         unsafe NotificationCenter.default.removeObserver(self)
         unsafe manager.stop()
         unsafe controller = nil
         unsafe manager = nil
         unsafe mockDevice = nil
         unsafe preferences = nil
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Initialization Tests
@@ -578,34 +580,34 @@ import XCTest
 
         unsafe manager.stop()
     }
-    
+
     // MARK: - Force Release Stuck Drag Tests
-    
+
     func testForceReleaseStuckDragDoesNotCrash() {
         unsafe manager.start()
-        
+
         // Calling force release when not dragging should be safe
         unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
-        
+
         unsafe manager.stop()
     }
-    
+
     func testForceReleaseStuckDragMultipleTimes() {
         unsafe manager.start()
-        
+
         // Calling force release multiple times rapidly should be safe
         for _ in 0..<5 {
             unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
         }
-        
+
         unsafe manager.stop()
     }
-    
+
     func testForceReleaseStuckDragWhenStopped() {
         // Controller should handle force release even when manager is stopped
         unsafe XCTAssertNoThrow(controller.forceReleaseStuckDrag())
     }
-    
+
     func testForceReleaseStuckDragSelectorExists() {
         let selector = #selector(MenuBarController.forceReleaseStuckDrag)
         unsafe XCTAssertTrue(controller.responds(to: selector))
