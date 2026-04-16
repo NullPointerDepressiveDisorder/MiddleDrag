@@ -556,9 +556,9 @@ import Synchronization
         unsafe XCTAssertFalse(monitor.hasActiveRefreshTimer)
     }
 
-    // MARK: - Refresh Skip / Register
+    // MARK: - Refresh Teardown / Re-register
 
-    func testRefreshSkipsWhenDeviceCountUnchanged() {
+    func testRefreshTearsDownOldHandlesBeforeRegistering() {
         let enumerator = unsafe MockDeviceEnumerator()
         let device = unsafe makeFakeDevice()
         defer { unsafe device.deallocate() }
@@ -569,12 +569,62 @@ import Synchronization
         defer { unsafe monitor.stop() }
         unsafe monitor.start()
 
-        let callsBefore = unsafe enumerator.registeredCallbackDevices.count
-        unsafe monitor.refreshConnectedDevices()
-        let callsAfter = unsafe enumerator.registeredCallbackDevices.count
+        // After start: 1 register, 1 start
+        unsafe XCTAssertEqual(enumerator.registeredCallbackDevices.count, 1)
 
-        XCTAssertEqual(callsBefore, callsAfter,
-                       "Refresh should skip registration when device count is unchanged")
+        // Refresh should unregister the old handle, then re-register it
+        unsafe monitor.refreshConnectedDevices()
+
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(device),
+                             "Old handle should be unregistered during refresh")
+        // Total registrations: 1 (start) + 1 (refresh re-register)
+        unsafe XCTAssertEqual(enumerator.registeredCallbackDevices.count, 2)
+    }
+
+    func testRefreshWithUnstablePointersDoesNotLeakCallbacks() {
+        // Simulates the core pointer-instability bug:
+        // MTDeviceCreateList() returns a different pointer for the same
+        // physical device on each call. Without the teardown step, this
+        // would orphan the old callback and register a duplicate.
+        let enumerator = unsafe MockDeviceEnumerator()
+        let ptr1 = unsafe makeFakeDevice()
+        let ptr2 = unsafe makeFakeDevice()
+        let ptr3 = unsafe makeFakeDevice()
+        defer {
+            unsafe ptr1.deallocate()
+            unsafe ptr2.deallocate()
+            unsafe ptr3.deallocate()
+        }
+        unsafe enumerator.devices = [ptr1]
+        unsafe enumerator.defaultDevice = ptr1
+
+        let monitor = unsafe makeMonitor(enumerator: enumerator)
+        defer { unsafe monitor.stop() }
+        unsafe monitor.start()
+
+        // Simulate framework returning different pointer for same device
+        unsafe enumerator.devices = [ptr2]
+        unsafe enumerator.defaultDevice = ptr2
+        unsafe monitor.refreshConnectedDevices()
+
+        // ptr1 must have been torn down
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(ptr1),
+                             "Old pointer should have its callback unregistered")
+        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(ptr1),
+                             "Old pointer should be stopped")
+
+        // Do it again with a third pointer
+        unsafe enumerator.devices = [ptr3]
+        unsafe enumerator.defaultDevice = ptr3
+        unsafe monitor.refreshConnectedDevices()
+
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(ptr2))
+        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(ptr2))
+
+        // Total unregisters should match: ptr1, ptr2 (not ptr3 — still active)
+        let unregCount = unsafe enumerator.unregisteredCallbackDevices.count
+        XCTAssertEqual(unregCount, 2,
+                       "Exactly the old handles should be unregistered, no leaks")
     }
 
     func testRefreshRegistersWhenDeviceCountIncreases() {
@@ -591,12 +641,12 @@ import Synchronization
 
         // Simulate connecting a second device
         unsafe enumerator.devices = [device1, device2]
-        let callsBefore = unsafe enumerator.registeredCallbackDevices.count
         unsafe monitor.refreshConnectedDevices()
-        let callsAfter = unsafe enumerator.registeredCallbackDevices.count
 
-        XCTAssertGreaterThan(callsAfter, callsBefore,
-                             "Refresh should register devices when count increases")
+        // Both devices should have been registered in the refresh pass
+        unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 2)
+        unsafe XCTAssertTrue(enumerator.registeredCallbackDevices.contains(device2),
+                             "Newly connected device should be registered")
     }
 
     func testRefreshHandlesDeviceDisconnect() {
@@ -618,6 +668,9 @@ import Synchronization
 
         unsafe XCTAssertEqual(monitor.lastKnownDeviceCount, 1,
                               "Count should update after device disconnect")
+        // device2 should have been torn down
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(device2))
+        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(device2))
     }
 
     func testRefreshUpdatesLastKnownDeviceCount() {

@@ -352,7 +352,13 @@ class DeviceMonitor: TouchDeviceProviding {
         timer.cancel()
     }
 
-    /// Finds newly connected devices and registers callbacks for them.
+    /// Tears down old device handles and re-registers the current device set.
+    ///
+    /// `MTDeviceCreateList()` may return different pointer addresses for the same
+    /// physical device on every call, so we cannot correlate old handles with new
+    /// ones. A full unregister-stop-then-register-start cycle on every refresh
+    /// prevents orphaned callbacks that would otherwise accumulate and deliver
+    /// duplicate touch events.
     func refreshConnectedDevices() {
         unsafe DeviceMonitor.lifecycleLock.lock()
         defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
@@ -362,21 +368,41 @@ class DeviceMonitor: TouchDeviceProviding {
 
         guard unsafe isRunning else { return }
 
-        // Do not skip refreshes based only on the number of devices.
-        // A disconnect/connect swap can keep the count unchanged while the
-        // actual device set changes, which would otherwise leave the newly
-        // connected device unregistered.
         let devices = unsafe enumerator.enumerateDevices()
+        let previousCount = lastKnownDeviceCount
 
+        // --- tear down every old handle ---
+        let oldDevices: Set<UnsafeMutableRawPointer> =
+            unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
+        if !oldDevices.isEmpty {
+            // Unregister callbacks first (same ordering as stop()).
+            for unsafe deviceRef in unsafe oldDevices {
+                unsafe enumerator.unregisterContactCallback(deviceRef, deviceContactCallback)
+            }
+            // Stop each device under gCallbackLock so the framework's internal
+            // thread cannot access the handle mid-teardown.
+            for unsafe deviceRef in unsafe oldDevices {
+                unsafe os_unfair_lock_lock(&gCallbackLock)
+                unsafe enumerator.stopDevice(deviceRef)
+                unsafe os_unfair_lock_unlock(&gCallbackLock)
+            }
+            unsafe registeredDevicesByID.removeAll()
+            unsafe device = nil
+        }
+
+        // --- register fresh handles ---
         let registrationResult = unsafe registerAvailableDevices(
             logDeviceCount: false, prefetchedDevices: devices)
-        let addedCount = registrationResult.addedCount
 
-        if addedCount > 0 {
+        // Only log when the set of devices actually changed, not on every
+        // routine re-registration cycle.
+        if devices.count != previousCount {
             Log.info(
-                "Registered \(addedCount) newly connected multitouch device(s)",
+                "Multitouch device count changed: \(previousCount) → \(devices.count)",
                 category: .device)
         }
+
+        _ = registrationResult  // suppress unused-result warning
     }
 
     /// Enumerates currently available devices and registers any that are not already active.
@@ -433,8 +459,10 @@ class DeviceMonitor: TouchDeviceProviding {
 
     /// Registers callbacks and starts a device if we are not already monitoring it.
     ///
-    /// Note: Device identity is pointer-based and not stable across MTDeviceCreateList() calls.
-    /// Cross-refresh deduplication is handled by the count-based check in refreshConnectedDevices().
+    /// Device identity is pointer-based and not stable across `MTDeviceCreateList()` calls.
+    /// `refreshConnectedDevices()` handles this by tearing down all old handles before
+    /// calling `registerAvailableDevices`, so within a single registration pass the
+    /// pointer-based IDs are consistent.
     private func registerDeviceIfNeeded(
         _ deviceRef: MTDeviceRef?,
         deviceID: Int64?
