@@ -29,6 +29,11 @@ jobs:
         runs-on: macos-latest
 
         steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
             - name: Download dSYM Artifact
               uses: actions/download-artifact@v4
               with:
@@ -47,11 +52,6 @@ jobs:
                   SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
               run: |
                   sentry-cli debug-files upload --include-sources dSYM/
-
-            - name: Checkout
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
 
             - name: Create Sentry Release
               env:
