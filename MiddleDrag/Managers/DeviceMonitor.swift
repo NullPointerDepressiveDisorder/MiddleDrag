@@ -36,7 +36,7 @@ import os
 
 @unsafe private let deviceContactCallback: MTContactCallbackFunction = {
     device, touches, numTouches, timestamp, frame in
-    
+
     // CRITICAL: Check the enabled flag FIRST, before accessing gDeviceMonitor.
     // This prevents accessing a nil or dangling pointer during teardown.
     // We use the lock to synchronize with stop() which sets the flag to false.
@@ -53,14 +53,14 @@ import os
         return 0
     }
     unsafe os_unfair_lock_unlock(&gCallbackLock)
-    
+
     // Additional safety check: Verify the monitor instance is still valid and running.
     unsafe monitor.stateLock.lock()
     let monitorIsRunning = unsafe monitor.isRunning
     unsafe monitor.stateLock.unlock()
-    
+
     guard monitorIsRunning else { return 0 }
-    
+
     #if DEBUG
         unsafe touchCount += 1
         // Log sparingly to avoid performance impact
@@ -124,18 +124,18 @@ class DeviceMonitor: TouchDeviceProviding {
     init() {
         // Acquire lock to safely update global state
         unsafe os_unfair_lock_lock(&gCallbackLock)
-        
+
         // Release any previous pending cleanup reference
         // The old instance has had time to complete cleanup by now
         unsafe gPendingCleanup = nil
-        
+
         // Only take ownership of the global reference if no other instance owns it
         // This prevents test interference when multiple DeviceMonitor instances are created
         if unsafe gDeviceMonitor == nil {
             unsafe gDeviceMonitor = unsafe self
             unsafe ownsGlobalReference = true
         }
-        
+
         unsafe os_unfair_lock_unlock(&gCallbackLock)
     }
 
@@ -213,13 +213,13 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor started with \(deviceCount) device(s)", category: .device)
 
         unsafe isRunning = true
-        
+
         // Enable callbacks AFTER all devices are registered.
         // This ensures gDeviceMonitor is fully set up before callbacks can access it.
         unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = true
         unsafe os_unfair_lock_unlock(&gCallbackLock)
-        
+
         return true
     }
 
@@ -267,7 +267,7 @@ class DeviceMonitor: TouchDeviceProviding {
         // accessing gDeviceMonitor while we're tearing down.
         unsafe os_unfair_lock_lock(&gCallbackLock)
         unsafe gCallbackEnabled = false
-        
+
         // Handle global cleanup: if this instance owns the global reference,
         // move it to gPendingCleanup to keep it alive until the next DeviceMonitor
         // is created. This prevents EXC_BAD_ACCESS if the framework's internal
@@ -302,13 +302,18 @@ class DeviceMonitor: TouchDeviceProviding {
         unsafe DeviceMonitor.lifecycleLock.lock()
         defer { unsafe DeviceMonitor.lifecycleLock.unlock() }
 
-        // Now safe to stop devices. Acquire lock before each MTDeviceStop to ensure
-        // the framework's internal thread (mt_ThreadedMTEntry) cannot access the device
-        // during the critical stop operation. This prevents CFRelease(NULL) crashes
-        // from the framework trying to release device resources concurrently.
+        // Now safe to stop devices. Guard each stop with MTDeviceIsRunning to prevent
+        // CFRelease(NULL) → EXC_BREAKPOINT crashes: if the framework's internal thread
+        // (mt_ThreadedMTEntry) already tore down a device handle (e.g. during sleep/wake
+        // or physical disconnect), calling MTDeviceStop on the same handle causes a
+        // double-release of the underlying CF object, which CoreFoundation traps as
+        // CFRelease(NULL) in CFRelease.cold.2. Skipping the stop when the handle is
+        // already not-running closes this window without affecting normal teardown.
         for unsafe deviceRef in unsafe devicesToStop {
             unsafe os_unfair_lock_lock(&gCallbackLock)
-            unsafe MTDeviceStop(deviceRef)
+            if unsafe MTDeviceIsRunning(deviceRef) {
+                unsafe MTDeviceStop(deviceRef)
+            }
             unsafe os_unfair_lock_unlock(&gCallbackLock)
         }
 
