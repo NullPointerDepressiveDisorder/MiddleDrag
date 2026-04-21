@@ -575,6 +575,7 @@ import Synchronization
 
         // Change device pointer to trigger a refresh teardown
         unsafe enumerator.devices = [device2]
+        unsafe enumerator.defaultDevice = device2
 
         // Refresh should unregister the old handle, then re-register them
         unsafe monitor.refreshConnectedDevices()
