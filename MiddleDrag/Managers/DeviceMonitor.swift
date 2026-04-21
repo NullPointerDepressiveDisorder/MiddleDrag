@@ -369,9 +369,10 @@ class DeviceMonitor: TouchDeviceProviding {
         guard unsafe isRunning else { return }
 
         let devices = unsafe enumerator.enumerateDevices()
-        let currentDevicePointers = unsafe Set(devices)
-        let previousCount = unsafe lastKnownDevicePointers.count
-        let pointersChanged = unsafe currentDevicePointers != unsafe lastKnownDevicePointers
+        let currentDevicePointers = Set(devices)
+        let lastPointers = unsafe lastKnownDevicePointers
+        let previousCount = lastPointers.count
+        let pointersChanged = currentDevicePointers != lastPointers
 
         // Optimization to prevent ThreadSanitizer thread leaks:
         // Only tear down and re-register if the actual device pointers have changed.
@@ -429,7 +430,7 @@ class DeviceMonitor: TouchDeviceProviding {
 
         let devices = unsafe prefetchedDevices ?? enumerator.enumerateDevices()
         hadAnyDevice = unsafe !devices.isEmpty
-        unsafe lastKnownDevicePointers = unsafe Set(devices)
+        unsafe lastKnownDevicePointers = Set(devices)
 
         if logDeviceCount {
             Log.info(unsafe "Found \(devices.count) multitouch device(s)", category: .device)
