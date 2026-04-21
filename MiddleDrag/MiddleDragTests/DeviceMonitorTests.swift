@@ -561,7 +561,8 @@ import Synchronization
     func testRefreshTearsDownOldHandlesBeforeRegistering() {
         let enumerator = unsafe MockDeviceEnumerator()
         let device = unsafe makeFakeDevice()
-        defer { unsafe device.deallocate() }
+        let device2 = unsafe makeFakeDevice()
+        defer { unsafe device.deallocate(); unsafe device2.deallocate() }
         unsafe enumerator.devices = [device]
         unsafe enumerator.defaultDevice = device
 
@@ -572,13 +573,16 @@ import Synchronization
         // After start: 1 register, 1 start
         unsafe XCTAssertEqual(enumerator.registeredCallbackDevices.count, 1)
 
-        // Refresh should unregister the old handle, then re-register it
+        // Change device count to trigger a refresh teardown
+        unsafe enumerator.devices = [device, device2]
+
+        // Refresh should unregister the old handle, then re-register them
         unsafe monitor.refreshConnectedDevices()
 
         unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(device),
                              "Old handle should be unregistered during refresh")
-        // Total registrations: 1 (start) + 1 (refresh re-register)
-        unsafe XCTAssertEqual(enumerator.registeredCallbackDevices.count, 2)
+        // Total registrations: 1 (initial start) + 2 (refresh re-register both)
+        unsafe XCTAssertEqual(enumerator.registeredCallbackDevices.count, 3)
     }
 
     func testRefreshWithUnstablePointersDoesNotLeakCallbacks() {
@@ -603,28 +607,37 @@ import Synchronization
         unsafe monitor.start()
 
         // Simulate framework returning different pointer for same device
+        // but the total count hasn't changed.
         unsafe enumerator.devices = [ptr2]
         unsafe enumerator.defaultDevice = ptr2
         unsafe monitor.refreshConnectedDevices()
 
-        // ptr1 must have been torn down
-        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(ptr1),
-                             "Old pointer should have its callback unregistered")
-        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(ptr1),
-                             "Old pointer should be stopped")
+        // With the TSan optimization, if count hasn't changed, we don't tear down.
+        // The old handle (ptr1) is kept alive and no new callbacks are registered.
+        unsafe XCTAssertFalse(enumerator.unregisteredCallbackDevices.contains(ptr1),
+                              "Old pointer should NOT be torn down if count is unchanged")
+        unsafe XCTAssertFalse(enumerator.stoppedDevices.contains(ptr1),
+                              "Old pointer should NOT be stopped if count is unchanged")
+        unsafe XCTAssertFalse(enumerator.registeredCallbackDevices.contains(ptr2),
+                              "New pointer should NOT be registered if count is unchanged")
 
-        // Do it again with a third pointer
-        unsafe enumerator.devices = [ptr3]
-        unsafe enumerator.defaultDevice = ptr3
+        // Now simulate connecting a new device, changing the count from 1 to 2.
+        // This should trigger a full teardown of ptr1 and registration of ptr2 & ptr3.
+        unsafe enumerator.devices = [ptr2, ptr3]
+        unsafe enumerator.defaultDevice = ptr2
         unsafe monitor.refreshConnectedDevices()
 
-        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(ptr2))
-        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(ptr2))
+        unsafe XCTAssertTrue(enumerator.unregisteredCallbackDevices.contains(ptr1),
+                             "Old pointer should be torn down when count changes")
+        unsafe XCTAssertTrue(enumerator.stoppedDevices.contains(ptr1),
+                             "Old pointer should be stopped when count changes")
+        unsafe XCTAssertTrue(enumerator.registeredCallbackDevices.contains(ptr2))
+        unsafe XCTAssertTrue(enumerator.registeredCallbackDevices.contains(ptr3))
 
-        // Total unregisters should match: ptr1, ptr2 (not ptr3 — still active)
+        // Total unregisters should match: ptr1
         let unregCount = unsafe enumerator.unregisteredCallbackDevices.count
-        XCTAssertEqual(unregCount, 2,
-                       "Exactly the old handles should be unregistered, no leaks")
+        XCTAssertEqual(unregCount, 1,
+                       "Only the previously active handle should be unregistered")
     }
 
     func testRefreshRegistersWhenDeviceCountIncreases() {

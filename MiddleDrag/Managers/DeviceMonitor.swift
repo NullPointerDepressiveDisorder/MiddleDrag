@@ -371,6 +371,14 @@ class DeviceMonitor: TouchDeviceProviding {
         let devices = unsafe enumerator.enumerateDevices()
         let previousCount = unsafe lastKnownDeviceCount
 
+        // Optimization to prevent ThreadSanitizer thread leaks:
+        // Only tear down and re-register if the device count has actually changed.
+        // Repeatedly stopping and starting MTDevice handles every few seconds
+        // causes the MultitouchSupport framework to leak internal threads.
+        if unsafe devices.count == previousCount {
+            return
+        }
+
         // --- tear down every old handle ---
         let oldDevices: Set<UnsafeMutableRawPointer> =
             unsafe Set(registeredDevicesByID.values.flatMap { unsafe $0 })
