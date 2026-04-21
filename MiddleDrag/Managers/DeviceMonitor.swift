@@ -121,9 +121,9 @@ class DeviceMonitor: TouchDeviceProviding {
     /// accurately represents the registration state without redundant ID bucketing.
     private var registeredDevicesByID: [Int64: Set<UnsafeMutableRawPointer>] = unsafe [:]
     fileprivate var isRunning = false
-    /// Tracks the device count from the last successful enumeration.
-    /// Used to skip redundant re-registration when the count is unchanged.
-    private(set) var lastKnownDeviceCount: Int = 0
+    /// Tracks the device pointers from the last successful enumeration.
+    /// Used to skip redundant re-registration when the devices are unchanged.
+    private(set) var lastKnownDevicePointers: Set<UnsafeMutableRawPointer> = unsafe []
     private var deviceRefreshTimer: DispatchSourceTimer?
     private let deviceRefreshQueue = DispatchQueue(
         label: "com.middledrag.device-monitor.refresh",
@@ -197,7 +197,7 @@ class DeviceMonitor: TouchDeviceProviding {
         Log.info("DeviceMonitor starting...", category: .device)
 
         unsafe registeredDevicesByID.removeAll()
-        unsafe lastKnownDeviceCount = 0
+        unsafe lastKnownDevicePointers.removeAll()
         unsafe device = nil
 
         let registrationResult = unsafe registerAvailableDevices(logDeviceCount: true)
@@ -369,13 +369,17 @@ class DeviceMonitor: TouchDeviceProviding {
         guard unsafe isRunning else { return }
 
         let devices = unsafe enumerator.enumerateDevices()
-        let previousCount = unsafe lastKnownDeviceCount
+        let currentDevicePointers = unsafe Set(devices)
+        let previousCount = unsafe lastKnownDevicePointers.count
+        let pointersChanged = unsafe currentDevicePointers != unsafe lastKnownDevicePointers
 
         // Optimization to prevent ThreadSanitizer thread leaks:
-        // Only tear down and re-register if the device count has actually changed.
+        // Only tear down and re-register if the actual device pointers have changed.
         // Repeatedly stopping and starting MTDevice handles every few seconds
         // causes the MultitouchSupport framework to leak internal threads.
-        if unsafe devices.count == previousCount {
+        // This set comparison safely handles the case where a trackpad is swapped
+        // (device count remains the same, but pointers differ).
+        if !pointersChanged {
             return
         }
 
@@ -404,7 +408,7 @@ class DeviceMonitor: TouchDeviceProviding {
 
         // Only log when the set of devices actually changed, not on every
         // routine re-registration cycle.
-        if unsafe devices.count != previousCount {
+        if pointersChanged && previousCount != devices.count {
             Log.info(
                 unsafe "Multitouch device count changed: \(previousCount) → \(devices.count)",
                 category: .device)
@@ -425,7 +429,7 @@ class DeviceMonitor: TouchDeviceProviding {
 
         let devices = unsafe prefetchedDevices ?? enumerator.enumerateDevices()
         hadAnyDevice = unsafe !devices.isEmpty
-        unsafe lastKnownDeviceCount = unsafe devices.count
+        unsafe lastKnownDevicePointers = unsafe Set(devices)
 
         if logDeviceCount {
             Log.info(unsafe "Found \(devices.count) multitouch device(s)", category: .device)
