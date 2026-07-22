@@ -20,6 +20,7 @@ public class MenuBarController: NSObject {
     private var preferences: UserPreferences
     private(set) var isMenuBarVisible = true
     private var touchDebugWindowController: TouchDebugWindowController?
+    private var calibrationWizardController: CalibrationWizardController?
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {
@@ -391,6 +392,32 @@ public class MenuBarController: NSObject {
         let item = NSMenuItem(title: "Palm Rejection", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
 
+        // Incidental contact filtering (classifier-based thumb/palm rejection)
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Ignore Incidental Contacts",
+                isOn: preferences.incidentalFilterEnabled,
+                action: #selector(toggleIncidentalFilter)
+            ))
+
+        let calibrateItem = NSMenuItem(
+            title: "Calibrate Touch Classification...",
+            action: #selector(showCalibrationWizard),
+            keyEquivalent: ""
+        )
+        calibrateItem.target = self
+        submenu.addItem(calibrateItem)
+
+        let resetCalibrationItem = NSMenuItem(
+            title: "Reset Touch Calibration",
+            action: #selector(resetTouchCalibration),
+            keyEquivalent: ""
+        )
+        resetCalibrationItem.target = self
+        submenu.addItem(resetCalibrationItem)
+
+        submenu.addItem(NSMenuItem.separator())
+
         // Exclusion Zone section
         let exclusionItem = createAdvancedMenuItem(
             title: "Exclusion Zone",
@@ -641,6 +668,32 @@ public class MenuBarController: NSObject {
     }
 
     // MARK: - Palm Rejection Actions
+
+    @objc func toggleIncidentalFilter() {
+        preferences.incidentalFilterEnabled.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.incidentalFilterEnabled = preferences.incidentalFilterEnabled
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func showCalibrationWizard() {
+        guard let multitouchManager else { return }
+
+        // Always start a fresh wizard; a finished or abandoned run should not resume.
+        let wizard = CalibrationWizardController(multitouchManager: multitouchManager)
+        calibrationWizardController = wizard
+        wizard.show()
+    }
+
+    @objc func resetTouchCalibration() {
+        TouchCalibrationStore.shared.reset()
+        multitouchManager?.applyTouchCalibration(.default)
+        flashStatusBarIcon()
+    }
 
     @objc func toggleExclusionZone() {
         preferences.exclusionZoneEnabled.toggle()
