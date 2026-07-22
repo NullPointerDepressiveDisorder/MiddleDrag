@@ -826,6 +826,19 @@ public final class MultitouchManager: @unchecked Sendable {
             }
         }
 
+        // Optional: let a real left click (e.g. a thumb pressing the trackpad) reach
+        // the target app as an actual left button, in addition to the synthetic
+        // middle button already held for the drag. Scoped to left button only and
+        // to an active drag specifically (not just possibleTap) — this is for combined
+        // middle-drag + left-click workflows (e.g. orbit-and-select in CAD apps).
+        if configuration.allowLeftClickDuringDrag && isActivelyDragging && isLeftButton
+            && !isOurEvent
+        {
+            if type == .leftMouseDown || type == .leftMouseUp || type == .leftMouseDragged {
+                return unsafe Unmanaged.passUnretained(event)
+            }
+        }
+
         // Suppress left/right events during gesture or shortly after
         // Only suppress after gesture end if the last gesture was actually active (not cancelled)
         let shouldSuppress = gestureActive || (timeSinceGestureEnd < 0.15 && lastGestureWasActive)
@@ -843,6 +856,7 @@ public final class MultitouchManager: @unchecked Sendable {
         gestureRecognizer.configuration = configuration
         mouseGenerator.smoothingFactor = configuration.smoothingFactor
         mouseGenerator.minimumMovementThreshold = CGFloat(configuration.minimumMovementThreshold)
+        mouseGenerator.preserveModifierKeys = configuration.preserveModifierKeysDuringDrag
     }
 
     /// Thread-safe check if cursor is over desktop (no window underneath)

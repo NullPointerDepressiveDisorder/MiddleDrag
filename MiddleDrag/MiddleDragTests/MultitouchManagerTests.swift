@@ -2237,6 +2237,131 @@ final class MultitouchManagerTests: XCTestCase {
         manager.stop()
     }
 
+    // MARK: - Allow Left Click During Drag Tests
+
+    func testLeftClickDuringDragSuppressedByDefault() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let expectation = XCTestExpectation(description: "Dragging state updated")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
+
+        unsafe XCTAssertNil(
+            result, "A real left click during a drag should be suppressed by default")
+    }
+
+    func testLeftClickDuringDragPassesThroughWhenEnabled() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let expectation = XCTestExpectation(description: "Dragging state updated")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        for type in [CGEventType.leftMouseDown, .leftMouseDragged, .leftMouseUp] {
+            let event = CGEvent(
+                mouseEventSource: nil, mouseType: type, mouseCursorPosition: CGPoint.zero,
+                mouseButton: .left)!
+
+            let result = unsafe manager.processEvent(event, type: type)
+
+            unsafe XCTAssertNotNil(
+                result,
+                "\(type) should pass through as a real left click when the option is enabled")
+        }
+    }
+
+    func testRightClickDuringDragStillSuppressedWhenLeftClickPassthroughEnabled() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let expectation = XCTestExpectation(description: "Dragging state updated")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .right)!
+
+        let result = unsafe manager.processEvent(event, type: .rightMouseDown)
+
+        unsafe XCTAssertNil(
+            result,
+            "The left-click passthrough option must not also let right-clicks through")
+    }
+
+    func testLeftClickPassthroughDoesNotApplyOutsideActiveDrag() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        // In a possibleTap gesture (not yet dragging), not currently dragging
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidStart(recognizer, at: MTPoint(x: 0, y: 0))
+
+        let expectation = XCTestExpectation(description: "State updated")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isInThreeFingerGesture)
+            XCTAssertFalse(manager.isActivelyDragging)
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 1.0)
+
+        let event = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: CGPoint.zero,
+            mouseButton: .left)!
+
+        let result = unsafe manager.processEvent(event, type: .leftMouseDown)
+
+        unsafe XCTAssertNil(
+            result,
+            "Left-click passthrough is scoped to an active drag, not just gesture-active state")
+    }
+
     // MARK: - Last Gesture Was Active Flag Tests
 
     func testCancelledGestureDoesNotSuppressEventsAfterEnd() throws {

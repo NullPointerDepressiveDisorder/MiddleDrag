@@ -83,6 +83,14 @@ public struct GestureConfiguration: Sendable {
     // Incidental contact filtering - classifier-based thumb/palm rejection
     var incidentalFilterEnabled: Bool = true
 
+    // Mouse button behavior during a middle-drag
+    // Forward live keyboard modifiers on synthetic middle-button events instead
+    // of always reporting none (some apps switch behavior on modifier+middle-drag)
+    var preserveModifierKeysDuringDrag: Bool = false
+    // Pass a real left click (e.g. a thumb pressing the trackpad) through to the
+    // target app while a middle-drag is active, instead of suppressing it
+    var allowLeftClickDuringDrag: Bool = false
+
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
         guard enableVelocityBoost else { return sensitivity }
@@ -251,6 +259,10 @@ public struct UserPreferences: Codable, Sendable {
     // Incidental contact filtering - classifier-based thumb/palm rejection
     var incidentalFilterEnabled: Bool = true
 
+    // Mouse button behavior during a middle-drag
+    var preserveModifierKeysDuringDrag: Bool = false
+    var allowLeftClickDuringDrag: Bool = false
+
     // Hotkey bindings
     public var toggleHotKey: HotKeyBinding = HotKeyBinding(
         keyCode: UInt32(kVK_ANSI_E),
@@ -285,7 +297,9 @@ public struct UserPreferences: Codable, Sendable {
             allowReliftDuringDrag: allowReliftDuringDrag,
             passThroughTitleBar: passThroughTitleBar,
             titleBarHeight: CGFloat(titleBarHeight),
-            incidentalFilterEnabled: incidentalFilterEnabled
+            incidentalFilterEnabled: incidentalFilterEnabled,
+            preserveModifierKeysDuringDrag: preserveModifierKeysDuringDrag,
+            allowLeftClickDuringDrag: allowLeftClickDuringDrag
         )
     }
 }

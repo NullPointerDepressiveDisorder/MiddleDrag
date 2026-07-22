@@ -37,6 +37,15 @@ final class MouseEventGeneratorTests: XCTestCase {
         XCTAssertEqual(generator.minimumMovementThreshold, 1.0, accuracy: 0.001)
     }
 
+    func testDefaultPreserveModifierKeysIsFalse() {
+        XCTAssertFalse(generator.preserveModifierKeys)
+    }
+
+    func testPreserveModifierKeysCanBeModified() {
+        generator.preserveModifierKeys = true
+        XCTAssertTrue(generator.preserveModifierKeys)
+    }
+
     // MARK: - Drag State Tests
 
     func testCancelDragWithoutActiveDrag() {

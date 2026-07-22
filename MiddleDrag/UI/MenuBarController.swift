@@ -330,6 +330,24 @@ public class MenuBarController: NSObject {
                 action: #selector(toggleAllowReliftDuringDrag)
             ))
 
+        // Forward keyboard modifiers on the synthetic middle-button events
+        // (useful for apps whose middle-drag behavior changes with Shift/Ctrl/etc.)
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Preserve Modifier Keys During Drag",
+                isOn: preferences.preserveModifierKeysDuringDrag,
+                action: #selector(togglePreserveModifierKeysDuringDrag)
+            ))
+
+        // Let a real click (e.g. a thumb press) reach the app as a left click
+        // while a middle-drag is active, instead of being suppressed
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Allow Left Click During Drag",
+                isOn: preferences.allowLeftClickDuringDrag,
+                action: #selector(toggleAllowLeftClickDuringDrag)
+            ))
+
         submenu.addItem(NSMenuItem.separator())
         
         // Emergency release for stuck drags
@@ -829,6 +847,28 @@ public class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.allowReliftDuringDrag = preferences.allowReliftDuringDrag
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func togglePreserveModifierKeysDuringDrag() {
+        preferences.preserveModifierKeysDuringDrag.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.preserveModifierKeysDuringDrag = preferences.preserveModifierKeysDuringDrag
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func toggleAllowLeftClickDuringDrag() {
+        preferences.allowLeftClickDuringDrag.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.allowLeftClickDuringDrag = preferences.allowLeftClickDuringDrag
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()

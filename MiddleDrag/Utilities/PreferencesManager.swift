@@ -38,6 +38,9 @@ public final class PreferencesManager: @unchecked Sendable {
         static let allowReliftDuringDrag = "allowReliftDuringDrag"
         // Incidental contact filtering key
         static let incidentalFilterEnabled = "incidentalFilterEnabled"
+        // Mouse button behavior during a middle-drag
+        static let preserveModifierKeysDuringDrag = "preserveModifierKeysDuringDrag"
+        static let allowLeftClickDuringDrag = "allowLeftClickDuringDrag"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
         // Hotkey binding keys
@@ -89,6 +92,9 @@ public final class PreferencesManager: @unchecked Sendable {
             Keys.allowReliftDuringDrag: false,
             // Incidental contact filtering default
             Keys.incidentalFilterEnabled: true,
+            // Mouse button behavior defaults
+            Keys.preserveModifierKeysDuringDrag: false,
+            Keys.allowLeftClickDuringDrag: false,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
             // Hotkey defaults
@@ -132,6 +138,9 @@ public final class PreferencesManager: @unchecked Sendable {
         prefs.titleBarHeight = userDefaults.double(forKey: Keys.titleBarHeight)
         prefs.allowReliftDuringDrag = userDefaults.bool(forKey: Keys.allowReliftDuringDrag)
         prefs.incidentalFilterEnabled = userDefaults.bool(forKey: Keys.incidentalFilterEnabled)
+        prefs.preserveModifierKeysDuringDrag = userDefaults.bool(
+            forKey: Keys.preserveModifierKeysDuringDrag)
+        prefs.allowLeftClickDuringDrag = userDefaults.bool(forKey: Keys.allowLeftClickDuringDrag)
         prefs.toggleHotKey = HotKeyBinding(
             keyCode: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyCode)),
             carbonModifiers: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyModifiers))
@@ -175,6 +184,11 @@ public final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.allowReliftDuringDrag, forKey: Keys.allowReliftDuringDrag)
         // Incidental contact filtering
         userDefaults.set(preferences.incidentalFilterEnabled, forKey: Keys.incidentalFilterEnabled)
+        // Mouse button behavior
+        userDefaults.set(
+            preferences.preserveModifierKeysDuringDrag, forKey: Keys.preserveModifierKeysDuringDrag)
+        userDefaults.set(
+            preferences.allowLeftClickDuringDrag, forKey: Keys.allowLeftClickDuringDrag)
         // Hotkey bindings
         userDefaults.set(Int(preferences.toggleHotKey.keyCode), forKey: Keys.toggleHotKeyCode)
         userDefaults.set(Int(preferences.toggleHotKey.carbonModifiers), forKey: Keys.toggleHotKeyModifiers)

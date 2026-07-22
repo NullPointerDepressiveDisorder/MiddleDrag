@@ -20,6 +20,17 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// After this many seconds without updateDrag calls, the drag is auto-released
     var stuckDragTimeout: TimeInterval = 10.0
 
+    /// When true, synthetic middle-button events carry the live keyboard modifier
+    /// state instead of always reporting none. Off by default to match prior
+    /// behavior (some apps react unexpectedly to modifiers on a synthetic button).
+    var preserveModifierKeys: Bool = false
+
+    /// The flags to stamp on a synthetic event: live modifier state when
+    /// `preserveModifierKeys` is on, none otherwise (the historical behavior).
+    private var syntheticEventFlags: CGEventFlags {
+        preserveModifierKeys ? CGEventSource.flagsState(.hidSystemState) : []
+    }
+
     // State tracking - protected by stateLock for thread safety
     // isMiddleMouseDown is read from multiple threads (updateDrag on gesture queue,
     // written on eventQueue), so it needs synchronization
@@ -246,7 +257,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
         
         // Warp the visible cursor to match the accumulated position.
@@ -325,7 +336,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             downEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             downEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            downEvent.flags = []
+            downEvent.flags = self.syntheticEventFlags
 
             // Create mouse up event
             guard
@@ -340,7 +351,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             upEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            upEvent.flags = []
+            upEvent.flags = self.syntheticEventFlags
 
             // Post events with small delay between them
             self._clickCount += 1
@@ -532,7 +543,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
     }
 
@@ -549,7 +560,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
     }
     
