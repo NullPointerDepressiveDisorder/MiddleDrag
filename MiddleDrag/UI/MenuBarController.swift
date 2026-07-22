@@ -19,6 +19,7 @@ public class MenuBarController: NSObject {
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
     private(set) var isMenuBarVisible = true
+    private var touchDebugWindowController: TouchDebugWindowController?
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {
@@ -255,6 +256,14 @@ public class MenuBarController: NSObject {
         )
         gestureItem.target = self
         submenu.addItem(gestureItem)
+
+        let debugTouchesItem = NSMenuItem(
+            title: "Debug Touches...",
+            action: #selector(showTouchDebugWindow),
+            keyEquivalent: ""
+        )
+        debugTouchesItem.target = self
+        submenu.addItem(debugTouchesItem)
 
         submenu.addItem(NSMenuItem.separator())
 
@@ -548,6 +557,16 @@ public class MenuBarController: NSObject {
 
         // Notify delegate to save preferences
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func showTouchDebugWindow() {
+        guard let multitouchManager else { return }
+
+        if touchDebugWindowController == nil {
+            touchDebugWindowController = TouchDebugWindowController(
+                multitouchManager: multitouchManager)
+        }
+        touchDebugWindowController?.show()
     }
 
     @objc func configureSystemGestures() {
