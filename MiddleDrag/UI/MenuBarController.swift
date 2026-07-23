@@ -436,38 +436,6 @@ public class MenuBarController: NSObject {
 
         submenu.addItem(NSMenuItem.separator())
 
-        // Exclusion Zone section
-        let exclusionItem = createAdvancedMenuItem(
-            title: "Exclusion Zone",
-            isOn: preferences.exclusionZoneEnabled,
-            action: #selector(toggleExclusionZone)
-        )
-        submenu.addItem(exclusionItem)
-
-        // Exclusion zone size options (only shown when enabled)
-        if preferences.exclusionZoneEnabled {
-            let sizes: [(String, Double)] = [
-                ("10% (Small)", 0.10),
-                ("15% (Default)", 0.15),
-                ("20% (Medium)", 0.20),
-                ("25% (Large)", 0.25),
-            ]
-
-            for (title, value) in sizes {
-                let sizeItem = NSMenuItem(
-                    title: "    \(title)", action: #selector(setExclusionZoneSize(_:)),
-                    keyEquivalent: "")
-                sizeItem.target = self
-                sizeItem.representedObject = value
-                if abs(preferences.exclusionZoneSize - value) < 0.01 {
-                    sizeItem.state = .on
-                }
-                submenu.addItem(sizeItem)
-            }
-        }
-
-        submenu.addItem(NSMenuItem.separator())
-
         // Modifier Key section
         let modifierItem = createAdvancedMenuItem(
             title: "Require Modifier Key",
@@ -488,37 +456,6 @@ public class MenuBarController: NSObject {
                     keyItem.state = .on
                 }
                 submenu.addItem(keyItem)
-            }
-        }
-
-        submenu.addItem(NSMenuItem.separator())
-
-        // Contact Size Filter section
-        let contactSizeItem = createAdvancedMenuItem(
-            title: "Filter Large Contacts",
-            isOn: preferences.contactSizeFilterEnabled,
-            action: #selector(toggleContactSizeFilter)
-        )
-        submenu.addItem(contactSizeItem)
-
-        // Contact size threshold options (only shown when enabled)
-        if preferences.contactSizeFilterEnabled {
-            let thresholds: [(String, Double)] = [
-                ("Strict (1.0)", 1.0),
-                ("Normal (1.5)", 1.5),
-                ("Lenient (2.0)", 2.0),
-            ]
-
-            for (title, value) in thresholds {
-                let thresholdItem = NSMenuItem(
-                    title: "    \(title)", action: #selector(setContactSizeThreshold(_:)),
-                    keyEquivalent: "")
-                thresholdItem.target = self
-                thresholdItem.representedObject = value
-                if abs(preferences.maxContactSize - value) < 0.01 {
-                    thresholdItem.state = .on
-                }
-                submenu.addItem(thresholdItem)
             }
         }
 
@@ -713,31 +650,6 @@ public class MenuBarController: NSObject {
         flashStatusBarIcon()
     }
 
-    @objc func toggleExclusionZone() {
-        preferences.exclusionZoneEnabled.toggle()
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.exclusionZoneEnabled = preferences.exclusionZoneEnabled
-        config.exclusionZoneSize = Float(preferences.exclusionZoneSize)
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
-    @objc func setExclusionZoneSize(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Double else { return }
-
-        preferences.exclusionZoneSize = value
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.exclusionZoneSize = Float(value)
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
     @objc func toggleRequireModifierKey() {
         preferences.requireModifierKey.toggle()
 
@@ -759,31 +671,6 @@ public class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.modifierKeyType = keyType
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
-    @objc func toggleContactSizeFilter() {
-        preferences.contactSizeFilterEnabled.toggle()
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.contactSizeFilterEnabled = preferences.contactSizeFilterEnabled
-        config.maxContactSize = Float(preferences.maxContactSize)
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
-    @objc func setContactSizeThreshold(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Double else { return }
-
-        preferences.maxContactSize = value
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.maxContactSize = Float(value)
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()

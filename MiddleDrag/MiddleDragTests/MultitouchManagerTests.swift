@@ -75,21 +75,13 @@ final class MultitouchManagerTests: XCTestCase {
     func testUpdateConfigurationPalmRejection() {
         let manager = MultitouchManager.shared
         var newConfig = GestureConfiguration()
-        newConfig.exclusionZoneEnabled = true
-        newConfig.exclusionZoneSize = 0.25
         newConfig.requireModifierKey = true
         newConfig.modifierKeyType = .option
-        newConfig.contactSizeFilterEnabled = true
-        newConfig.maxContactSize = 2.5
 
         manager.updateConfiguration(newConfig)
 
-        XCTAssertTrue(manager.configuration.exclusionZoneEnabled)
-        XCTAssertEqual(manager.configuration.exclusionZoneSize, 0.25, accuracy: 0.001)
         XCTAssertTrue(manager.configuration.requireModifierKey)
         XCTAssertEqual(manager.configuration.modifierKeyType, .option)
-        XCTAssertTrue(manager.configuration.contactSizeFilterEnabled)
-        XCTAssertEqual(manager.configuration.maxContactSize, 2.5, accuracy: 0.001)
     }
 
     // MARK: - State Tests
@@ -140,12 +132,8 @@ final class MultitouchManagerTests: XCTestCase {
         config.smoothingFactor = 0.8
         config.minimumMovementThreshold = 1.0
         config.middleDragEnabled = false
-        config.exclusionZoneEnabled = true
-        config.exclusionZoneSize = 0.3
         config.requireModifierKey = true
         config.modifierKeyType = .command
-        config.contactSizeFilterEnabled = true
-        config.maxContactSize = 3.0
 
         manager.updateConfiguration(config)
 
@@ -156,12 +144,8 @@ final class MultitouchManagerTests: XCTestCase {
         XCTAssertEqual(manager.configuration.smoothingFactor, 0.8, accuracy: 0.001)
         XCTAssertEqual(manager.configuration.minimumMovementThreshold, 1.0, accuracy: 0.001)
         XCTAssertFalse(manager.configuration.middleDragEnabled)
-        XCTAssertTrue(manager.configuration.exclusionZoneEnabled)
-        XCTAssertEqual(manager.configuration.exclusionZoneSize, 0.3, accuracy: 0.001)
         XCTAssertTrue(manager.configuration.requireModifierKey)
         XCTAssertEqual(manager.configuration.modifierKeyType, .command)
-        XCTAssertTrue(manager.configuration.contactSizeFilterEnabled)
-        XCTAssertEqual(manager.configuration.maxContactSize, 3.0, accuracy: 0.001)
     }
 
     // MARK: - Dependency Injection Tests (using mock)

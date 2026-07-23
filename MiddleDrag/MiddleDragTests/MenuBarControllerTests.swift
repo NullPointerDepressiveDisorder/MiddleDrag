@@ -153,12 +153,8 @@ import XCTest
 
     func testPreferencesWithPalmRejectionEnabled() {
         var prefs = UserPreferences()
-        prefs.exclusionZoneEnabled = true
-        prefs.exclusionZoneSize = 0.20
         prefs.requireModifierKey = true
         prefs.modifierKeyType = .option
-        prefs.contactSizeFilterEnabled = true
-        prefs.maxContactSize = 2.0
 
         let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
         XCTAssertNotNil(ctrl)
@@ -193,21 +189,13 @@ import XCTest
 
     func testManagerConfigurationWithPalmRejection() {
         var config = GestureConfiguration()
-        config.exclusionZoneEnabled = true
-        config.exclusionZoneSize = 0.25
         config.requireModifierKey = true
         config.modifierKeyType = .command
-        config.contactSizeFilterEnabled = true
-        config.maxContactSize = 1.0
 
         unsafe manager.updateConfiguration(config)
 
-        unsafe XCTAssertTrue(manager.configuration.exclusionZoneEnabled)
-        unsafe XCTAssertEqual(manager.configuration.exclusionZoneSize, 0.25, accuracy: 0.001)
         unsafe XCTAssertTrue(manager.configuration.requireModifierKey)
         unsafe XCTAssertEqual(manager.configuration.modifierKeyType, .command)
-        unsafe XCTAssertTrue(manager.configuration.contactSizeFilterEnabled)
-        unsafe XCTAssertEqual(manager.configuration.maxContactSize, 1.0, accuracy: 0.001)
     }
 
     // MARK: - Edge Case Tests
@@ -243,34 +231,6 @@ import XCTest
             var prefs = UserPreferences()
             prefs.requireModifierKey = true
             prefs.modifierKeyType = keyType
-
-            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
-            XCTAssertNotNil(ctrl)
-            ctrl.buildMenu()
-        }
-    }
-
-    func testExclusionZoneSizeOptions() {
-        let sizes: [Double] = [0.10, 0.15, 0.20, 0.25]
-
-        for size in sizes {
-            var prefs = UserPreferences()
-            prefs.exclusionZoneEnabled = true
-            prefs.exclusionZoneSize = size
-
-            let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
-            XCTAssertNotNil(ctrl)
-            ctrl.buildMenu()
-        }
-    }
-
-    func testContactSizeThresholdOptions() {
-        let thresholds: [Double] = [1.0, 1.5, 2.0]
-
-        for threshold in thresholds {
-            var prefs = UserPreferences()
-            prefs.contactSizeFilterEnabled = true
-            prefs.maxContactSize = threshold
 
             let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
             XCTAssertNotNil(ctrl)
@@ -329,19 +289,9 @@ import XCTest
     // toggleSystemGestureBlocking() calls AlertHelper.showSystemGestureWarning()
     // which invokes NSAlert().runModal() and blocks indefinitely.
 
-    func testToggleExclusionZoneViaSelector() {
-        // Invoke the private @objc method via selector - should not throw
-        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleExclusionZone)))
-    }
-
     func testToggleRequireModifierKeyViaSelector() {
         // Invoke the private @objc method via selector - should not throw
         unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleRequireModifierKey)))
-    }
-
-    func testToggleContactSizeFilterViaSelector() {
-        // Invoke the private @objc method via selector - should not throw
-        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.toggleContactSizeFilter)))
     }
 
     func testToggleCrashReportingViaSelector() {
@@ -430,28 +380,12 @@ import XCTest
         unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setSensitivity(_:)), with: menuItem))
     }
 
-    func testSetExclusionZoneSizeWithMenuItem() {
-        let menuItem = NSMenuItem(title: "Test", action: nil, keyEquivalent: "")
-        menuItem.representedObject = Double(0.25)
-
-        // Invoke via selector - should not crash
-        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setExclusionZoneSize(_:)), with: menuItem))
-    }
-
     func testSetModifierKeyTypeWithMenuItem() {
         let menuItem = NSMenuItem(title: "Test", action: nil, keyEquivalent: "")
         menuItem.representedObject = ModifierKeyType.command.rawValue
 
         // Invoke via selector - should not crash
         unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setModifierKeyType(_:)), with: menuItem))
-    }
-
-    func testSetContactSizeThresholdWithMenuItem() {
-        let menuItem = NSMenuItem(title: "Test", action: nil, keyEquivalent: "")
-        menuItem.representedObject = Double(2.0)
-
-        // Invoke via selector - should not crash
-        unsafe XCTAssertNoThrow(controller.perform(#selector(MenuBarController.setContactSizeThreshold(_:)), with: menuItem))
     }
 
     func testToggleMinimumWindowSizeFilterViaSelector() {
@@ -480,9 +414,7 @@ import XCTest
 
     func testBuildMenuWithAllPalmRejectionOptionsEnabled() {
         var prefs = UserPreferences()
-        prefs.exclusionZoneEnabled = true
         prefs.requireModifierKey = true
-        prefs.contactSizeFilterEnabled = true
         prefs.minimumWindowSizeFilterEnabled = true
 
         let ctrl = unsafe MenuBarController(multitouchManager: manager, preferences: prefs)
@@ -503,9 +435,7 @@ import XCTest
         // Toggle preferences multiple times
         for _ in 0..<3 {
             unsafe controller.perform(#selector(MenuBarController.toggleMiddleDrag))
-            unsafe controller.perform(#selector(MenuBarController.toggleExclusionZone))
             unsafe controller.perform(#selector(MenuBarController.toggleRequireModifierKey))
-            unsafe controller.perform(#selector(MenuBarController.toggleContactSizeFilter))
         }
 
         // Should not crash
@@ -565,9 +495,7 @@ import XCTest
 
         // Test all toggle methods in sequence
         unsafe controller.perform(#selector(MenuBarController.toggleMiddleDrag))
-        unsafe controller.perform(#selector(MenuBarController.toggleExclusionZone))
         unsafe controller.perform(#selector(MenuBarController.toggleRequireModifierKey))
-        unsafe controller.perform(#selector(MenuBarController.toggleContactSizeFilter))
         unsafe controller.perform(#selector(MenuBarController.toggleMinimumWindowSizeFilter))
         unsafe controller.perform(#selector(MenuBarController.toggleAllowReliftDuringDrag))
         unsafe controller.perform(#selector(MenuBarController.toggleCrashReporting))

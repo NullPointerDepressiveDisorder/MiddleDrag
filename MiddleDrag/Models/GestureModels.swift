@@ -52,17 +52,9 @@ public struct GestureConfiguration: Sendable {
     // Performance
     var minimumMovementThreshold: Float = 0.5  // pixels
 
-    // Palm rejection - Exclusion zone
-    var exclusionZoneEnabled: Bool = false
-    var exclusionZoneSize: Float = 0.15  // Bottom 15% of trackpad (normalized 0-1)
-
     // Palm rejection - Modifier key
     var requireModifierKey: Bool = false
     var modifierKeyType: ModifierKeyType = .shift
-
-    // Palm rejection - Contact size filter
-    var contactSizeFilterEnabled: Bool = false
-    var maxContactSize: Float = 1.5  // Maximum zTotal value to include (larger = palm)
 
     // Window size filter - ignore small windows (menus, popups)
     var minimumWindowSizeFilterEnabled: Bool = false
@@ -229,17 +221,9 @@ public struct UserPreferences: Codable, Sendable {
     var middleDragEnabled: Bool = true  // Allow disabling drag while keeping tap
     var tapToClickEnabled: Bool = true  // Allow disabling tap while keeping drag
 
-    // Palm rejection - Exclusion zone
-    var exclusionZoneEnabled: Bool = false
-    var exclusionZoneSize: Double = 0.15  // Bottom 15% of trackpad
-
     // Palm rejection - Modifier key
     var requireModifierKey: Bool = false
     var modifierKeyType: ModifierKeyType = .shift
-
-    // Palm rejection - Contact size filter
-    var contactSizeFilterEnabled: Bool = false
-    var maxContactSize: Double = 1.5  // Maximum contact size to include
 
     // Window size filter - ignore small windows
     var minimumWindowSizeFilterEnabled: Bool = false
@@ -284,12 +268,8 @@ public struct UserPreferences: Codable, Sendable {
             blockSystemGestures: blockSystemGestures,
             middleDragEnabled: middleDragEnabled,
             tapToClickEnabled: tapToClickEnabled,
-            exclusionZoneEnabled: exclusionZoneEnabled,
-            exclusionZoneSize: Float(exclusionZoneSize),
             requireModifierKey: requireModifierKey,
             modifierKeyType: modifierKeyType,
-            contactSizeFilterEnabled: contactSizeFilterEnabled,
-            maxContactSize: Float(maxContactSize),
             minimumWindowSizeFilterEnabled: minimumWindowSizeFilterEnabled,
             minimumWindowWidth: CGFloat(minimumWindowWidth),
             minimumWindowHeight: CGFloat(minimumWindowHeight),

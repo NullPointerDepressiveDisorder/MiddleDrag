@@ -169,9 +169,7 @@ final class TouchClassifier {
         timestamp: Double,
         configuration: GestureConfiguration
     ) -> ClassifiedTouchFrame {
-        let samples = rawSamples.filter { sample in
-            sample.isActive && passesLegacyFilters(sample, configuration: configuration)
-        }
+        let samples = rawSamples.filter { $0.isActive }
 
         guard !samples.isEmpty else {
             pruneHistories(activeIDs: [])
@@ -192,23 +190,6 @@ final class TouchClassifier {
             rawTouches: samples,
             classifiedTouches: classified
         )
-    }
-
-    private func passesLegacyFilters(
-        _ sample: TouchSample,
-        configuration: GestureConfiguration
-    ) -> Bool {
-        if configuration.exclusionZoneEnabled,
-           sample.position.y < configuration.exclusionZoneSize {
-            return false
-        }
-
-        if configuration.contactSizeFilterEnabled,
-           sample.zTotal > configuration.maxContactSize {
-            return false
-        }
-
-        return true
     }
 
     private func updateHistories(samples: [TouchSample], timestamp: Double) {
