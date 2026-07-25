@@ -10,6 +10,39 @@ final class MultitouchManagerTests: XCTestCase {
         }
     }
 
+    private func createTouch(
+        x: Float,
+        y: Float,
+        zTotal: Float = 0.5,
+        fingerID: Int32,
+        pathIndex: Int32,
+        velocity: MTPoint = MTPoint(x: 0, y: 0),
+        majorAxis: Float = 0.1,
+        minorAxis: Float = 0.1
+    ) -> MTTouch {
+        let position = MTPoint(x: x, y: y)
+        let vector = MTVector(position: position, velocity: velocity)
+
+        return MTTouch(
+            frame: 0,
+            timestamp: CACurrentMediaTime(),
+            pathIndex: pathIndex,
+            state: 4,
+            fingerID: fingerID,
+            handID: 0,
+            normalizedVector: vector,
+            zTotal: zTotal,
+            field9: 0,
+            angle: 0,
+            majorAxis: majorAxis,
+            minorAxis: minorAxis,
+            absoluteVector: vector,
+            field14: 0,
+            field15: 0,
+            zDensity: 0
+        )
+    }
+
     // MARK: - Singleton Tests
 
     func testSharedInstanceIsSingleton() {
@@ -1379,6 +1412,48 @@ final class MultitouchManagerTests: XCTestCase {
             expectation.fulfill()
         }
         wait(for: [expectation], timeout: 1.0)
+
+        manager.stop()
+    }
+
+    func testDeviceMonitorDelegateCurrentFingerCountUsesClassifiedDigits() {
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        manager.start()
+
+        let digitVelocity = MTPoint(x: 0, y: 0.5)
+        var touchData = [
+            createTouch(x: 0.35, y: 0.58, fingerID: 1, pathIndex: 1, velocity: digitVelocity),
+            createTouch(x: 0.55, y: 0.60, fingerID: 2, pathIndex: 2, velocity: digitVelocity),
+            createTouch(
+                x: 0.82,
+                y: 0.52,
+                zTotal: 5.0,
+                fingerID: 99,
+                pathIndex: 99,
+                majorAxis: 25,
+                minorAxis: 15
+            ),
+        ]
+
+        let touchCount = Int32(touchData.count)
+        unsafe touchData.withUnsafeMutableBytes { buffer in
+            guard let rawPointer = buffer.baseAddress else { return }
+            let tempMonitor = unsafe DeviceMonitor()
+            unsafe manager.deviceMonitor(
+                tempMonitor,
+                didReceiveTouches: rawPointer,
+                count: touchCount,
+                timestamp: CACurrentMediaTime()
+            )
+        }
+
+        XCTAssertEqual(
+            manager.currentFingerCount,
+            2,
+            "Force-click detection should see filtered digit count, not raw contact count")
 
         manager.stop()
     }

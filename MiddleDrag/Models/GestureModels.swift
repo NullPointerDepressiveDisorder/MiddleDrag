@@ -80,6 +80,9 @@ public struct GestureConfiguration: Sendable {
     var passThroughTitleBar: Bool = false
     var titleBarHeight: CGFloat = 28  // Height of title bar region in pixels (accounts for toolbar)
 
+    // Incidental contact filtering - classifier-based thumb/palm rejection
+    var incidentalFilterEnabled: Bool = true
+
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
         guard enableVelocityBoost else { return sensitivity }
@@ -245,6 +248,9 @@ public struct UserPreferences: Codable, Sendable {
     var passThroughTitleBar: Bool = false
     var titleBarHeight: Double = 28  // Height of title bar region in pixels
     
+    // Incidental contact filtering - classifier-based thumb/palm rejection
+    var incidentalFilterEnabled: Bool = true
+
     // Hotkey bindings
     public var toggleHotKey: HotKeyBinding = HotKeyBinding(
         keyCode: UInt32(kVK_ANSI_E),
@@ -278,7 +284,8 @@ public struct UserPreferences: Codable, Sendable {
             ignoreDesktop: ignoreDesktop,
             allowReliftDuringDrag: allowReliftDuringDrag,
             passThroughTitleBar: passThroughTitleBar,
-            titleBarHeight: CGFloat(titleBarHeight)
+            titleBarHeight: CGFloat(titleBarHeight),
+            incidentalFilterEnabled: incidentalFilterEnabled
         )
     }
 }

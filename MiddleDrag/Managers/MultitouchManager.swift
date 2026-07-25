@@ -79,6 +79,8 @@ public final class MultitouchManager: @unchecked Sendable {
 
     // Core components
     private let gestureRecognizer = GestureRecognizer()
+    private let touchClassifier = TouchClassifier()
+    private let touchClassifierLock = NSLock()
     private let mouseGenerator = MouseEventGenerator()
     private var deviceMonitor: TouchDeviceProviding?
 
@@ -120,6 +122,33 @@ public final class MultitouchManager: @unchecked Sendable {
 
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
+
+    // Debug frame observer for the "Debug Touches" window. Set from the main thread,
+    // invoked on the gesture queue after each frame is processed. nil (the normal
+    // case) costs one lock acquisition per frame.
+    private let debugObserverLock = NSLock()
+    private var _touchDebugObserver: (@Sendable (TouchDebugFrame) -> Void)?
+    var touchDebugObserver: (@Sendable (TouchDebugFrame) -> Void)? {
+        get { debugObserverLock.withLock { _touchDebugObserver } }
+        set { debugObserverLock.withLock { _touchDebugObserver = newValue } }
+    }
+
+    /// Apply per-user calibration to the shared touch classifier (from the
+    /// calibration wizard or from disk at startup).
+    func applyTouchCalibration(_ calibration: TouchClassifierCalibration) {
+        touchClassifierLock.withLock {
+            touchClassifier.calibration = calibration
+        }
+    }
+
+    /// Load and apply the persisted calibration if the user has run the wizard.
+    /// Returns true when a stored calibration was found. Called at app launch.
+    @discardableResult
+    public func loadPersistedTouchCalibration() -> Bool {
+        guard let calibration = TouchCalibrationStore.shared.load() else { return false }
+        applyTouchCalibration(calibration)
+        return true
+    }
 
     // Thread-safe finger count tracking
     private let fingerCountLock = NSLock()
@@ -522,6 +551,9 @@ public final class MultitouchManager: @unchecked Sendable {
         isActivelyDragging = false
         isInThreeFingerGesture = false
         currentFingerCount = 0  // Reset finger count on stop
+        touchClassifierLock.withLock {
+            touchClassifier.reset()
+        }
         lastGestureWasActive = false
         gestureEndTime = 0
         lastForceClickTime = 0
@@ -592,6 +624,9 @@ public final class MultitouchManager: @unchecked Sendable {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
             currentFingerCount = 0  // Reset finger count when disabled
+            touchClassifierLock.withLock {
+                touchClassifier.reset()
+            }
             lastGestureWasActive = false
             gestureEndTime = 0
             lastForceClickTime = 0
@@ -627,6 +662,9 @@ public final class MultitouchManager: @unchecked Sendable {
             
             // Also reset the gesture recognizer to ensure clean state
             self.gestureRecognizer.reset()
+            self.touchClassifierLock.withLock {
+                self.touchClassifier.reset()
+            }
         }
     }
 
@@ -846,43 +884,45 @@ extension MultitouchManager: DeviceMonitorDelegate {
     ) {
         guard isEnabled else { return }
 
-        // Update safe finger count immediately
-        currentFingerCount = Int(count)
-
         // Capture modifier flags before dispatching to gesture queue
         // Note: This callback runs on a framework-managed background thread, not main thread
         // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
-        // The touches pointer is only valid for the duration of this callback.
-        // Copy touch data into a Data value — Swift manages its lifetime automatically,
-        // eliminating the use-after-free / double-free risk of manual raw pointer
-        // allocation that can occur when rapid sleep/wake cycles cause concurrent
-        // restart() calls while async closures are still queued on gestureQueue.
         let touchCount = Int(count)
-        let touchData: Data?
-        if touchCount > 0 {
-            let byteCount = touchCount * MemoryLayout<MTTouch>.stride
-            touchData = unsafe Data(bytes: touches, count: byteCount)
-        } else {
-            touchData = nil
+        let classifiedFrame = touchClassifierLock.withLock {
+            unsafe touchClassifier.classify(
+                touches: touches,
+                count: touchCount,
+                timestamp: timestamp,
+                configuration: configuration
+            )
         }
 
+        // Update safe finger count from classified digit count, not raw contacts.
+        currentFingerCount = classifiedFrame.digitCount
+
+        // The touches pointer is only valid for the duration of this callback.
+        // Classification happens synchronously while the pointer is valid. The resulting value
+        // is safe to pass across queues and is also used by force-click conversion.
+
         gestureQueue.async { [weak self] in
-            if let data = touchData {
-                unsafe data.withUnsafeBytes { rawBuffer in
-                    guard let baseAddress = rawBuffer.baseAddress else { return }
-                    let buffer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
-                    unsafe self?.gestureRecognizer.processTouches(
-                        buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
-                }
-            } else {
-                // Zero touches — still notify so gesture recognizer can end via stableFrameCount
-                unsafe self?.gestureRecognizer.processTouches(
-                    UnsafeMutableRawPointer(bitPattern: 1)!,
-                    count: 0,
-                    timestamp: timestamp,
-                    modifierFlags: modifierFlags)
+            guard let self else { return }
+            self.gestureRecognizer.processClassifiedFrame(
+                classifiedFrame,
+                timestamp: timestamp,
+                modifierFlags: modifierFlags
+            )
+
+            if let observer = self.touchDebugObserver {
+                observer(
+                    TouchDebugFrame(
+                        timestamp: timestamp,
+                        classified: classifiedFrame,
+                        recognizerState: String(describing: self.gestureRecognizer.state),
+                        isDragging: self.isActivelyDragging,
+                        isPassThrough: self.shouldPassThroughCurrentGesture
+                    ))
             }
         }
     }

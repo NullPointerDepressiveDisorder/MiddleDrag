@@ -59,6 +59,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configure multitouch manager (always configure, regardless of permission)
         multitouchManager.updateConfiguration(preferences.gestureConfig)
 
+        // Apply persisted touch calibration if the user has run the wizard
+        if multitouchManager.loadPersistedTouchCalibration() {
+            Log.info("Touch calibration applied from disk", category: .app)
+        }
+
         // Check Accessibility permission
         // First check WITHOUT prompting to avoid showing dialog on every relaunch
         var hasAccessibilityPermission = AXIsProcessTrusted()

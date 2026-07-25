@@ -36,6 +36,8 @@ public final class PreferencesManager: @unchecked Sendable {
         static let titleBarHeight = "titleBarHeight"
         // Relift during drag key
         static let allowReliftDuringDrag = "allowReliftDuringDrag"
+        // Incidental contact filtering key
+        static let incidentalFilterEnabled = "incidentalFilterEnabled"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
         // Hotkey binding keys
@@ -85,6 +87,8 @@ public final class PreferencesManager: @unchecked Sendable {
             Keys.titleBarHeight: 28.0,
             // Relift during drag default
             Keys.allowReliftDuringDrag: false,
+            // Incidental contact filtering default
+            Keys.incidentalFilterEnabled: true,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
             // Hotkey defaults
@@ -127,6 +131,7 @@ public final class PreferencesManager: @unchecked Sendable {
         prefs.passThroughTitleBar = userDefaults.bool(forKey: Keys.passThroughTitleBar)
         prefs.titleBarHeight = userDefaults.double(forKey: Keys.titleBarHeight)
         prefs.allowReliftDuringDrag = userDefaults.bool(forKey: Keys.allowReliftDuringDrag)
+        prefs.incidentalFilterEnabled = userDefaults.bool(forKey: Keys.incidentalFilterEnabled)
         prefs.toggleHotKey = HotKeyBinding(
             keyCode: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyCode)),
             carbonModifiers: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyModifiers))
@@ -168,6 +173,8 @@ public final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.titleBarHeight, forKey: Keys.titleBarHeight)
         // Relift during drag
         userDefaults.set(preferences.allowReliftDuringDrag, forKey: Keys.allowReliftDuringDrag)
+        // Incidental contact filtering
+        userDefaults.set(preferences.incidentalFilterEnabled, forKey: Keys.incidentalFilterEnabled)
         // Hotkey bindings
         userDefaults.set(Int(preferences.toggleHotKey.keyCode), forKey: Keys.toggleHotKeyCode)
         userDefaults.set(Int(preferences.toggleHotKey.carbonModifiers), forKey: Keys.toggleHotKeyModifiers)
