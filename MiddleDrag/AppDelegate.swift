@@ -103,6 +103,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         accessibilityMonitor?.onRevocation = { [weak self] in
             Log.warning("Permission revoked - stopping multitouch manager", category: .app)
             self?.multitouchManager.stop()
+            // stop() alone doesn't refresh the menu bar icon - unlike the
+            // device-connect/polling-timeout/manual-toggle paths, nothing else
+            // notifies MenuBarController of this state change, so it can be
+            // left showing the stale "enabled" icon until the next click.
+            self?.menuBarController?.updateStatusIcon(enabled: false)
+            self?.menuBarController?.buildMenu()
         }
 
         accessibilityMonitor?.onGrant = { [weak self] in

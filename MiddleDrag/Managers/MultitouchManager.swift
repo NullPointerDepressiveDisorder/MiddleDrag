@@ -110,6 +110,15 @@ public final class MultitouchManager: @unchecked Sendable {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
+    // Periodic health check for the event tap. Removing (not just unchecking)
+    // the app's Accessibility entry in System Settings can disable the tap at
+    // the OS level without ever delivering a tapDisabledByUserInput callback -
+    // there is no touch/click for that callback to piggyback on, since the tap
+    // simply goes silent. This timer catches that silent case by probing
+    // whether a fresh tap can still be created (see canCreateProbeEventTap),
+    // rather than waiting for a notification that may never come.
+    private var eventTapHealthCheckTimer: Timer?
+
     // Sleep/wake observers for reinitializing after system wake
     private var sleepObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
@@ -744,10 +753,13 @@ public final class MultitouchManager: @unchecked Sendable {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        startEventTapHealthCheck()
         return true
     }
 
     private func teardownEventTap() {
+        stopEventTapHealthCheck()
+
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
@@ -759,6 +771,76 @@ public final class MultitouchManager: @unchecked Sendable {
 
         eventTap = nil
         runLoopSource = nil
+    }
+
+    /// Periodically verifies we can still actually filter events. Removing
+    /// (not just unchecking) the app's Accessibility entry can break the tap
+    /// silently: no tapDisabledByUserInput callback is delivered (confirmed via
+    /// live testing - Console shows nothing at all from this class while the
+    /// system stays blocked), AND CGEvent.tapIsEnabled on our EXISTING tap keeps
+    /// reporting true even though it no longer functions. Querying existing
+    /// state is unreliable here. The only signal macOS reliably gates is
+    /// *creating a brand new tap* - so probe with that instead of trusting
+    /// anything our already-registered tap reports about itself.
+    private func startEventTapHealthCheck(interval: TimeInterval = 1.0) {
+        stopEventTapHealthCheck()
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            self?.checkEventTapHealth()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        eventTapHealthCheckTimer = timer
+    }
+
+    private func stopEventTapHealthCheck() {
+        eventTapHealthCheckTimer?.invalidate()
+        eventTapHealthCheckTimer = nil
+    }
+
+    private func checkEventTapHealth() {
+        guard eventTap != nil, !Self.canCreateProbeEventTap() else { return }
+        Log.warning(
+            "Probe tap creation failed (Accessibility permission likely revoked/removed) - "
+                + "tearing down and releasing any active drag",
+            category: .device)
+        handleAccessibilityPermissionLost()
+    }
+
+    /// Attempts to create (and immediately destroy) a throwaway session event
+    /// tap purely to test whether the OS currently grants us permission to do
+    /// so. CGEventTapCreate reliably returns nil when Accessibility trust is
+    /// missing at creation time, unlike querying an existing tap's state.
+    private static func canCreateProbeEventTap() -> Bool {
+        guard
+            let probeTap = unsafe CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .tailAppendEventTap,
+                options: .defaultTap,
+                eventsOfInterest: 1 << CGEventType.mouseMoved.rawValue,
+                callback: { _, _, event, _ in unsafe Unmanaged.passUnretained(event) },
+                userInfo: nil
+            )
+        else {
+            return false
+        }
+        CGEvent.tapEnable(tap: probeTap, enable: false)
+        CFMachPortInvalidate(probeTap)
+        return true
+    }
+
+    /// Immediately releases any active/sustained drag and tears down the event
+    /// tap. Shared by the tapDisabledByUserInput callback path (fires promptly
+    /// when there's an in-flight event to deliver it with) and the periodic
+    /// health check above (catches the case where no such event ever arrives).
+    private func handleAccessibilityPermissionLost() {
+        mouseGenerator.cancelDrag()
+        isActivelyDragging = false
+        isInThreeFingerGesture = false
+        isSustainingDragForLeftClick = false
+        isRealLeftButtonDown = false
+        gestureEndTime = CACurrentMediaTime()
+        lastGestureWasActive = false
+        gestureRecognizer.reset()
+        teardownEventTap()
     }
 
     private func handleEventTapCallback(
@@ -775,11 +857,36 @@ public final class MultitouchManager: @unchecked Sendable {
         type: CGEventType
     ) -> Unmanaged<CGEvent>? {
 
-        // Re-enable tap if it was disabled
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        // A timeout (we took too long processing an event) is a transient
+        // performance hiccup - safe to resume automatically.
+        if type == .tapDisabledByTimeout {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
+            return unsafe Unmanaged.passUnretained(event)
+        }
+
+        // macOS sends this specifically when the user revokes Accessibility
+        // trust for the app (e.g. toggling it off in System Settings > Privacy
+        // & Security > Accessibility) while the tap is alive. Leaving the tap
+        // merely "disabled" (not re-enabled, but still registered with the
+        // WindowServer) is not enough to fix this: a session tap created with
+        // .defaultTap (active filtering) that loses its permission stays
+        // registered in a broken half-alive state that keeps swallowing every
+        // mouse/keyboard event system-wide until the *process* dies - this is a
+        // documented macOS behavior (see Apple Developer Forums thread 735204),
+        // and matches exactly the "disabling the permission still blocks
+        // touches, only killing the process fixes it" symptom. The fix is to
+        // fully invalidate the tap (CFMachPortInvalidate + remove the run loop
+        // source), not just skip re-enabling it, so the WindowServer actually
+        // drops us from the event chain immediately instead of waiting for the
+        // process to exit.
+        if type == .tapDisabledByUserInput {
+            Log.warning(
+                "Event tap disabled by user input (Accessibility permission likely revoked) - "
+                    + "tearing down the tap and releasing any active drag immediately",
+                category: .device)
+            handleAccessibilityPermissionLost()
             return unsafe Unmanaged.passUnretained(event)
         }
 

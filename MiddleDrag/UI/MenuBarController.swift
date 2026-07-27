@@ -85,7 +85,7 @@ public class MenuBarController: NSObject {
         buildMenu()
     }
 
-    func updateStatusIcon(enabled: Bool) {
+    public func updateStatusIcon(enabled: Bool) {
         guard let button = statusItem.button else { return }
 
         let iconName = enabled ? "hand.raised.fingers.spread" : "hand.raised.slash"
@@ -106,7 +106,7 @@ public class MenuBarController: NSObject {
 
     // MARK: - Menu Building
 
-    func buildMenu() {
+    public func buildMenu() {
         let menu = NSMenu()
 
         // Status

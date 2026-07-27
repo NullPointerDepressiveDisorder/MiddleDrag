@@ -2088,6 +2088,52 @@ final class MultitouchManagerTests: XCTestCase {
         unsafe XCTAssertNotNil(result)
     }
 
+    func testTapDisabledByTimeoutReenablesTap() throws {
+        // `type` is passed independently of the CGEvent object itself, so we can
+        // exercise this branch directly with any placeholder event.
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        let event = CGEvent(source: nil)!
+        let result = unsafe manager.processEvent(event, type: .tapDisabledByTimeout)
+        unsafe XCTAssertNotNil(result, "A timeout is a transient hiccup - the tap resumes automatically")
+    }
+
+    func testTapDisabledByUserInputDoesNotReenableAndReleasesActiveDrag() throws {
+        // Regression test: macOS sends tapDisabledByUserInput specifically when
+        // the user revokes Accessibility trust (e.g. toggling MiddleDrag off in
+        // System Settings > Privacy & Security > Accessibility) while the tap is
+        // alive. Blindly re-enabling here would fight that action and keep
+        // suppressing/holding input even with the permission off - any drag
+        // that was active must instead be released immediately.
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let startExpectation = XCTestExpectation(description: "Dragging started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        let event = CGEvent(source: nil)!
+        let result = unsafe manager.processEvent(event, type: .tapDisabledByUserInput)
+
+        unsafe XCTAssertNotNil(result)
+        XCTAssertFalse(
+            manager.isActivelyDragging,
+            "An active drag must be released immediately rather than left stuck when permission is revoked"
+        )
+        XCTAssertFalse(manager.isSustainingDragForLeftClick)
+    }
+
     func testProcessEventIdentifiesOurEvents() throws {
         try requireCGEventTestsEnabled()
         let mockDevice = unsafe MockDeviceMonitor()
