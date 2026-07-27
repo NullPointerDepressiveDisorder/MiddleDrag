@@ -2346,6 +2346,165 @@ final class MultitouchManagerTests: XCTestCase {
             "Left-click passthrough is scoped to an active drag, not just gesture-active state")
     }
 
+    // MARK: - Sustained Drag (Left Click Held Across Finger Lift) Tests
+
+    func testDragSustainsAcrossFingerLiftWhenRealLeftButtonHeld() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let startExpectation = XCTestExpectation(description: "Dragging started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // Real left click pressed (e.g. a thumb on the trackpad) while dragging.
+        let downEvent = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: .zero,
+            mouseButton: .left)!
+        unsafe _ = manager.processEvent(downEvent, type: .leftMouseDown)
+
+        // Fingers lift off the trackpad - the gesture ends. The synthetic middle
+        // button stays conceptually held (isSustainingDragForLeftClick), but
+        // isActivelyDragging must drop like a normal end so the rest of the
+        // system (cursor movement, other clicks) stays fully responsive during
+        // the pause - this is the fix for the "UI unresponsive" regression.
+        // isActivelyDragging is updated via DispatchQueue.main.async, so each
+        // check below must go through an expectation like the setup above.
+        manager.gestureRecognizerDidEndDragging(recognizer)
+        XCTAssertTrue(
+            manager.isSustainingDragForLeftClick,
+            "Drag should stay conceptually held while the real left button remains held")
+
+        let pausedExpectation = XCTestExpectation(description: "Paused, system responsive")
+        DispatchQueue.main.async {
+            XCTAssertFalse(
+                manager.isActivelyDragging,
+                "System must stay responsive (no suppression, cursor re-associated) during the pause"
+            )
+            pausedExpectation.fulfill()
+        }
+        wait(for: [pausedExpectation], timeout: 1.0)
+
+        // A subsequent three-finger swipe resumes the same held drag rather than
+        // starting a fresh one.
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+        XCTAssertFalse(manager.isSustainingDragForLeftClick, "Cleared once resumed")
+
+        let resumedExpectation = XCTestExpectation(description: "Resumed dragging")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            resumedExpectation.fulfill()
+        }
+        wait(for: [resumedExpectation], timeout: 1.0)
+
+        manager.gestureRecognizerDidEndDragging(recognizer)
+        XCTAssertTrue(manager.isSustainingDragForLeftClick, "Still sustained after second lift")
+
+        let pausedAgainExpectation = XCTestExpectation(description: "Paused again")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            pausedAgainExpectation.fulfill()
+        }
+        wait(for: [pausedAgainExpectation], timeout: 1.0)
+
+        // Releasing the real left button finally ends the drag, and the release
+        // event itself must still reach the target app.
+        let upEvent = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: .zero,
+            mouseButton: .left)!
+        let result = unsafe manager.processEvent(upEvent, type: .leftMouseUp)
+
+        unsafe XCTAssertNotNil(result, "Left button release must reach the app")
+        XCTAssertFalse(
+            manager.isSustainingDragForLeftClick, "Drag ends once the real left button is released")
+        XCTAssertFalse(
+            manager.isActivelyDragging,
+            "isActivelyDragging is set synchronously in processEvent, so no wait needed here")
+    }
+
+    func testDragEndsNormallyWhenLeftClickNotHeldEvenIfPassthroughEnabled() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let startExpectation = XCTestExpectation(description: "Dragging started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        // No real left button held - lifting fingers should end the drag as usual.
+        manager.gestureRecognizerDidEndDragging(recognizer)
+        XCTAssertFalse(manager.isSustainingDragForLeftClick)
+
+        let endExpectation = XCTestExpectation(description: "Dragging ended")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            endExpectation.fulfill()
+        }
+        wait(for: [endExpectation], timeout: 1.0)
+    }
+
+    func testCancelDraggingAlwaysEndsDragEvenWhileSustainedByLeftClick() throws {
+        try requireCGEventTestsEnabled()
+        let mockDevice = unsafe MockDeviceMonitor()
+        let manager = MultitouchManager(
+            deviceProviderFactory: { unsafe mockDevice }, eventTapSetup: { true })
+
+        var config = GestureConfiguration()
+        config.allowLeftClickDuringDrag = true
+        manager.updateConfiguration(config)
+
+        let recognizer = GestureRecognizer()
+        manager.gestureRecognizerDidBeginDragging(recognizer)
+
+        let startExpectation = XCTestExpectation(description: "Dragging started")
+        DispatchQueue.main.async {
+            XCTAssertTrue(manager.isActivelyDragging)
+            startExpectation.fulfill()
+        }
+        wait(for: [startExpectation], timeout: 1.0)
+
+        let downEvent = CGEvent(
+            mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: .zero,
+            mouseButton: .left)!
+        unsafe _ = manager.processEvent(downEvent, type: .leftMouseDown)
+
+        manager.gestureRecognizerDidEndDragging(recognizer)
+        XCTAssertTrue(manager.isSustainingDragForLeftClick, "Sustained by held left click")
+
+        // A 4th finger (Mission Control) must cancel unconditionally, even mid-sustain.
+        manager.gestureRecognizerDidCancelDragging(recognizer)
+        XCTAssertFalse(manager.isSustainingDragForLeftClick)
+
+        let cancelExpectation = XCTestExpectation(description: "Dragging cancelled")
+        DispatchQueue.main.async {
+            XCTAssertFalse(manager.isActivelyDragging)
+            cancelExpectation.fulfill()
+        }
+        wait(for: [cancelExpectation], timeout: 1.0)
+    }
+
     // MARK: - Last Gesture Was Active Flag Tests
 
     func testCancelledGestureDoesNotSuppressEventsAfterEnd() throws {

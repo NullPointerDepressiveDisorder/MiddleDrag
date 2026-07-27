@@ -559,6 +559,92 @@ final class MouseEventGeneratorTests: XCTestCase {
         XCTAssertEqual(generator.stuckDragTimeout, 5.0, accuracy: 0.001)
     }
 
+    // MARK: - Sustained Pause (Left-Click Hold) Tests
+
+    func testDefaultSustainedPauseTimeout() {
+        XCTAssertEqual(generator.sustainedPauseTimeout, 60.0, accuracy: 0.001)
+    }
+
+    func testSustainedPauseTimeoutCanBeModified() {
+        generator.sustainedPauseTimeout = 30.0
+        XCTAssertEqual(generator.sustainedPauseTimeout, 30.0, accuracy: 0.001)
+    }
+
+    func testPauseDragKeepingButtonHeldSurvivesPastNormalStuckTimeout() {
+        // Regression test: pausing must NOT leave the drag subject to the short
+        // stuckDragTimeout - only the longer sustainedPauseTimeout applies while
+        // paused. Previously this window force-released the drag every time,
+        // defeating the point of sustaining across a multi-second gap.
+        generator.stuckDragTimeout = 0.3
+        generator.sustainedPauseTimeout = 3.0
+
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        XCTAssertTrue(generator.isDraggingForTesting)
+
+        generator.pauseDragKeepingButtonHeld()
+
+        // The watchdog only ticks once per second (first check at ~1.0s after
+        // startDrag), so the wait must cross that boundary with margin, not
+        // just outlast stuckDragTimeout in wall-clock terms.
+        let waitExpectation = XCTestExpectation(description: "Waited past first watchdog tick")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            waitExpectation.fulfill()
+        }
+        wait(for: [waitExpectation], timeout: 2.0)
+
+        XCTAssertTrue(
+            generator.isDraggingForTesting,
+            "Drag must still be held well within sustainedPauseTimeout, "
+                + "even though stuckDragTimeout alone has already elapsed")
+
+        generator.endDrag()
+    }
+
+    func testResumeDragKeepingButtonHeldRestoresNormalStuckTimeout() {
+        generator.stuckDragTimeout = 0.3
+        generator.sustainedPauseTimeout = 10.0
+
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        generator.pauseDragKeepingButtonHeld()
+        generator.resumeDragKeepingButtonHeld()
+
+        XCTAssertTrue(generator.isDraggingForTesting)
+
+        // Once resumed without any further activity, the normal short
+        // stuckDragTimeout applies again (not the extended pause timeout). The
+        // watchdog only ticks once per second (first check at ~1.0s after
+        // startDrag), so the wait must cross that boundary with margin.
+        let waitExpectation = XCTestExpectation(description: "Waited past first watchdog tick")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            waitExpectation.fulfill()
+        }
+        wait(for: [waitExpectation], timeout: 2.0)
+
+        XCTAssertFalse(
+            generator.isDraggingForTesting,
+            "Resuming should restore the normal (short) stuck-drag watchdog")
+    }
+
+    func testPauseEventuallyForceReleasesAfterSustainedPauseTimeout() {
+        // Even a sustained hold must self-heal eventually if something goes
+        // wrong (e.g. the release event is never observed).
+        generator.stuckDragTimeout = 0.2
+        generator.sustainedPauseTimeout = 0.5
+
+        generator.startDrag(at: CGPoint(x: 100, y: 100))
+        generator.pauseDragKeepingButtonHeld()
+
+        let waitExpectation = XCTestExpectation(description: "Waited past sustainedPauseTimeout")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            waitExpectation.fulfill()
+        }
+        wait(for: [waitExpectation], timeout: 2.0)
+
+        XCTAssertFalse(
+            generator.isDraggingForTesting,
+            "A paused hold must still auto-release after sustainedPauseTimeout")
+    }
+
     func testDoubleStartDragCancelsExistingDrag() {
         // Start first drag
         generator.startDrag(at: CGPoint(x: 100, y: 100))

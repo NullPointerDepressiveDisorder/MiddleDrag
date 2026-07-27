@@ -52,6 +52,21 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Currently unused for suppression but tracks the drag state precisely
     private(set) var isActivelyDragging = false
 
+    /// Real (non-synthetic) left mouse button physical state, tracked only while
+    /// allowLeftClickDuringDrag is enabled. Lets a middle-drag sustain across a
+    /// full three-finger lift as long as the user keeps a real left click held
+    /// (e.g. repeatedly re-gripping the trackpad to keep rotating a CAD view).
+    private var isRealLeftButtonDown = false
+
+    /// True while a middle-drag is being kept alive (button conceptually still
+    /// held in MouseEventGenerator) with no fingers on the trackpad, because
+    /// allowLeftClickDuringDrag is on and the real left button is still held.
+    /// isActivelyDragging is false during this window - only the mouse
+    /// generator's internal button state is preserved, so the rest of the
+    /// system stays fully responsive. Cleared when the drag resumes or the
+    /// left button is released.
+    private(set) var isSustainingDragForLeftClick = false
+
     // Timestamp when gesture ended (for delayed event suppression)
     private var gestureEndTime: Double = 0
     // Whether the last gesture that ended was actually active (not cancelled)
@@ -550,6 +565,8 @@ public final class MultitouchManager: @unchecked Sendable {
         // Reset gesture state flags
         isActivelyDragging = false
         isInThreeFingerGesture = false
+        isSustainingDragForLeftClick = false
+        isRealLeftButtonDown = false
         currentFingerCount = 0  // Reset finger count on stop
         touchClassifierLock.withLock {
             touchClassifier.reset()
@@ -623,6 +640,8 @@ public final class MultitouchManager: @unchecked Sendable {
         if !isEnabled {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
+            isSustainingDragForLeftClick = false
+            isRealLeftButtonDown = false
             currentFingerCount = 0  // Reset finger count when disabled
             touchClassifierLock.withLock {
                 touchClassifier.reset()
@@ -653,6 +672,8 @@ public final class MultitouchManager: @unchecked Sendable {
             // Reset all internal state
             self.isActivelyDragging = false
             self.isInThreeFingerGesture = false
+            self.isSustainingDragForLeftClick = false
+            self.isRealLeftButtonDown = false
             self.gestureEndTime = CACurrentMediaTime()
             self.lastGestureWasActive = false
             
@@ -775,6 +796,28 @@ public final class MultitouchManager: @unchecked Sendable {
         // We tagging events in MouseEventGenerator with this value
         let userData = event.getIntegerValueField(.eventSourceUserData)
         let isOurEvent = userData == 0x4D44
+
+        // Track the real left button's physical state so a middle-drag can be
+        // sustained across a full three-finger lift as long as the user keeps a
+        // real left click held (see allowLeftClickDuringDrag). If we're ending a
+        // sustained hold, this exact mouse-up must reach the app even though the
+        // gesture-end suppression window below would otherwise catch it, since the
+        // app already received the matching mouse-down while the drag was active.
+        if configuration.allowLeftClickDuringDrag && isLeftButton && !isOurEvent {
+            if type == .leftMouseDown {
+                isRealLeftButtonDown = true
+            } else if type == .leftMouseUp {
+                isRealLeftButtonDown = false
+                if isSustainingDragForLeftClick {
+                    isSustainingDragForLeftClick = false
+                    isActivelyDragging = false
+                    gestureEndTime = now
+                    lastGestureWasActive = true
+                    mouseGenerator.endDrag()
+                    return unsafe Unmanaged.passUnretained(event)
+                }
+            }
+        }
 
         // Check if modifier key is required and currently held
         // This ensures we only suppress events when a valid gesture is actually active
@@ -1126,6 +1169,16 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = true
         }
 
+        if isSustainingDragForLeftClick {
+            // The middle button was never released after the last three-finger
+            // lift (see gestureRecognizerDidEndDragging) - resume in place rather
+            // than pressing it down again, which would look like a fresh drag to
+            // the target app and cancel the in-progress CAD rotation.
+            isSustainingDragForLeftClick = false
+            mouseGenerator.resumeDragKeepingButtonHeld()
+            return
+        }
+
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
@@ -1157,7 +1210,32 @@ extension MultitouchManager: GestureRecognizerDelegate {
         if wasPassingThrough {
             return
         }
-        
+
+        // If the user is holding a real left click (thumb on the trackpad) while
+        // allowLeftClickDuringDrag is on, keep the synthetic middle button held
+        // instead of releasing it. This lets repeated three-finger swipes sustain
+        // one continuous drag - e.g. rotating a CAD view further than a single
+        // swipe's travel allows - as long as the left click is maintained. The
+        // held drag resumes in gestureRecognizerDidBeginDragging, or ends when the
+        // real left button is released (see processEvent).
+        //
+        // Crucially, isActivelyDragging is cleared here like a normal end: the
+        // cursor is re-associated (via pauseDragKeepingButtonHeld) and event
+        // suppression (gestureActive) drops, so the rest of the system - and the
+        // trackpad's own pointer movement - stays fully responsive during the
+        // pause. Only MouseEventGenerator's internal button state stays "down".
+        if configuration.allowLeftClickDuringDrag && isRealLeftButtonDown {
+            isSustainingDragForLeftClick = true
+            mouseGenerator.pauseDragKeepingButtonHeld()
+            DispatchQueue.main.async { [weak self] in
+                self?.isActivelyDragging = false
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = true
+            }
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
@@ -1180,8 +1258,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
-        // Cancel drag immediately - user added 4th finger for Mission Control
+        // Cancel drag immediately - user added 4th finger for Mission Control.
+        // This always fully cancels, even mid-sustain: Mission Control must keep
+        // working regardless of a held left click.
         shouldPassThroughCurrentGesture = false
+        isSustainingDragForLeftClick = false
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
