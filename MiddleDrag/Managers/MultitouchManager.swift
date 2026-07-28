@@ -52,6 +52,53 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Currently unused for suppression but tracks the drag state precisely
     private(set) var isActivelyDragging = false
 
+    /// Protects isRealLeftButtonDown/isSustainingDragForLeftClick below: written
+    /// and read from processEvent (event tap callback, main thread) AND from
+    /// the GestureRecognizerDelegate callbacks (gestureQueue) - a genuine
+    /// cross-thread race without this, including a check-then-act race on
+    /// isSustainingDragForLeftClick between processEvent's left-mouse-up
+    /// handler and gestureRecognizerDidBeginDragging (see
+    /// claimSustainingDragForLeftClick()).
+    private let leftClickSustainLock = NSLock()
+
+    /// Real (non-synthetic) left mouse button physical state, tracked only while
+    /// allowLeftClickDuringDrag is enabled. Lets a middle-drag sustain across a
+    /// full three-finger lift as long as the user keeps a real left click held
+    /// (e.g. repeatedly re-gripping the trackpad to keep rotating a CAD view).
+    private var _isRealLeftButtonDown = false
+    private var isRealLeftButtonDown: Bool {
+        get { leftClickSustainLock.withLock { _isRealLeftButtonDown } }
+        set { leftClickSustainLock.withLock { _isRealLeftButtonDown = newValue } }
+    }
+
+    /// True while a middle-drag is being kept alive (button conceptually still
+    /// held in MouseEventGenerator) with no fingers on the trackpad, because
+    /// allowLeftClickDuringDrag is on and the real left button is still held.
+    /// isActivelyDragging is false during this window - only the mouse
+    /// generator's internal button state is preserved, so the rest of the
+    /// system stays fully responsive. Cleared when the drag resumes or the
+    /// left button is released.
+    private var _isSustainingDragForLeftClick = false
+    private(set) var isSustainingDragForLeftClick: Bool {
+        get { leftClickSustainLock.withLock { _isSustainingDragForLeftClick } }
+        set { leftClickSustainLock.withLock { _isSustainingDragForLeftClick = newValue } }
+    }
+
+    /// Atomically checks whether a sustain is in progress and, if so, claims
+    /// (clears) it as part of the same critical section. Using this instead of
+    /// `if isSustainingDragForLeftClick { isSustainingDragForLeftClick = false }`
+    /// prevents processEvent's left-mouse-up handler (main thread) and
+    /// gestureRecognizerDidBeginDragging (gestureQueue) from both observing
+    /// `true` and double-handling the same sustained hold - one ending the
+    /// drag while the other simultaneously tries to resume it.
+    private func claimSustainingDragForLeftClick() -> Bool {
+        leftClickSustainLock.withLock {
+            guard _isSustainingDragForLeftClick else { return false }
+            _isSustainingDragForLeftClick = false
+            return true
+        }
+    }
+
     // Timestamp when gesture ended (for delayed event suppression)
     private var gestureEndTime: Double = 0
     // Whether the last gesture that ended was actually active (not cancelled)
@@ -79,6 +126,8 @@ public final class MultitouchManager: @unchecked Sendable {
 
     // Core components
     private let gestureRecognizer = GestureRecognizer()
+    private let touchClassifier = TouchClassifier()
+    private let touchClassifierLock = NSLock()
     private let mouseGenerator = MouseEventGenerator()
     private var deviceMonitor: TouchDeviceProviding?
 
@@ -92,6 +141,15 @@ public final class MultitouchManager: @unchecked Sendable {
     // Event tap for suppressing system-generated clicks during gestures
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+
+    // Periodic health check for the event tap. Removing (not just unchecking)
+    // the app's Accessibility entry in System Settings can disable the tap at
+    // the OS level without ever delivering a tapDisabledByUserInput callback -
+    // there is no touch/click for that callback to piggyback on, since the tap
+    // simply goes silent. This timer catches that silent case by probing
+    // whether a fresh tap can still be created (see canCreateProbeEventTap),
+    // rather than waiting for a notification that may never come.
+    private var eventTapHealthCheckTimer: Timer?
 
     // Sleep/wake observers for reinitializing after system wake
     private var sleepObserver: NSObjectProtocol?
@@ -120,6 +178,33 @@ public final class MultitouchManager: @unchecked Sendable {
 
     // Processing queue
     private let gestureQueue = DispatchQueue(label: "com.middledrag.gesture", qos: .userInteractive)
+
+    // Debug frame observer for the "Debug Touches" window. Set from the main thread,
+    // invoked on the gesture queue after each frame is processed. nil (the normal
+    // case) costs one lock acquisition per frame.
+    private let debugObserverLock = NSLock()
+    private var _touchDebugObserver: (@Sendable (TouchDebugFrame) -> Void)?
+    var touchDebugObserver: (@Sendable (TouchDebugFrame) -> Void)? {
+        get { debugObserverLock.withLock { _touchDebugObserver } }
+        set { debugObserverLock.withLock { _touchDebugObserver = newValue } }
+    }
+
+    /// Apply per-user calibration to the shared touch classifier (from the
+    /// calibration wizard or from disk at startup).
+    func applyTouchCalibration(_ calibration: TouchClassifierCalibration) {
+        touchClassifierLock.withLock {
+            touchClassifier.calibration = calibration
+        }
+    }
+
+    /// Load and apply the persisted calibration if the user has run the wizard.
+    /// Returns true when a stored calibration was found. Called at app launch.
+    @discardableResult
+    public func loadPersistedTouchCalibration() -> Bool {
+        guard let calibration = TouchCalibrationStore.shared.load() else { return false }
+        applyTouchCalibration(calibration)
+        return true
+    }
 
     // Thread-safe finger count tracking
     private let fingerCountLock = NSLock()
@@ -521,7 +606,12 @@ public final class MultitouchManager: @unchecked Sendable {
         // Reset gesture state flags
         isActivelyDragging = false
         isInThreeFingerGesture = false
+        isSustainingDragForLeftClick = false
+        isRealLeftButtonDown = false
         currentFingerCount = 0  // Reset finger count on stop
+        touchClassifierLock.withLock {
+            touchClassifier.reset()
+        }
         lastGestureWasActive = false
         gestureEndTime = 0
         lastForceClickTime = 0
@@ -591,7 +681,12 @@ public final class MultitouchManager: @unchecked Sendable {
         if !isEnabled {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
+            isSustainingDragForLeftClick = false
+            isRealLeftButtonDown = false
             currentFingerCount = 0  // Reset finger count when disabled
+            touchClassifierLock.withLock {
+                touchClassifier.reset()
+            }
             lastGestureWasActive = false
             gestureEndTime = 0
             lastForceClickTime = 0
@@ -618,6 +713,8 @@ public final class MultitouchManager: @unchecked Sendable {
             // Reset all internal state
             self.isActivelyDragging = false
             self.isInThreeFingerGesture = false
+            self.isSustainingDragForLeftClick = false
+            self.isRealLeftButtonDown = false
             self.gestureEndTime = CACurrentMediaTime()
             self.lastGestureWasActive = false
             
@@ -627,6 +724,9 @@ public final class MultitouchManager: @unchecked Sendable {
             
             // Also reset the gesture recognizer to ensure clean state
             self.gestureRecognizer.reset()
+            self.touchClassifierLock.withLock {
+                self.touchClassifier.reset()
+            }
         }
     }
 
@@ -685,10 +785,13 @@ public final class MultitouchManager: @unchecked Sendable {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        startEventTapHealthCheck()
         return true
     }
 
     private func teardownEventTap() {
+        stopEventTapHealthCheck()
+
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
@@ -700,6 +803,76 @@ public final class MultitouchManager: @unchecked Sendable {
 
         eventTap = nil
         runLoopSource = nil
+    }
+
+    /// Periodically verifies we can still actually filter events. Removing
+    /// (not just unchecking) the app's Accessibility entry can break the tap
+    /// silently: no tapDisabledByUserInput callback is delivered (confirmed via
+    /// live testing - Console shows nothing at all from this class while the
+    /// system stays blocked), AND CGEvent.tapIsEnabled on our EXISTING tap keeps
+    /// reporting true even though it no longer functions. Querying existing
+    /// state is unreliable here. The only signal macOS reliably gates is
+    /// *creating a brand new tap* - so probe with that instead of trusting
+    /// anything our already-registered tap reports about itself.
+    private func startEventTapHealthCheck(interval: TimeInterval = 1.0) {
+        stopEventTapHealthCheck()
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            self?.checkEventTapHealth()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        eventTapHealthCheckTimer = timer
+    }
+
+    private func stopEventTapHealthCheck() {
+        eventTapHealthCheckTimer?.invalidate()
+        eventTapHealthCheckTimer = nil
+    }
+
+    private func checkEventTapHealth() {
+        guard eventTap != nil, !Self.canCreateProbeEventTap() else { return }
+        Log.warning(
+            "Probe tap creation failed (Accessibility permission likely revoked/removed) - "
+                + "tearing down and releasing any active drag",
+            category: .device)
+        handleAccessibilityPermissionLost()
+    }
+
+    /// Attempts to create (and immediately destroy) a throwaway session event
+    /// tap purely to test whether the OS currently grants us permission to do
+    /// so. CGEventTapCreate reliably returns nil when Accessibility trust is
+    /// missing at creation time, unlike querying an existing tap's state.
+    private static func canCreateProbeEventTap() -> Bool {
+        guard
+            let probeTap = unsafe CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .tailAppendEventTap,
+                options: .defaultTap,
+                eventsOfInterest: 1 << CGEventType.mouseMoved.rawValue,
+                callback: { _, _, event, _ in unsafe Unmanaged.passUnretained(event) },
+                userInfo: nil
+            )
+        else {
+            return false
+        }
+        CGEvent.tapEnable(tap: probeTap, enable: false)
+        CFMachPortInvalidate(probeTap)
+        return true
+    }
+
+    /// Immediately releases any active/sustained drag and tears down the event
+    /// tap. Shared by the tapDisabledByUserInput callback path (fires promptly
+    /// when there's an in-flight event to deliver it with) and the periodic
+    /// health check above (catches the case where no such event ever arrives).
+    private func handleAccessibilityPermissionLost() {
+        mouseGenerator.cancelDrag()
+        isActivelyDragging = false
+        isInThreeFingerGesture = false
+        isSustainingDragForLeftClick = false
+        isRealLeftButtonDown = false
+        gestureEndTime = CACurrentMediaTime()
+        lastGestureWasActive = false
+        gestureRecognizer.reset()
+        teardownEventTap()
     }
 
     private func handleEventTapCallback(
@@ -716,11 +889,36 @@ public final class MultitouchManager: @unchecked Sendable {
         type: CGEventType
     ) -> Unmanaged<CGEvent>? {
 
-        // Re-enable tap if it was disabled
-        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+        // A timeout (we took too long processing an event) is a transient
+        // performance hiccup - safe to resume automatically.
+        if type == .tapDisabledByTimeout {
             if let tap = eventTap {
                 CGEvent.tapEnable(tap: tap, enable: true)
             }
+            return unsafe Unmanaged.passUnretained(event)
+        }
+
+        // macOS sends this specifically when the user revokes Accessibility
+        // trust for the app (e.g. toggling it off in System Settings > Privacy
+        // & Security > Accessibility) while the tap is alive. Leaving the tap
+        // merely "disabled" (not re-enabled, but still registered with the
+        // WindowServer) is not enough to fix this: a session tap created with
+        // .defaultTap (active filtering) that loses its permission stays
+        // registered in a broken half-alive state that keeps swallowing every
+        // mouse/keyboard event system-wide until the *process* dies - this is a
+        // documented macOS behavior (see Apple Developer Forums thread 735204),
+        // and matches exactly the "disabling the permission still blocks
+        // touches, only killing the process fixes it" symptom. The fix is to
+        // fully invalidate the tap (CFMachPortInvalidate + remove the run loop
+        // source), not just skip re-enabling it, so the WindowServer actually
+        // drops us from the event chain immediately instead of waiting for the
+        // process to exit.
+        if type == .tapDisabledByUserInput {
+            Log.warning(
+                "Event tap disabled by user input (Accessibility permission likely revoked) - "
+                    + "tearing down the tap and releasing any active drag immediately",
+                category: .device)
+            handleAccessibilityPermissionLost()
             return unsafe Unmanaged.passUnretained(event)
         }
 
@@ -737,6 +935,27 @@ public final class MultitouchManager: @unchecked Sendable {
         // We tagging events in MouseEventGenerator with this value
         let userData = event.getIntegerValueField(.eventSourceUserData)
         let isOurEvent = userData == 0x4D44
+
+        // Track the real left button's physical state so a middle-drag can be
+        // sustained across a full three-finger lift as long as the user keeps a
+        // real left click held (see allowLeftClickDuringDrag). If we're ending a
+        // sustained hold, this exact mouse-up must reach the app even though the
+        // gesture-end suppression window below would otherwise catch it, since the
+        // app already received the matching mouse-down while the drag was active.
+        if configuration.allowLeftClickDuringDrag && isLeftButton && !isOurEvent {
+            if type == .leftMouseDown {
+                isRealLeftButtonDown = true
+            } else if type == .leftMouseUp {
+                isRealLeftButtonDown = false
+                if claimSustainingDragForLeftClick() {
+                    isActivelyDragging = false
+                    gestureEndTime = now
+                    lastGestureWasActive = true
+                    mouseGenerator.endDrag()
+                    return unsafe Unmanaged.passUnretained(event)
+                }
+            }
+        }
 
         // Check if modifier key is required and currently held
         // This ensures we only suppress events when a valid gesture is actually active
@@ -788,6 +1007,19 @@ public final class MultitouchManager: @unchecked Sendable {
             }
         }
 
+        // Optional: let a real left click (e.g. a thumb pressing the trackpad) reach
+        // the target app as an actual left button, in addition to the synthetic
+        // middle button already held for the drag. Scoped to left button only and
+        // to an active drag specifically (not just possibleTap) — this is for combined
+        // middle-drag + left-click workflows (e.g. orbit-and-select in CAD apps).
+        if configuration.allowLeftClickDuringDrag && isActivelyDragging && isLeftButton
+            && !isOurEvent
+        {
+            if type == .leftMouseDown || type == .leftMouseUp || type == .leftMouseDragged {
+                return unsafe Unmanaged.passUnretained(event)
+            }
+        }
+
         // Suppress left/right events during gesture or shortly after
         // Only suppress after gesture end if the last gesture was actually active (not cancelled)
         let shouldSuppress = gestureActive || (timeSinceGestureEnd < 0.15 && lastGestureWasActive)
@@ -805,6 +1037,7 @@ public final class MultitouchManager: @unchecked Sendable {
         gestureRecognizer.configuration = configuration
         mouseGenerator.smoothingFactor = configuration.smoothingFactor
         mouseGenerator.minimumMovementThreshold = CGFloat(configuration.minimumMovementThreshold)
+        mouseGenerator.preserveModifierKeys = configuration.preserveModifierKeysDuringDrag
     }
 
     /// Thread-safe check if cursor is over desktop (no window underneath)
@@ -846,43 +1079,45 @@ extension MultitouchManager: DeviceMonitorDelegate {
     ) {
         guard isEnabled else { return }
 
-        // Update safe finger count immediately
-        currentFingerCount = Int(count)
-
         // Capture modifier flags before dispatching to gesture queue
         // Note: This callback runs on a framework-managed background thread, not main thread
         // CGEventSource.flagsState is thread-safe and can be called from any thread
         let modifierFlags = CGEventSource.flagsState(.hidSystemState)
 
-        // The touches pointer is only valid for the duration of this callback.
-        // Copy touch data into a Data value — Swift manages its lifetime automatically,
-        // eliminating the use-after-free / double-free risk of manual raw pointer
-        // allocation that can occur when rapid sleep/wake cycles cause concurrent
-        // restart() calls while async closures are still queued on gestureQueue.
         let touchCount = Int(count)
-        let touchData: Data?
-        if touchCount > 0 {
-            let byteCount = touchCount * MemoryLayout<MTTouch>.stride
-            touchData = unsafe Data(bytes: touches, count: byteCount)
-        } else {
-            touchData = nil
+        let classifiedFrame = touchClassifierLock.withLock {
+            unsafe touchClassifier.classify(
+                touches: touches,
+                count: touchCount,
+                timestamp: timestamp,
+                configuration: configuration
+            )
         }
 
+        // Update safe finger count from classified digit count, not raw contacts.
+        currentFingerCount = classifiedFrame.digitCount
+
+        // The touches pointer is only valid for the duration of this callback.
+        // Classification happens synchronously while the pointer is valid. The resulting value
+        // is safe to pass across queues and is also used by force-click conversion.
+
         gestureQueue.async { [weak self] in
-            if let data = touchData {
-                unsafe data.withUnsafeBytes { rawBuffer in
-                    guard let baseAddress = rawBuffer.baseAddress else { return }
-                    let buffer = unsafe UnsafeMutableRawPointer(mutating: baseAddress)
-                    unsafe self?.gestureRecognizer.processTouches(
-                        buffer, count: touchCount, timestamp: timestamp, modifierFlags: modifierFlags)
-                }
-            } else {
-                // Zero touches — still notify so gesture recognizer can end via stableFrameCount
-                unsafe self?.gestureRecognizer.processTouches(
-                    UnsafeMutableRawPointer(bitPattern: 1)!,
-                    count: 0,
-                    timestamp: timestamp,
-                    modifierFlags: modifierFlags)
+            guard let self else { return }
+            self.gestureRecognizer.processClassifiedFrame(
+                classifiedFrame,
+                timestamp: timestamp,
+                modifierFlags: modifierFlags
+            )
+
+            if let observer = self.touchDebugObserver {
+                observer(
+                    TouchDebugFrame(
+                        timestamp: timestamp,
+                        classified: classifiedFrame,
+                        recognizerState: String(describing: self.gestureRecognizer.state),
+                        isDragging: self.isActivelyDragging,
+                        isPassThrough: self.shouldPassThroughCurrentGesture
+                    ))
             }
         }
     }
@@ -1072,6 +1307,15 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = true
         }
 
+        if claimSustainingDragForLeftClick() {
+            // The middle button was never released after the last three-finger
+            // lift (see gestureRecognizerDidEndDragging) - resume in place rather
+            // than pressing it down again, which would look like a fresh drag to
+            // the target app and cancel the in-progress CAD rotation.
+            mouseGenerator.resumeDragKeepingButtonHeld()
+            return
+        }
+
         let mouseLocation = MouseEventGenerator.currentMouseLocation
         mouseGenerator.startDrag(at: mouseLocation)
     }
@@ -1103,7 +1347,32 @@ extension MultitouchManager: GestureRecognizerDelegate {
         if wasPassingThrough {
             return
         }
-        
+
+        // If the user is holding a real left click (thumb on the trackpad) while
+        // allowLeftClickDuringDrag is on, keep the synthetic middle button held
+        // instead of releasing it. This lets repeated three-finger swipes sustain
+        // one continuous drag - e.g. rotating a CAD view further than a single
+        // swipe's travel allows - as long as the left click is maintained. The
+        // held drag resumes in gestureRecognizerDidBeginDragging, or ends when the
+        // real left button is released (see processEvent).
+        //
+        // Crucially, isActivelyDragging is cleared here like a normal end: the
+        // cursor is re-associated (via pauseDragKeepingButtonHeld) and event
+        // suppression (gestureActive) drops, so the rest of the system - and the
+        // trackpad's own pointer movement - stays fully responsive during the
+        // pause. Only MouseEventGenerator's internal button state stays "down".
+        if configuration.allowLeftClickDuringDrag && isRealLeftButtonDown {
+            isSustainingDragForLeftClick = true
+            mouseGenerator.pauseDragKeepingButtonHeld()
+            DispatchQueue.main.async { [weak self] in
+                self?.isActivelyDragging = false
+                self?.isInThreeFingerGesture = false
+                self?.gestureEndTime = CACurrentMediaTime()
+                self?.lastGestureWasActive = true
+            }
+            return
+        }
+
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false
@@ -1126,8 +1395,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
     }
 
     func gestureRecognizerDidCancelDragging(_ recognizer: GestureRecognizer) {
-        // Cancel drag immediately - user added 4th finger for Mission Control
+        // Cancel drag immediately - user added 4th finger for Mission Control.
+        // This always fully cancels, even mid-sustain: Mission Control must keep
+        // working regardless of a held left click.
         shouldPassThroughCurrentGesture = false
+        isSustainingDragForLeftClick = false
         DispatchQueue.main.async { [weak self] in
             self?.isActivelyDragging = false
             self?.isInThreeFingerGesture = false

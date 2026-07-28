@@ -59,6 +59,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Configure multitouch manager (always configure, regardless of permission)
         multitouchManager.updateConfiguration(preferences.gestureConfig)
 
+        // Apply persisted touch calibration if the user has run the wizard
+        if multitouchManager.loadPersistedTouchCalibration() {
+            Log.info("Touch calibration applied from disk", category: .app)
+        }
+
         // Check Accessibility permission
         // First check WITHOUT prompting to avoid showing dialog on every relaunch
         var hasAccessibilityPermission = AXIsProcessTrusted()
@@ -98,6 +103,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         accessibilityMonitor?.onRevocation = { [weak self] in
             Log.warning("Permission revoked - stopping multitouch manager", category: .app)
             self?.multitouchManager.stop()
+            // stop() alone doesn't refresh the menu bar icon - unlike the
+            // device-connect/polling-timeout/manual-toggle paths, nothing else
+            // notifies MenuBarController of this state change, so it can be
+            // left showing the stale "enabled" icon until the next click.
+            self?.menuBarController?.updateStatusIcon(enabled: false)
+            self?.menuBarController?.buildMenu()
         }
 
         accessibilityMonitor?.onGrant = { [weak self] in

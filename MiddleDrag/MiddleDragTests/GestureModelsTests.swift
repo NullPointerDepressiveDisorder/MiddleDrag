@@ -111,55 +111,31 @@ final class GestureModelsTests: XCTestCase {
     func testDefaultGestureConfigurationPalmRejectionFields() {
         let config = GestureConfiguration()
 
-        // Exclusion zone defaults
-        XCTAssertFalse(config.exclusionZoneEnabled)
-        XCTAssertEqual(config.exclusionZoneSize, 0.15, accuracy: 0.001)
-
         // Modifier key defaults
         XCTAssertFalse(config.requireModifierKey)
         XCTAssertEqual(config.modifierKeyType, .shift)
-
-        // Contact size filter defaults
-        XCTAssertFalse(config.contactSizeFilterEnabled)
-        XCTAssertEqual(config.maxContactSize, 1.5, accuracy: 0.001)
     }
 
     func testDefaultUserPreferencesPalmRejectionFields() {
         let prefs = UserPreferences()
 
-        // Exclusion zone defaults
-        XCTAssertFalse(prefs.exclusionZoneEnabled)
-        XCTAssertEqual(prefs.exclusionZoneSize, 0.15, accuracy: 0.001)
-
         // Modifier key defaults
         XCTAssertFalse(prefs.requireModifierKey)
         XCTAssertEqual(prefs.modifierKeyType, .shift)
-
-        // Contact size filter defaults
-        XCTAssertFalse(prefs.contactSizeFilterEnabled)
-        XCTAssertEqual(prefs.maxContactSize, 1.5, accuracy: 0.001)
     }
 
     func testUserPreferencesToGestureConfigPalmRejectionMapping() {
         var prefs = UserPreferences()
 
         // Set palm rejection values
-        prefs.exclusionZoneEnabled = true
-        prefs.exclusionZoneSize = 0.25
         prefs.requireModifierKey = true
         prefs.modifierKeyType = .option
-        prefs.contactSizeFilterEnabled = true
-        prefs.maxContactSize = 2.5
 
         let config = prefs.gestureConfig
 
-        // Verify mapping (Double to Float conversion)
-        XCTAssertTrue(config.exclusionZoneEnabled)
-        XCTAssertEqual(config.exclusionZoneSize, 0.25, accuracy: 0.001)
+        // Verify mapping
         XCTAssertTrue(config.requireModifierKey)
         XCTAssertEqual(config.modifierKeyType, .option)
-        XCTAssertTrue(config.contactSizeFilterEnabled)
-        XCTAssertEqual(config.maxContactSize, 2.5, accuracy: 0.001)
     }
 
     // MARK: - ModifierKeyType Tests

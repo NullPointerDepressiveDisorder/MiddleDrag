@@ -44,12 +44,8 @@ final class PreferencesManagerTests: XCTestCase {
         // Load preferences from fresh UserDefaults - should return defaults
         let prefs = preferencesManager.loadPreferences()
 
-        XCTAssertFalse(prefs.exclusionZoneEnabled)
-        XCTAssertEqual(prefs.exclusionZoneSize, 0.15, accuracy: 0.001)
         XCTAssertFalse(prefs.requireModifierKey)
         XCTAssertEqual(prefs.modifierKeyType, .shift)
-        XCTAssertFalse(prefs.contactSizeFilterEnabled)
-        XCTAssertEqual(prefs.maxContactSize, 1.5, accuracy: 0.001)
     }
 
     // MARK: - Save and Load Roundtrip Tests
@@ -76,22 +72,14 @@ final class PreferencesManagerTests: XCTestCase {
 
     func testSaveAndLoadPalmRejectionPreferences() {
         var prefs = UserPreferences()
-        prefs.exclusionZoneEnabled = true
-        prefs.exclusionZoneSize = 0.25
         prefs.requireModifierKey = true
         prefs.modifierKeyType = .option
-        prefs.contactSizeFilterEnabled = true
-        prefs.maxContactSize = 2.0
 
         preferencesManager.savePreferences(prefs)
         let loaded = preferencesManager.loadPreferences()
 
-        XCTAssertTrue(loaded.exclusionZoneEnabled)
-        XCTAssertEqual(loaded.exclusionZoneSize, 0.25, accuracy: 0.001)
         XCTAssertTrue(loaded.requireModifierKey)
         XCTAssertEqual(loaded.modifierKeyType, .option)
-        XCTAssertTrue(loaded.contactSizeFilterEnabled)
-        XCTAssertEqual(loaded.maxContactSize, 2.0, accuracy: 0.001)
     }
 
     func testSavePreservesAllModifierKeyTypes() {
@@ -123,22 +111,6 @@ final class PreferencesManagerTests: XCTestCase {
         preferencesManager.savePreferences(prefs)
         loaded = preferencesManager.loadPreferences()
         XCTAssertEqual(loaded.dragSensitivity, 10.0, accuracy: 0.001)
-    }
-
-    func testSaveZeroExclusionZoneSize() {
-        var prefs = UserPreferences()
-        prefs.exclusionZoneSize = 0.0
-        preferencesManager.savePreferences(prefs)
-        let loaded = preferencesManager.loadPreferences()
-        XCTAssertEqual(loaded.exclusionZoneSize, 0.0, accuracy: 0.001)
-    }
-
-    func testSaveMaxExclusionZoneSize() {
-        var prefs = UserPreferences()
-        prefs.exclusionZoneSize = 0.5
-        preferencesManager.savePreferences(prefs)
-        let loaded = preferencesManager.loadPreferences()
-        XCTAssertEqual(loaded.exclusionZoneSize, 0.5, accuracy: 0.001)
     }
 
     func testLoadPreferencesWindowSizeFilterDefaults() {

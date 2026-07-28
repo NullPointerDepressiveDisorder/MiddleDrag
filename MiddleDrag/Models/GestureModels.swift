@@ -52,17 +52,9 @@ public struct GestureConfiguration: Sendable {
     // Performance
     var minimumMovementThreshold: Float = 0.5  // pixels
 
-    // Palm rejection - Exclusion zone
-    var exclusionZoneEnabled: Bool = false
-    var exclusionZoneSize: Float = 0.15  // Bottom 15% of trackpad (normalized 0-1)
-
     // Palm rejection - Modifier key
     var requireModifierKey: Bool = false
     var modifierKeyType: ModifierKeyType = .shift
-
-    // Palm rejection - Contact size filter
-    var contactSizeFilterEnabled: Bool = false
-    var maxContactSize: Float = 1.5  // Maximum zTotal value to include (larger = palm)
 
     // Window size filter - ignore small windows (menus, popups)
     var minimumWindowSizeFilterEnabled: Bool = false
@@ -79,6 +71,17 @@ public struct GestureConfiguration: Sendable {
     // This allows macOS native three-finger drag to work for window dragging
     var passThroughTitleBar: Bool = false
     var titleBarHeight: CGFloat = 28  // Height of title bar region in pixels (accounts for toolbar)
+
+    // Incidental contact filtering - classifier-based thumb/palm rejection
+    var incidentalFilterEnabled: Bool = true
+
+    // Mouse button behavior during a middle-drag
+    // Forward live keyboard modifiers on synthetic middle-button events instead
+    // of always reporting none (some apps switch behavior on modifier+middle-drag)
+    var preserveModifierKeysDuringDrag: Bool = false
+    // Pass a real left click (e.g. a thumb pressing the trackpad) through to the
+    // target app while a middle-drag is active, instead of suppressing it
+    var allowLeftClickDuringDrag: Bool = false
 
     /// Calculate effective sensitivity based on velocity
     func effectiveSensitivity(for velocity: MTPoint) -> Float {
@@ -218,17 +221,9 @@ public struct UserPreferences: Codable, Sendable {
     var middleDragEnabled: Bool = true  // Allow disabling drag while keeping tap
     var tapToClickEnabled: Bool = true  // Allow disabling tap while keeping drag
 
-    // Palm rejection - Exclusion zone
-    var exclusionZoneEnabled: Bool = false
-    var exclusionZoneSize: Double = 0.15  // Bottom 15% of trackpad
-
     // Palm rejection - Modifier key
     var requireModifierKey: Bool = false
     var modifierKeyType: ModifierKeyType = .shift
-
-    // Palm rejection - Contact size filter
-    var contactSizeFilterEnabled: Bool = false
-    var maxContactSize: Double = 1.5  // Maximum contact size to include
 
     // Window size filter - ignore small windows
     var minimumWindowSizeFilterEnabled: Bool = false
@@ -245,6 +240,13 @@ public struct UserPreferences: Codable, Sendable {
     var passThroughTitleBar: Bool = false
     var titleBarHeight: Double = 28  // Height of title bar region in pixels
     
+    // Incidental contact filtering - classifier-based thumb/palm rejection
+    var incidentalFilterEnabled: Bool = true
+
+    // Mouse button behavior during a middle-drag
+    var preserveModifierKeysDuringDrag: Bool = false
+    var allowLeftClickDuringDrag: Bool = false
+
     // Hotkey bindings
     public var toggleHotKey: HotKeyBinding = HotKeyBinding(
         keyCode: UInt32(kVK_ANSI_E),
@@ -266,19 +268,18 @@ public struct UserPreferences: Codable, Sendable {
             blockSystemGestures: blockSystemGestures,
             middleDragEnabled: middleDragEnabled,
             tapToClickEnabled: tapToClickEnabled,
-            exclusionZoneEnabled: exclusionZoneEnabled,
-            exclusionZoneSize: Float(exclusionZoneSize),
             requireModifierKey: requireModifierKey,
             modifierKeyType: modifierKeyType,
-            contactSizeFilterEnabled: contactSizeFilterEnabled,
-            maxContactSize: Float(maxContactSize),
             minimumWindowSizeFilterEnabled: minimumWindowSizeFilterEnabled,
             minimumWindowWidth: CGFloat(minimumWindowWidth),
             minimumWindowHeight: CGFloat(minimumWindowHeight),
             ignoreDesktop: ignoreDesktop,
             allowReliftDuringDrag: allowReliftDuringDrag,
             passThroughTitleBar: passThroughTitleBar,
-            titleBarHeight: CGFloat(titleBarHeight)
+            titleBarHeight: CGFloat(titleBarHeight),
+            incidentalFilterEnabled: incidentalFilterEnabled,
+            preserveModifierKeysDuringDrag: preserveModifierKeysDuringDrag,
+            allowLeftClickDuringDrag: allowLeftClickDuringDrag
         )
     }
 }

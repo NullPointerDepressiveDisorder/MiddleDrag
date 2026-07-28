@@ -20,6 +20,17 @@ final class MouseEventGenerator: @unchecked Sendable {
     /// After this many seconds without updateDrag calls, the drag is auto-released
     var stuckDragTimeout: TimeInterval = 10.0
 
+    /// When true, synthetic middle-button events carry the live keyboard modifier
+    /// state instead of always reporting none. Off by default to match prior
+    /// behavior (some apps react unexpectedly to modifiers on a synthetic button).
+    var preserveModifierKeys: Bool = false
+
+    /// The flags to stamp on a synthetic event: live modifier state when
+    /// `preserveModifierKeys` is on, none otherwise (the historical behavior).
+    private var syntheticEventFlags: CGEventFlags {
+        preserveModifierKeys ? CGEventSource.flagsState(.hidSystemState) : []
+    }
+
     // State tracking - protected by stateLock for thread safety
     // isMiddleMouseDown is read from multiple threads (updateDrag on gesture queue,
     // written on eventQueue), so it needs synchronization
@@ -29,6 +40,10 @@ final class MouseEventGenerator: @unchecked Sendable {
         get { stateLock.withLock { _isMiddleMouseDown } }
         set { stateLock.withLock { _isMiddleMouseDown = newValue } }
     }
+
+    /// Whether the synthetic middle button is currently considered held.
+    /// Internal access for testability.
+    internal var isDraggingForTesting: Bool { isMiddleMouseDown }
     
     /// Drag session generation counter - protected by stateLock
     /// Must be accessed atomically with isMiddleMouseDown to prevent race conditions
@@ -246,7 +261,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
         
         // Warp the visible cursor to match the accumulated position.
@@ -325,7 +340,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             downEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             downEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            downEvent.flags = []
+            downEvent.flags = self.syntheticEventFlags
 
             // Create mouse up event
             guard
@@ -340,7 +355,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             upEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            upEvent.flags = []
+            upEvent.flags = self.syntheticEventFlags
 
             // Post events with small delay between them
             self._clickCount += 1
@@ -414,6 +429,67 @@ final class MouseEventGenerator: @unchecked Sendable {
             
             let pos = self.currentMouseLocationQuartz
             self.sendMiddleMouseUp(at: pos)
+        }
+    }
+
+    /// Extra grace period applied (in place of `stuckDragTimeout`) while a drag
+    /// is paused-but-held via `pauseDragKeepingButtonHeld()`. Keeps a legitimate
+    /// multi-second gap between three-finger swipes (repositioning fingers,
+    /// examining the model) from being force-released, while still guaranteeing
+    /// eventual auto-recovery if the button is never released as expected.
+    var sustainedPauseTimeout: TimeInterval = 60.0
+
+    /// True while paused via `pauseDragKeepingButtonHeld()` and not yet resumed.
+    /// Only read/written on watchdogQueue.
+    private var isPausedForSustainedHold = false
+
+    /// Pause an in-progress drag WITHOUT releasing the synthetic button: the
+    /// target app still sees the middle button held, but the real cursor is
+    /// re-associated so the system is fully interactive again (normal pointer
+    /// movement, clicks elsewhere, etc.) during the pause. Used when fingers
+    /// lift but a real left click is keeping the conceptual drag open, so
+    /// repeated three-finger swipes can sustain one continuous drag without
+    /// freezing the rest of the system in between swipes.
+    func pauseDragKeepingButtonHeld() {
+        guard isMiddleMouseDown else { return }
+        stateLock.withLock {
+            reassociateCursor()
+        }
+        watchdogQueue.async { [weak self] in
+            self?.isPausedForSustainedHold = true
+        }
+    }
+
+    /// Resume a drag paused via `pauseDragKeepingButtonHeld()`. No new
+    /// button-down event is sent (the button was never released) - just
+    /// re-disassociates the cursor and reseeds the accumulated drag position
+    /// from wherever the real cursor ended up during the pause, so movement
+    /// continues smoothly rather than jumping. No-op if the drag already ended.
+    func resumeDragKeepingButtonHeld() {
+        guard isMiddleMouseDown else { return }
+
+        watchdogQueue.async { [weak self] in
+            self?.isPausedForSustainedHold = false
+        }
+
+        previousDeltaX = 0
+        previousDeltaY = 0
+        let quartzPos = currentMouseLocationQuartz
+        lastDragPosition = quartzPos
+
+        activityLock.lock()
+        lastActivityTime = CACurrentMediaTime()
+        activityLock.unlock()
+
+        guard shouldPostEvents else { return }
+        stateLock.withLock {
+            let error = CGAssociateMouseAndMouseCursorPosition(0)
+            if error != CGError.success {
+                Log.warning("Failed to disassociate cursor: \(error.rawValue)", category: .gesture)
+            }
+            if let source = eventSource {
+                source.localEventsSuppressionInterval = 0
+            }
         }
     }
 
@@ -532,7 +608,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
     }
 
@@ -549,7 +625,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = syntheticEventFlags
         event.post(tap: .cghidEventTap)
     }
     
@@ -587,8 +663,9 @@ final class MouseEventGenerator: @unchecked Sendable {
     private func stopWatchdogLocked() {
         watchdogTimer?.cancel()
         watchdogTimer = nil
+        isPausedForSustainedHold = false
     }
-    
+
     /// Check if the drag has become stuck (no activity for too long)
     /// Called on watchdogQueue
     private func checkForStuckDrag() {
@@ -597,20 +674,21 @@ final class MouseEventGenerator: @unchecked Sendable {
         let (isDragging, capturedGeneration): (Bool, UInt64) = stateLock.withLock {
             (_isMiddleMouseDown, _dragGeneration)
         }
-        
+
         guard isDragging else {
             // Drag already ended, stop checking
             stopWatchdogLocked()
             return
         }
-        
+
         activityLock.lock()
         let lastActivity = lastActivityTime
         activityLock.unlock()
-        
+
         let timeSinceActivity = CACurrentMediaTime() - lastActivity
-        
-        if timeSinceActivity > stuckDragTimeout {
+        let effectiveTimeout = isPausedForSustainedHold ? sustainedPauseTimeout : stuckDragTimeout
+
+        if timeSinceActivity > effectiveTimeout {
             // Drag appears to be stuck - auto-release
             Log.warning(
                 unsafe "Stuck drag detected - no activity for \(String(format: "%.1f", timeSinceActivity))s, auto-releasing",
@@ -623,7 +701,7 @@ final class MouseEventGenerator: @unchecked Sendable {
                     "category": "gesture",
                     "event": "stuck_drag_auto_release",
                     "time_since_activity": timeSinceActivity,
-                    "timeout_threshold": stuckDragTimeout,
+                    "timeout_threshold": effectiveTimeout,
                     "session_id": Log.sessionID,
                 ]
                 SentrySDK.logger.warn("Stuck drag auto-released after timeout", attributes: attributes)

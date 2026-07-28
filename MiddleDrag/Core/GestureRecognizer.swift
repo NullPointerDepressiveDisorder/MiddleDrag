@@ -26,6 +26,11 @@ class GestureRecognizer {
     // Stability tracking - prevents false gesture ends during brief state transitions
     private var stableFrameCount: Int = 0
 
+    private let touchClassifier = TouchClassifier()
+
+    // Confirmation counter for 4-finger cancellation during an active drag
+    private var consecutiveFourFingerFrames: Int = 0
+
     // Cooldown after 4-finger cancellation
     // Prevents accidental gesture triggers when lifting one finger during Mission Control
     private var isInCancellationCooldown: Bool = false
@@ -42,8 +47,6 @@ class GestureRecognizer {
         _ touches: UnsafeMutableRawPointer, count: Int, timestamp: Double,
         modifierFlags: CGEventFlags
     ) {
-        let touchArray = unsafe touches.bindMemory(to: MTTouch.self, capacity: count)
-
         // Check modifier key requirement first (if enabled)
         if configuration.requireModifierKey {
             let requiredFlagPresent: Bool
@@ -67,41 +70,56 @@ class GestureRecognizer {
             }
         }
 
-        // Collect only valid touching fingers (state 3 = touching down, state 4 = active)
-        // Skip state 5 (lifting), 6 (lingering), 7 (gone)
-        // Apply palm rejection filters
-        var validFingers: [MTPoint] = []
+        let frame = touchClassifier.classify(
+            touches: touches,
+            count: count,
+            timestamp: timestamp,
+            configuration: configuration
+        )
+        processClassifiedFrame(frame, timestamp: timestamp, modifierFlags: modifierFlags)
+    }
 
-        for i in 0..<count {
-            let touch = unsafe touchArray[i]
-            if touch.state == 3 || touch.state == 4 {
-                let position = touch.normalizedVector.position
+    func processClassifiedFrame(
+        _ frame: ClassifiedTouchFrame,
+        timestamp: Double,
+        modifierFlags: CGEventFlags
+    ) {
+        if configuration.requireModifierKey {
+            let requiredFlagPresent: Bool
+            switch configuration.modifierKeyType {
+            case .shift:
+                requiredFlagPresent = modifierFlags.contains(.maskShift)
+            case .control:
+                requiredFlagPresent = modifierFlags.contains(.maskControl)
+            case .option:
+                requiredFlagPresent = modifierFlags.contains(.maskAlternate)
+            case .command:
+                requiredFlagPresent = modifierFlags.contains(.maskCommand)
+            }
 
-                // Palm rejection: Exclusion zone filter
-                // Skip touches in the bottom portion of trackpad (where palm rests)
-                if configuration.exclusionZoneEnabled {
-                    if position.y < configuration.exclusionZoneSize {
-                        continue  // Skip this touch
-                    }
+            if !requiredFlagPresent {
+                if state != .idle {
+                    handleGestureCancel()
                 }
-
-                // Palm rejection: Contact size filter
-                // Skip touches that are too large (palms have larger contact area)
-                if configuration.contactSizeFilterEnabled {
-                    if touch.zTotal > configuration.maxContactSize {
-                        continue  // Skip this touch - likely a palm
-                    }
-                }
-
-                validFingers.append(position)
+                return
             }
         }
 
+        let countedTouches = countableTouches(in: frame)
+        let validFingers = countedTouches.map { $0.sample.position }
         let fingerCount = validFingers.count
 
         // ALWAYS cancel on 4+ fingers regardless of configuration
         // This ensures Mission Control and other system gestures always work
         if fingerCount >= 4 {
+            // During an active drag, require a few consecutive frames before
+            // cancelling so a single-frame classification flicker (a thumb
+            // momentarily reading as a digit) cannot kill the drag. ~24ms is
+            // imperceptible for a real four-finger swipe.
+            if state == .dragging {
+                consecutiveFourFingerFrames += 1
+                guard consecutiveFourFingerFrames >= 3 else { return }
+            }
             if state != .idle {
                 handleGestureCancel()
             }
@@ -109,6 +127,7 @@ class GestureRecognizer {
             isInCancellationCooldown = true
             return
         }
+        consecutiveFourFingerFrames = 0
 
         // Clear cooldown when finger count drops to 0-2,
         // or when finger count is 3 and we're idle (so user can start a new gesture)
@@ -144,6 +163,38 @@ class GestureRecognizer {
         frameCount += 1
     }
 
+    /// The contacts that count toward the finger total for gesture decisions.
+    ///
+    /// Normally that is every digit-role and uncertain-role contact, but a thumb
+    /// resting, landing to click, or adjusting position must not read as a fourth
+    /// finger. On real hardware a thumb's size/shape flags it `uncertain` while a
+    /// fingertip never is (size evidence 0.000 at p95), so uncertain-role extras
+    /// beyond the three established digits are always forgiven. During an active
+    /// drag even digit-role extras are forgiven while stationary — the classifier
+    /// needs a few hundred milliseconds of differential motion before it can mark
+    /// a newcomer incidental. A genuine system gesture still cancels: its four
+    /// contacts are digit-role fingertips sweeping together.
+    private func countableTouches(in frame: ClassifiedTouchFrame) -> [ClassifiedTouch] {
+        let digits = frame.digitTouches
+        guard digits.count > 3 else { return digits }
+
+        // Digit-role contacts first, then older before younger, so the ambiguous
+        // newcomers (or a long-resting thumb) end up in the extras.
+        let ranked = digits.sorted { first, second in
+            let firstIsDigit = first.role == .digit
+            let secondIsDigit = second.role == .digit
+            if firstIsDigit != secondIsDigit { return firstIsDigit }
+            return first.features.age > second.features.age
+        }
+        let core = Array(ranked.prefix(3))
+        let extras = ranked.dropFirst(3)
+
+        let hasGenuineFourthDigit = extras.contains { extra in
+            extra.role == .digit && (state != .dragging || extra.features.speed >= 0.25)
+        }
+        return hasGenuineFourthDigit ? digits : core
+    }
+
     /// Reset gesture recognition state
     func reset() {
         state = .idle
@@ -154,6 +205,8 @@ class GestureRecognizer {
         frameCount = 0
         stableFrameCount = 0
         isInCancellationCooldown = false  // Clear cooldown on reset
+        consecutiveFourFingerFrames = 0
+        touchClassifier.reset()
     }
 
     // MARK: - Private Methods

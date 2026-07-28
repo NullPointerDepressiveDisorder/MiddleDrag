@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Touch Data Structures
 
 /// Represents a point in 2D space
-struct MTPoint: Sendable {
+struct MTPoint: Sendable, Codable {
     var x: Float
     var y: Float
     
@@ -21,7 +21,7 @@ struct MTPoint: Sendable {
 }
 
 /// Represents a vector with position and velocity components
-struct MTVector: Sendable {
+struct MTVector: Sendable, Codable {
     var position: MTPoint
     var velocity: MTPoint
 }

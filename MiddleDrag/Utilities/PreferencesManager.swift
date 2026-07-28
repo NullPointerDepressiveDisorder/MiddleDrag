@@ -19,12 +19,8 @@ public final class PreferencesManager: @unchecked Sendable {
         static let middleDragEnabled = "middleDragEnabled"
         static let tapToClickEnabled = "tapToClickEnabled"
         // Palm rejection keys
-        static let exclusionZoneEnabled = "exclusionZoneEnabled"
-        static let exclusionZoneSize = "exclusionZoneSize"
         static let requireModifierKey = "requireModifierKey"
         static let modifierKeyType = "modifierKeyType"
-        static let contactSizeFilterEnabled = "contactSizeFilterEnabled"
-        static let maxContactSize = "maxContactSize"
         // Window size filter keys
         static let minimumWindowSizeFilterEnabled = "minimumWindowSizeFilterEnabled"
         static let minimumWindowWidth = "minimumWindowWidth"
@@ -36,6 +32,11 @@ public final class PreferencesManager: @unchecked Sendable {
         static let titleBarHeight = "titleBarHeight"
         // Relift during drag key
         static let allowReliftDuringDrag = "allowReliftDuringDrag"
+        // Incidental contact filtering key
+        static let incidentalFilterEnabled = "incidentalFilterEnabled"
+        // Mouse button behavior during a middle-drag
+        static let preserveModifierKeysDuringDrag = "preserveModifierKeysDuringDrag"
+        static let allowLeftClickDuringDrag = "allowLeftClickDuringDrag"
         // Gesture configuration prompt tracking
         static let hasShownGestureConfigurationPrompt = "hasShownGestureConfigurationPrompt"
         // Hotkey binding keys
@@ -68,12 +69,8 @@ public final class PreferencesManager: @unchecked Sendable {
             Keys.middleDragEnabled: true,
             Keys.tapToClickEnabled: true,
             // Palm rejection defaults
-            Keys.exclusionZoneEnabled: false,
-            Keys.exclusionZoneSize: 0.15,
             Keys.requireModifierKey: false,
             Keys.modifierKeyType: ModifierKeyType.shift.rawValue,
-            Keys.contactSizeFilterEnabled: false,
-            Keys.maxContactSize: 1.5,
             // Window size filter defaults
             Keys.minimumWindowSizeFilterEnabled: false,
             Keys.minimumWindowWidth: 100.0,
@@ -85,6 +82,11 @@ public final class PreferencesManager: @unchecked Sendable {
             Keys.titleBarHeight: 28.0,
             // Relift during drag default
             Keys.allowReliftDuringDrag: false,
+            // Incidental contact filtering default
+            Keys.incidentalFilterEnabled: true,
+            // Mouse button behavior defaults
+            Keys.preserveModifierKeysDuringDrag: false,
+            Keys.allowLeftClickDuringDrag: false,
             // Gesture configuration prompt tracking
             Keys.hasShownGestureConfigurationPrompt: false,
             // Hotkey defaults
@@ -113,12 +115,8 @@ public final class PreferencesManager: @unchecked Sendable {
         prefs.blockSystemGestures = userDefaults.bool(forKey: Keys.blockSystemGestures)
         prefs.middleDragEnabled = userDefaults.bool(forKey: Keys.middleDragEnabled)
         prefs.tapToClickEnabled = userDefaults.bool(forKey: Keys.tapToClickEnabled)
-        prefs.exclusionZoneEnabled = userDefaults.bool(forKey: Keys.exclusionZoneEnabled)
-        prefs.exclusionZoneSize = userDefaults.double(forKey: Keys.exclusionZoneSize)
         prefs.requireModifierKey = userDefaults.bool(forKey: Keys.requireModifierKey)
         prefs.modifierKeyType = modifierKey
-        prefs.contactSizeFilterEnabled = userDefaults.bool(forKey: Keys.contactSizeFilterEnabled)
-        prefs.maxContactSize = userDefaults.double(forKey: Keys.maxContactSize)
         prefs.minimumWindowSizeFilterEnabled = userDefaults.bool(
             forKey: Keys.minimumWindowSizeFilterEnabled)
         prefs.minimumWindowWidth = userDefaults.double(forKey: Keys.minimumWindowWidth)
@@ -127,6 +125,10 @@ public final class PreferencesManager: @unchecked Sendable {
         prefs.passThroughTitleBar = userDefaults.bool(forKey: Keys.passThroughTitleBar)
         prefs.titleBarHeight = userDefaults.double(forKey: Keys.titleBarHeight)
         prefs.allowReliftDuringDrag = userDefaults.bool(forKey: Keys.allowReliftDuringDrag)
+        prefs.incidentalFilterEnabled = userDefaults.bool(forKey: Keys.incidentalFilterEnabled)
+        prefs.preserveModifierKeysDuringDrag = userDefaults.bool(
+            forKey: Keys.preserveModifierKeysDuringDrag)
+        prefs.allowLeftClickDuringDrag = userDefaults.bool(forKey: Keys.allowLeftClickDuringDrag)
         prefs.toggleHotKey = HotKeyBinding(
             keyCode: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyCode)),
             carbonModifiers: UInt32(userDefaults.integer(forKey: Keys.toggleHotKeyModifiers))
@@ -149,13 +151,8 @@ public final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.middleDragEnabled, forKey: Keys.middleDragEnabled)
         userDefaults.set(preferences.tapToClickEnabled, forKey: Keys.tapToClickEnabled)
         // Palm rejection
-        userDefaults.set(preferences.exclusionZoneEnabled, forKey: Keys.exclusionZoneEnabled)
-        userDefaults.set(preferences.exclusionZoneSize, forKey: Keys.exclusionZoneSize)
         userDefaults.set(preferences.requireModifierKey, forKey: Keys.requireModifierKey)
         userDefaults.set(preferences.modifierKeyType.rawValue, forKey: Keys.modifierKeyType)
-        userDefaults.set(
-            preferences.contactSizeFilterEnabled, forKey: Keys.contactSizeFilterEnabled)
-        userDefaults.set(preferences.maxContactSize, forKey: Keys.maxContactSize)
         // Window size filter
         userDefaults.set(
             preferences.minimumWindowSizeFilterEnabled, forKey: Keys.minimumWindowSizeFilterEnabled)
@@ -168,6 +165,13 @@ public final class PreferencesManager: @unchecked Sendable {
         userDefaults.set(preferences.titleBarHeight, forKey: Keys.titleBarHeight)
         // Relift during drag
         userDefaults.set(preferences.allowReliftDuringDrag, forKey: Keys.allowReliftDuringDrag)
+        // Incidental contact filtering
+        userDefaults.set(preferences.incidentalFilterEnabled, forKey: Keys.incidentalFilterEnabled)
+        // Mouse button behavior
+        userDefaults.set(
+            preferences.preserveModifierKeysDuringDrag, forKey: Keys.preserveModifierKeysDuringDrag)
+        userDefaults.set(
+            preferences.allowLeftClickDuringDrag, forKey: Keys.allowLeftClickDuringDrag)
         // Hotkey bindings
         userDefaults.set(Int(preferences.toggleHotKey.keyCode), forKey: Keys.toggleHotKeyCode)
         userDefaults.set(Int(preferences.toggleHotKey.carbonModifiers), forKey: Keys.toggleHotKeyModifiers)

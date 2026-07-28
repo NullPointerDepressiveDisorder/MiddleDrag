@@ -25,26 +25,33 @@ final class GestureRecognizerTests: XCTestCase {
 
     /// Creates a valid MTTouch struct with the given position and properties
     private func createTouch(
-        x: Float, y: Float, zTotal: Float = 0.5, state: UInt32 = 4
+        x: Float,
+        y: Float,
+        zTotal: Float = 0.5,
+        state: UInt32 = 4,
+        fingerID: Int32 = 0,
+        pathIndex: Int32 = 0,
+        velocity: MTPoint = MTPoint(x: 0, y: 0),
+        majorAxis: Float = 0.1,
+        minorAxis: Float = 0.1
     ) -> MTTouch {
         let position = MTPoint(x: x, y: y)
-        let velocity = MTPoint(x: 0, y: 0)
         let normalizedVector = MTVector(position: position, velocity: velocity)
         let absoluteVector = MTVector(position: position, velocity: velocity)
 
         return MTTouch(
             frame: 0,
             timestamp: 0,
-            pathIndex: 0,
+            pathIndex: pathIndex,
             state: state,
-            fingerID: 0,
+            fingerID: fingerID,
             handID: 0,
             normalizedVector: normalizedVector,
             zTotal: zTotal,
             field9: 0,
             angle: 0,
-            majorAxis: 0.1,
-            minorAxis: 0.1,
+            majorAxis: majorAxis,
+            minorAxis: minorAxis,
             absoluteVector: absoluteVector,
             field14: 0,
             field15: 0,
@@ -174,79 +181,24 @@ final class GestureRecognizerTests: XCTestCase {
             "Gesture should start without modifier when requirement is disabled")
     }
 
-    // MARK: - Exclusion Zone Tests
-
-    func testExclusionZone_FiltersTouchesInExclusionZone() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2  // Bottom 20%
-
-        // All 3 touches are in the exclusion zone (y < 0.2)
+    func testIncidentalContactClassifier_TwoDigitsPlusObviousIncidentalDoesNotStart() {
+        // The incidental contact is not at the bottom of the trackpad. It is rejected from
+        // shape/size evidence, not from a positional exclusion zone. The digits are
+        // moving (as real gesture digits are) so the palm-satellite rule does not
+        // absorb them.
+        let digitVelocity = MTPoint(x: 0, y: 0.5)
         let touches = [
-            createTouch(x: 0.3, y: 0.1),  // y=0.1 < 0.2, filtered
-            createTouch(x: 0.5, y: 0.15),  // y=0.15 < 0.2, filtered
-            createTouch(x: 0.7, y: 0.05),  // y=0.05 < 0.2, filtered
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        // All touches filtered = no valid 3-finger gesture
-        XCTAssertFalse(
-            mockDelegate.didStartCalled, "Gesture should not start when all touches are filtered")
-    }
-
-    func testExclusionZone_AcceptsTouchesAboveZone() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2
-
-        // All 3 touches are above the exclusion zone (y >= 0.2)
-        let touches = [
-            createTouch(x: 0.3, y: 0.5),
-            createTouch(x: 0.5, y: 0.6),
-            createTouch(x: 0.7, y: 0.7),
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start when touches are above exclusion zone"
-        )
-    }
-
-    func testExclusionZone_DisabledAcceptsAllTouches() {
-        recognizer.configuration.exclusionZoneEnabled = false  // Disabled
-
-        // Touches in what would be the exclusion zone
-        let touches = [
-            createTouch(x: 0.3, y: 0.1),
-            createTouch(x: 0.5, y: 0.1),
-            createTouch(x: 0.7, y: 0.1),
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start with low Y touches when exclusion zone is disabled")
-    }
-
-    // MARK: - Contact Size Filter Tests
-
-    func testContactSizeFilter_FiltersLargeContacts() {
-        recognizer.configuration.contactSizeFilterEnabled = true
-        recognizer.configuration.maxContactSize = 1.0
-
-        // All contacts are too large (zTotal > 1.0)
-        let touches = [
-            createTouch(x: 0.3, y: 0.5, zTotal: 2.0),  // Too large
-            createTouch(x: 0.5, y: 0.5, zTotal: 1.5),  // Too large
-            createTouch(x: 0.7, y: 0.5, zTotal: 3.0),  // Too large
+            createTouch(x: 0.35, y: 0.58, fingerID: 1, pathIndex: 1, velocity: digitVelocity),
+            createTouch(x: 0.55, y: 0.60, fingerID: 2, pathIndex: 2, velocity: digitVelocity),
+            createTouch(
+                x: 0.82,
+                y: 0.52,
+                zTotal: 5.0,
+                fingerID: 99,
+                pathIndex: 99,
+                majorAxis: 25,
+                minorAxis: 15
+            ),
         ]
         let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
@@ -255,18 +207,24 @@ final class GestureRecognizerTests: XCTestCase {
 
         XCTAssertFalse(
             mockDelegate.didStartCalled,
-            "Gesture should not start when all contacts are too large (palm rejection)")
+            "Two digits plus an obvious incidental contact should not start MiddleDrag")
     }
 
-    func testContactSizeFilter_AcceptsNormalContacts() {
-        recognizer.configuration.contactSizeFilterEnabled = true
-        recognizer.configuration.maxContactSize = 1.5
-
-        // All contacts are within acceptable range
+    func testIncidentalContactClassifier_ThreeDigitsPlusObviousIncidentalStarts() {
+        let digitVelocity = MTPoint(x: 0, y: 0.5)
         let touches = [
-            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),
-            createTouch(x: 0.5, y: 0.5, zTotal: 0.8),
-            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),
+            createTouch(x: 0.30, y: 0.58, fingerID: 1, pathIndex: 1, velocity: digitVelocity),
+            createTouch(x: 0.48, y: 0.60, fingerID: 2, pathIndex: 2, velocity: digitVelocity),
+            createTouch(x: 0.66, y: 0.57, fingerID: 3, pathIndex: 3, velocity: digitVelocity),
+            createTouch(
+                x: 0.88,
+                y: 0.48,
+                zTotal: 5.0,
+                fingerID: 99,
+                pathIndex: 99,
+                majorAxis: 25,
+                minorAxis: 15
+            ),
         ]
         let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
@@ -275,144 +233,150 @@ final class GestureRecognizerTests: XCTestCase {
 
         XCTAssertTrue(
             mockDelegate.didStartCalled,
-            "Gesture should start when all contacts are within size limit")
+            "Three digits plus an obvious incidental contact should still start MiddleDrag")
     }
 
-    func testContactSizeFilter_DisabledAcceptsAllContacts() {
-        recognizer.configuration.contactSizeFilterEnabled = false  // Disabled
+    func testIncidentalContactClassifier_NormalSizedRestingThumbDoesNotStartDuringScroll() {
+        // The headline case: a resting thumb with an ordinary contact patch. Nothing
+        // about its size or shape gives it away — only its behavior (it has never
+        // moved while the other digits scroll) marks it incidental.
+        let thumb = createTouch(x: 0.5, y: 0.25, fingerID: 9, pathIndex: 9)
+        let (restingPointer, restingCount, restingCleanup) =
+            unsafe createTouchData(touches: [thumb])
+        defer { restingCleanup() }
+        unsafe recognizer.processTouches(
+            restingPointer, count: restingCount, timestamp: 0.0, modifierFlags: [])
 
-        // Very large contacts that would normally be filtered
-        let touches = [
-            createTouch(x: 0.3, y: 0.5, zTotal: 10.0),
-            createTouch(x: 0.5, y: 0.5, zTotal: 15.0),
-            createTouch(x: 0.7, y: 0.5, zTotal: 20.0),
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start with large contacts when filter is disabled")
-    }
-
-    // MARK: - Partial Filter Tests (Some touches filtered, some pass)
-
-    func testExclusionZone_PartialFiltering_FiveTouchesThreePass() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2  // Bottom 20%
-
-        // 5 touches: 2 in exclusion zone, 3 above - should activate gesture
-        let touches = [
-            createTouch(x: 0.2, y: 0.1),  // Filtered (y < 0.2)
-            createTouch(x: 0.3, y: 0.5),  // Passes
-            createTouch(x: 0.5, y: 0.6),  // Passes
-            createTouch(x: 0.7, y: 0.5),  // Passes
-            createTouch(x: 0.8, y: 0.05),  // Filtered (y < 0.2)
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start when 5 touches detected but only 3 pass exclusion zone filter")
-    }
-
-    func testContactSizeFilter_PartialFiltering_FiveTouchesThreePass() {
-        recognizer.configuration.contactSizeFilterEnabled = true
-        recognizer.configuration.maxContactSize = 1.5
-
-        // 5 touches: 2 too large (palm), 3 normal - should activate gesture
-        let touches = [
-            createTouch(x: 0.2, y: 0.5, zTotal: 3.0),  // Filtered (too large)
-            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),  // Passes
-            createTouch(x: 0.5, y: 0.5, zTotal: 0.8),  // Passes
-            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes
-            createTouch(x: 0.8, y: 0.5, zTotal: 5.0),  // Filtered (too large)
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start when 5 touches detected but only 3 pass contact size filter")
-    }
-
-    func testCombinedFilters_PartialFiltering_SixTouchesThreePass() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2
-        recognizer.configuration.contactSizeFilterEnabled = true
-        recognizer.configuration.maxContactSize = 1.5
-
-        // 6 touches: 2 in exclusion zone, 1 too large, 3 pass both - should activate
-        let touches = [
-            createTouch(x: 0.1, y: 0.1, zTotal: 0.5),  // Filtered (exclusion zone)
-            createTouch(x: 0.2, y: 0.5, zTotal: 3.0),  // Filtered (too large)
-            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),  // Passes both
-            createTouch(x: 0.5, y: 0.6, zTotal: 0.8),  // Passes both
-            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),  // Passes both
-            createTouch(x: 0.9, y: 0.05, zTotal: 0.5),  // Filtered (exclusion zone)
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
-
-        XCTAssertTrue(
-            mockDelegate.didStartCalled,
-            "Gesture should start when 6 touches detected but only 3 pass all filters")
-    }
-
-    func testPartialFiltering_InsufficientRemainingTouches() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2
-
-        // 4 touches: 2 filtered, only 2 remain - should NOT activate (need exactly 3)
-        let touches = [
-            createTouch(x: 0.2, y: 0.1),  // Filtered (exclusion zone)
-            createTouch(x: 0.3, y: 0.5),  // Passes
-            createTouch(x: 0.7, y: 0.5),  // Passes
-            createTouch(x: 0.8, y: 0.05),  // Filtered (exclusion zone)
-        ]
-        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
-        defer { cleanup() }
-
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: [])
+        // Two fingers land already scrolling while the thumb keeps resting.
+        for (index, timestamp) in [0.5, 0.55, 0.6, 0.65].enumerated() {
+            let fingerY = 0.5 + 0.02 * Float(index)
+            let scrollVelocity = MTPoint(x: 0, y: 0.5)
+            let scrollFrame = [
+                createTouch(
+                    x: 0.35, y: fingerY, fingerID: 1, pathIndex: 1, velocity: scrollVelocity),
+                createTouch(
+                    x: 0.55, y: fingerY, fingerID: 2, pathIndex: 2, velocity: scrollVelocity),
+                thumb,
+            ]
+            let (pointer, count, cleanup) = unsafe createTouchData(touches: scrollFrame)
+            defer { cleanup() }
+            unsafe recognizer.processTouches(
+                pointer, count: count, timestamp: timestamp, modifierFlags: [])
+        }
 
         XCTAssertFalse(
             mockDelegate.didStartCalled,
-            "Gesture should not start when only 2 touches remain after filtering")
+            "A normal-sized resting thumb plus two scrolling fingers should not start MiddleDrag")
     }
 
-    // MARK: - Combined Filter Tests
+    // MARK: - Mid-Drag Thumb Tests
 
-    func testCombinedFilters_AllFiltersWorking() {
-        recognizer.configuration.exclusionZoneEnabled = true
-        recognizer.configuration.exclusionZoneSize = 0.2
-        recognizer.configuration.contactSizeFilterEnabled = true
-        recognizer.configuration.maxContactSize = 1.5
-        recognizer.configuration.requireModifierKey = true
-        recognizer.configuration.modifierKeyType = .shift
+    /// Establishes an active 3-finger drag with distinct finger IDs, then returns
+    /// the finger positions for the follow-up frame.
+    private func establishDrag() -> [(Float, Float)] {
+        recognizer.configuration.moveThreshold = 0.01
+        let drag = MTPoint(x: 0, y: 0.5)
 
-        // Valid touches: above exclusion zone, normal size
-        let touches = [
-            createTouch(x: 0.3, y: 0.5, zTotal: 0.5),
-            createTouch(x: 0.5, y: 0.5, zTotal: 0.8),
-            createTouch(x: 0.7, y: 0.5, zTotal: 1.0),
+        let start = [
+            createTouch(x: 0.3, y: 0.5, fingerID: 1, pathIndex: 1, velocity: drag),
+            createTouch(x: 0.5, y: 0.5, fingerID: 2, pathIndex: 2, velocity: drag),
+            createTouch(x: 0.7, y: 0.5, fingerID: 3, pathIndex: 3, velocity: drag),
         ]
+        let (p1, c1, cleanup1) = unsafe createTouchData(touches: start)
+        defer { cleanup1() }
+        unsafe recognizer.processTouches(p1, count: c1, timestamp: 0.0, modifierFlags: [])
+
+        let moved = [
+            createTouch(x: 0.3, y: 0.52, fingerID: 1, pathIndex: 1, velocity: drag),
+            createTouch(x: 0.5, y: 0.52, fingerID: 2, pathIndex: 2, velocity: drag),
+            createTouch(x: 0.7, y: 0.52, fingerID: 3, pathIndex: 3, velocity: drag),
+        ]
+        let (p2, c2, cleanup2) = unsafe createTouchData(touches: moved)
+        defer { cleanup2() }
+        unsafe recognizer.processTouches(p2, count: c2, timestamp: 0.1, modifierFlags: [])
+
+        XCTAssertEqual(recognizer.state, .dragging, "Drag should be established")
+        return [(0.3, 0.54), (0.5, 0.54), (0.7, 0.54)]
+    }
+
+    func testThumbLandingDuringDragDoesNotCancel() {
+        let fingers = establishDrag()
+        mockDelegate.reset()
+
+        // A thumb-sized contact lands (stationary) while the digits keep dragging.
+        let drag = MTPoint(x: 0, y: 0.5)
+        var touches = fingers.enumerated().map { index, position in
+            createTouch(
+                x: position.0, y: position.1,
+                fingerID: Int32(index + 1), pathIndex: Int32(index + 1), velocity: drag)
+        }
+        touches.append(
+            createTouch(
+                x: 0.5, y: 0.2, zTotal: 2.0, fingerID: 9, pathIndex: 9,
+                majorAxis: 20, minorAxis: 10))
         let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
         defer { cleanup() }
 
-        // Process with shift held
-        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.0, modifierFlags: .maskShift)
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.2, modifierFlags: [])
+
+        XCTAssertFalse(
+            mockDelegate.didCancelDraggingCalled,
+            "A thumb landing to click mid-drag must not cancel the drag")
+        XCTAssertEqual(recognizer.state, .dragging)
+    }
+
+    func testThumbSlidingDuringDragDoesNotCancel() {
+        let fingers = establishDrag()
+        mockDelegate.reset()
+
+        // The thumb moves against the drag direction (sliding into click position).
+        let drag = MTPoint(x: 0, y: 0.5)
+        var touches = fingers.enumerated().map { index, position in
+            createTouch(
+                x: position.0, y: position.1,
+                fingerID: Int32(index + 1), pathIndex: Int32(index + 1), velocity: drag)
+        }
+        touches.append(
+            createTouch(
+                x: 0.5, y: 0.2, zTotal: 2.0, fingerID: 9, pathIndex: 9,
+                velocity: MTPoint(x: 0.3, y: -0.3),
+                majorAxis: 17, minorAxis: 9))
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
+        defer { cleanup() }
+
+        unsafe recognizer.processTouches(pointer, count: count, timestamp: 0.2, modifierFlags: [])
+
+        XCTAssertFalse(
+            mockDelegate.didCancelDraggingCalled,
+            "A thumb sliding against the drag direction must not cancel the drag")
+        XCTAssertEqual(recognizer.state, .dragging)
+    }
+
+    func testCorrelatedFourthFingertipDuringDragCancels() {
+        let fingers = establishDrag()
+        mockDelegate.reset()
+
+        // A fingertip-sized fourth contact moving WITH the digits: a system gesture.
+        let drag = MTPoint(x: 0, y: 0.5)
+        var touches = fingers.enumerated().map { index, position in
+            createTouch(
+                x: position.0, y: position.1,
+                fingerID: Int32(index + 1), pathIndex: Int32(index + 1), velocity: drag)
+        }
+        touches.append(
+            createTouch(x: 0.85, y: 0.54, fingerID: 4, pathIndex: 4, velocity: drag))
+        let (pointer, count, cleanup) = unsafe createTouchData(touches: touches)
+        defer { cleanup() }
+
+        for frame in 0..<3 {
+            unsafe recognizer.processTouches(
+                pointer, count: count, timestamp: 0.2 + Double(frame) * 0.008,
+                modifierFlags: [])
+        }
 
         XCTAssertTrue(
-            mockDelegate.didStartCalled, "Gesture should start when all filters pass")
+            mockDelegate.didCancelDraggingCalled,
+            "Four fingertips sweeping together must still cancel for system gestures")
     }
 
     // MARK: - State Transition Tests
@@ -850,17 +814,23 @@ final class GestureRecognizerTests: XCTestCase {
         unsafe recognizer.processTouches(pointer2, count: count2, timestamp: 0.1, modifierFlags: [])
         XCTAssertEqual(recognizer.state, .dragging)
 
-        // Add 4th finger
+        // Add 4th finger — a system gesture's contacts sweep together. Cancellation
+        // during a drag requires a few consecutive frames of confirmation.
+        let swipe = MTPoint(x: 0, y: 0.5)
         let touches4 = [
-            createTouch(x: 0.2, y: 0.5),
-            createTouch(x: 0.4, y: 0.5),
-            createTouch(x: 0.6, y: 0.5),
-            createTouch(x: 0.8, y: 0.5),
+            createTouch(x: 0.2, y: 0.5, velocity: swipe),
+            createTouch(x: 0.4, y: 0.5, velocity: swipe),
+            createTouch(x: 0.6, y: 0.5, velocity: swipe),
+            createTouch(x: 0.8, y: 0.5, velocity: swipe),
         ]
         let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
+        for frame in 0..<3 {
+            unsafe recognizer.processTouches(
+                pointer4, count: count4, timestamp: 0.2 + Double(frame) * 0.008,
+                modifierFlags: [])
+        }
 
         XCTAssertTrue(mockDelegate.didCancelDraggingCalled, "4 fingers should cancel dragging")
     }
@@ -896,17 +866,22 @@ final class GestureRecognizerTests: XCTestCase {
         XCTAssertEqual(recognizer.state, .dragging)
         mockDelegate.reset()
 
-        // 4 fingers trigger cancellation
+        // 4 fingers sweeping together trigger cancellation (3-frame confirmation)
+        let swipe = MTPoint(x: 0, y: 0.5)
         let touches4 = [
-            createTouch(x: 0.2, y: 0.5),
-            createTouch(x: 0.4, y: 0.5),
-            createTouch(x: 0.6, y: 0.5),
-            createTouch(x: 0.8, y: 0.5),
+            createTouch(x: 0.2, y: 0.5, velocity: swipe),
+            createTouch(x: 0.4, y: 0.5, velocity: swipe),
+            createTouch(x: 0.6, y: 0.5, velocity: swipe),
+            createTouch(x: 0.8, y: 0.5, velocity: swipe),
         ]
         let (pointer4, count4, cleanup4) = unsafe createTouchData(touches: touches4)
         defer { cleanup4() }
 
-        unsafe recognizer.processTouches(pointer4, count: count4, timestamp: 0.2, modifierFlags: [])
+        for frame in 0..<3 {
+            unsafe recognizer.processTouches(
+                pointer4, count: count4, timestamp: 0.2 + Double(frame) * 0.008,
+                modifierFlags: [])
+        }
         XCTAssertTrue(mockDelegate.didCancelDraggingCalled, "4 fingers should cancel dragging")
         XCTAssertEqual(recognizer.state, .idle, "State should be idle after cancel")
 

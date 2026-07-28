@@ -19,6 +19,8 @@ public class MenuBarController: NSObject {
     private weak var multitouchManager: MultitouchManager?
     private var preferences: UserPreferences
     private(set) var isMenuBarVisible = true
+    private var touchDebugWindowController: TouchDebugWindowController?
+    private var calibrationWizardController: CalibrationWizardController?
 
     // Menu item tags for easy reference
     private enum MenuItemTag: Int {
@@ -83,7 +85,7 @@ public class MenuBarController: NSObject {
         buildMenu()
     }
 
-    func updateStatusIcon(enabled: Bool) {
+    public func updateStatusIcon(enabled: Bool) {
         guard let button = statusItem.button else { return }
 
         let iconName = enabled ? "hand.raised.fingers.spread" : "hand.raised.slash"
@@ -104,7 +106,7 @@ public class MenuBarController: NSObject {
 
     // MARK: - Menu Building
 
-    func buildMenu() {
+    public func buildMenu() {
         let menu = NSMenu()
 
         // Status
@@ -256,6 +258,14 @@ public class MenuBarController: NSObject {
         gestureItem.target = self
         submenu.addItem(gestureItem)
 
+        let debugTouchesItem = NSMenuItem(
+            title: "Debug Touches...",
+            action: #selector(showTouchDebugWindow),
+            keyEquivalent: ""
+        )
+        debugTouchesItem.target = self
+        submenu.addItem(debugTouchesItem)
+
         submenu.addItem(NSMenuItem.separator())
 
         // Palm Rejection section
@@ -320,6 +330,24 @@ public class MenuBarController: NSObject {
                 action: #selector(toggleAllowReliftDuringDrag)
             ))
 
+        // Forward keyboard modifiers on the synthetic middle-button events
+        // (useful for apps whose middle-drag behavior changes with Shift/Ctrl/etc.)
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Preserve Modifier Keys During Drag",
+                isOn: preferences.preserveModifierKeysDuringDrag,
+                action: #selector(togglePreserveModifierKeysDuringDrag)
+            ))
+
+        // Let a real click (e.g. a thumb press) reach the app as a left click
+        // while a middle-drag is active, instead of being suppressed
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Allow Left Click During Drag",
+                isOn: preferences.allowLeftClickDuringDrag,
+                action: #selector(toggleAllowLeftClickDuringDrag)
+            ))
+
         submenu.addItem(NSMenuItem.separator())
         
         // Emergency release for stuck drags
@@ -382,35 +410,29 @@ public class MenuBarController: NSObject {
         let item = NSMenuItem(title: "Palm Rejection", action: nil, keyEquivalent: "")
         let submenu = NSMenu()
 
-        // Exclusion Zone section
-        let exclusionItem = createAdvancedMenuItem(
-            title: "Exclusion Zone",
-            isOn: preferences.exclusionZoneEnabled,
-            action: #selector(toggleExclusionZone)
+        // Incidental contact filtering (classifier-based thumb/palm rejection)
+        submenu.addItem(
+            createAdvancedMenuItem(
+                title: "Ignore Incidental Contacts",
+                isOn: preferences.incidentalFilterEnabled,
+                action: #selector(toggleIncidentalFilter)
+            ))
+
+        let calibrateItem = NSMenuItem(
+            title: "Calibrate Touch Classification...",
+            action: #selector(showCalibrationWizard),
+            keyEquivalent: ""
         )
-        submenu.addItem(exclusionItem)
+        calibrateItem.target = self
+        submenu.addItem(calibrateItem)
 
-        // Exclusion zone size options (only shown when enabled)
-        if preferences.exclusionZoneEnabled {
-            let sizes: [(String, Double)] = [
-                ("10% (Small)", 0.10),
-                ("15% (Default)", 0.15),
-                ("20% (Medium)", 0.20),
-                ("25% (Large)", 0.25),
-            ]
-
-            for (title, value) in sizes {
-                let sizeItem = NSMenuItem(
-                    title: "    \(title)", action: #selector(setExclusionZoneSize(_:)),
-                    keyEquivalent: "")
-                sizeItem.target = self
-                sizeItem.representedObject = value
-                if abs(preferences.exclusionZoneSize - value) < 0.01 {
-                    sizeItem.state = .on
-                }
-                submenu.addItem(sizeItem)
-            }
-        }
+        let resetCalibrationItem = NSMenuItem(
+            title: "Reset Touch Calibration",
+            action: #selector(resetTouchCalibration),
+            keyEquivalent: ""
+        )
+        resetCalibrationItem.target = self
+        submenu.addItem(resetCalibrationItem)
 
         submenu.addItem(NSMenuItem.separator())
 
@@ -434,37 +456,6 @@ public class MenuBarController: NSObject {
                     keyItem.state = .on
                 }
                 submenu.addItem(keyItem)
-            }
-        }
-
-        submenu.addItem(NSMenuItem.separator())
-
-        // Contact Size Filter section
-        let contactSizeItem = createAdvancedMenuItem(
-            title: "Filter Large Contacts",
-            isOn: preferences.contactSizeFilterEnabled,
-            action: #selector(toggleContactSizeFilter)
-        )
-        submenu.addItem(contactSizeItem)
-
-        // Contact size threshold options (only shown when enabled)
-        if preferences.contactSizeFilterEnabled {
-            let thresholds: [(String, Double)] = [
-                ("Strict (1.0)", 1.0),
-                ("Normal (1.5)", 1.5),
-                ("Lenient (2.0)", 2.0),
-            ]
-
-            for (title, value) in thresholds {
-                let thresholdItem = NSMenuItem(
-                    title: "    \(title)", action: #selector(setContactSizeThreshold(_:)),
-                    keyEquivalent: "")
-                thresholdItem.target = self
-                thresholdItem.representedObject = value
-                if abs(preferences.maxContactSize - value) < 0.01 {
-                    thresholdItem.state = .on
-                }
-                submenu.addItem(thresholdItem)
             }
         }
 
@@ -550,6 +541,16 @@ public class MenuBarController: NSObject {
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
+    @objc func showTouchDebugWindow() {
+        guard let multitouchManager else { return }
+
+        if touchDebugWindowController == nil {
+            touchDebugWindowController = TouchDebugWindowController(
+                multitouchManager: multitouchManager)
+        }
+        touchDebugWindowController?.show()
+    }
+
     @objc func configureSystemGestures() {
         // Check if settings are already optimal
         if !SystemGestureHelper.hasConflictingSettings() {
@@ -623,29 +624,30 @@ public class MenuBarController: NSObject {
 
     // MARK: - Palm Rejection Actions
 
-    @objc func toggleExclusionZone() {
-        preferences.exclusionZoneEnabled.toggle()
+    @objc func toggleIncidentalFilter() {
+        preferences.incidentalFilterEnabled.toggle()
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.exclusionZoneEnabled = preferences.exclusionZoneEnabled
-        config.exclusionZoneSize = Float(preferences.exclusionZoneSize)
+        config.incidentalFilterEnabled = preferences.incidentalFilterEnabled
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()
         NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
     }
 
-    @objc func setExclusionZoneSize(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Double else { return }
+    @objc func showCalibrationWizard() {
+        guard let multitouchManager else { return }
 
-        preferences.exclusionZoneSize = value
+        // Always start a fresh wizard; a finished or abandoned run should not resume.
+        let wizard = CalibrationWizardController(multitouchManager: multitouchManager)
+        calibrationWizardController = wizard
+        wizard.show()
+    }
 
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.exclusionZoneSize = Float(value)
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    @objc func resetTouchCalibration() {
+        TouchCalibrationStore.shared.reset()
+        multitouchManager?.applyTouchCalibration(.default)
+        flashStatusBarIcon()
     }
 
     @objc func toggleRequireModifierKey() {
@@ -669,31 +671,6 @@ public class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.modifierKeyType = keyType
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
-    @objc func toggleContactSizeFilter() {
-        preferences.contactSizeFilterEnabled.toggle()
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.contactSizeFilterEnabled = preferences.contactSizeFilterEnabled
-        config.maxContactSize = Float(preferences.maxContactSize)
-        multitouchManager?.updateConfiguration(config)
-
-        buildMenu()
-        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
-    }
-
-    @objc func setContactSizeThreshold(_ sender: NSMenuItem) {
-        guard let value = sender.representedObject as? Double else { return }
-
-        preferences.maxContactSize = value
-
-        var config = multitouchManager?.configuration ?? GestureConfiguration()
-        config.maxContactSize = Float(value)
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()
@@ -757,6 +734,28 @@ public class MenuBarController: NSObject {
 
         var config = multitouchManager?.configuration ?? GestureConfiguration()
         config.allowReliftDuringDrag = preferences.allowReliftDuringDrag
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func togglePreserveModifierKeysDuringDrag() {
+        preferences.preserveModifierKeysDuringDrag.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.preserveModifierKeysDuringDrag = preferences.preserveModifierKeysDuringDrag
+        multitouchManager?.updateConfiguration(config)
+
+        buildMenu()
+        NotificationCenter.default.post(name: .preferencesChanged, object: preferences)
+    }
+
+    @objc func toggleAllowLeftClickDuringDrag() {
+        preferences.allowLeftClickDuringDrag.toggle()
+
+        var config = multitouchManager?.configuration ?? GestureConfiguration()
+        config.allowLeftClickDuringDrag = preferences.allowLeftClickDuringDrag
         multitouchManager?.updateConfiguration(config)
 
         buildMenu()
