@@ -52,11 +52,24 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Currently unused for suppression but tracks the drag state precisely
     private(set) var isActivelyDragging = false
 
+    /// Protects isRealLeftButtonDown/isSustainingDragForLeftClick below: written
+    /// and read from processEvent (event tap callback, main thread) AND from
+    /// the GestureRecognizerDelegate callbacks (gestureQueue) - a genuine
+    /// cross-thread race without this, including a check-then-act race on
+    /// isSustainingDragForLeftClick between processEvent's left-mouse-up
+    /// handler and gestureRecognizerDidBeginDragging (see
+    /// claimSustainingDragForLeftClick()).
+    private let leftClickSustainLock = NSLock()
+
     /// Real (non-synthetic) left mouse button physical state, tracked only while
     /// allowLeftClickDuringDrag is enabled. Lets a middle-drag sustain across a
     /// full three-finger lift as long as the user keeps a real left click held
     /// (e.g. repeatedly re-gripping the trackpad to keep rotating a CAD view).
-    private var isRealLeftButtonDown = false
+    private var _isRealLeftButtonDown = false
+    private var isRealLeftButtonDown: Bool {
+        get { leftClickSustainLock.withLock { _isRealLeftButtonDown } }
+        set { leftClickSustainLock.withLock { _isRealLeftButtonDown = newValue } }
+    }
 
     /// True while a middle-drag is being kept alive (button conceptually still
     /// held in MouseEventGenerator) with no fingers on the trackpad, because
@@ -65,7 +78,26 @@ public final class MultitouchManager: @unchecked Sendable {
     /// generator's internal button state is preserved, so the rest of the
     /// system stays fully responsive. Cleared when the drag resumes or the
     /// left button is released.
-    private(set) var isSustainingDragForLeftClick = false
+    private var _isSustainingDragForLeftClick = false
+    private(set) var isSustainingDragForLeftClick: Bool {
+        get { leftClickSustainLock.withLock { _isSustainingDragForLeftClick } }
+        set { leftClickSustainLock.withLock { _isSustainingDragForLeftClick = newValue } }
+    }
+
+    /// Atomically checks whether a sustain is in progress and, if so, claims
+    /// (clears) it as part of the same critical section. Using this instead of
+    /// `if isSustainingDragForLeftClick { isSustainingDragForLeftClick = false }`
+    /// prevents processEvent's left-mouse-up handler (main thread) and
+    /// gestureRecognizerDidBeginDragging (gestureQueue) from both observing
+    /// `true` and double-handling the same sustained hold - one ending the
+    /// drag while the other simultaneously tries to resume it.
+    private func claimSustainingDragForLeftClick() -> Bool {
+        leftClickSustainLock.withLock {
+            guard _isSustainingDragForLeftClick else { return false }
+            _isSustainingDragForLeftClick = false
+            return true
+        }
+    }
 
     // Timestamp when gesture ended (for delayed event suppression)
     private var gestureEndTime: Double = 0
@@ -915,8 +947,7 @@ public final class MultitouchManager: @unchecked Sendable {
                 isRealLeftButtonDown = true
             } else if type == .leftMouseUp {
                 isRealLeftButtonDown = false
-                if isSustainingDragForLeftClick {
-                    isSustainingDragForLeftClick = false
+                if claimSustainingDragForLeftClick() {
                     isActivelyDragging = false
                     gestureEndTime = now
                     lastGestureWasActive = true
@@ -1276,12 +1307,11 @@ extension MultitouchManager: GestureRecognizerDelegate {
             self?.isActivelyDragging = true
         }
 
-        if isSustainingDragForLeftClick {
+        if claimSustainingDragForLeftClick() {
             // The middle button was never released after the last three-finger
             // lift (see gestureRecognizerDidEndDragging) - resume in place rather
             // than pressing it down again, which would look like a fresh drag to
             // the target app and cancel the in-progress CAD rotation.
-            isSustainingDragForLeftClick = false
             mouseGenerator.resumeDragKeepingButtonHeld()
             return
         }
