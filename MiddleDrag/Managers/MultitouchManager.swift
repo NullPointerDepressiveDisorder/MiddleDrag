@@ -50,7 +50,32 @@ public final class MultitouchManager: @unchecked Sendable {
 
     /// Whether actively dragging (more restrictive than isInThreeFingerGesture)
     /// Currently unused for suppression but tracks the drag state precisely
-    private(set) var isActivelyDragging = false
+    private(set) var isActivelyDragging = false {
+        didSet {
+            // Only intercept scroll events while we're actually middle-dragging.
+            // macOS emits scroll-wheel events during three-finger movement, which apps like
+            // Fusion (scroll = zoom) turn into zoom on top of our middle-drag pan.
+            if oldValue != isActivelyDragging {
+                if let tap = zoomEventTap {
+                    if isActivelyDragging {
+                        CGEvent.tapEnable(tap: tap, enable: true)
+                    } else {
+                        // Keep blocking briefly so trailing momentum scroll can't zoom
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+                            guard let self, !self.isActivelyDragging, let tap = self.zoomEventTap else { return }
+                            CGEvent.tapEnable(tap: tap, enable: false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Separate tap for scroll events, disabled except during an active drag.
+    // Kept separate (and off by default) because always-on gesture taps can stall
+    // Mission Control / system gestures.
+    private var zoomEventTap: CFMachPort?
+    private var zoomRunLoopSource: CFRunLoopSource?
 
     // Timestamp when gesture ended (for delayed event suppression)
     private var gestureEndTime: Double = 0
@@ -591,6 +616,10 @@ public final class MultitouchManager: @unchecked Sendable {
         if !isEnabled {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
+            // Clear drag state so the zoom/scroll tap (gated on isActivelyDragging)
+            // turns off. Otherwise disabling mid-drag leaves it swallowing scroll system-wide.
+            isActivelyDragging = false
+            isInThreeFingerGesture = false
             currentFingerCount = 0  // Reset finger count when disabled
             lastGestureWasActive = false
             gestureEndTime = 0
@@ -685,10 +714,83 @@ public final class MultitouchManager: @unchecked Sendable {
         }
 
         CGEvent.tapEnable(tap: tap, enable: true)
+        setupZoomEventTap()
         return true
     }
 
+    /// Event types blocked during an active middle-drag: 22 = scroll wheel only.
+    /// macOS keeps emitting scroll-wheel events while three fingers move on the trackpad;
+    /// apps where scroll = zoom (Fusion's node editor and viewers) then zoom during the pan.
+    /// Gesture types (29-32) are deliberately NOT included: even registering a tap for them
+    /// stalls system swipes (Mission Control, swipe between full-screen apps).
+    private static let zoomEventTypes: [UInt32] = [22]
+
+    private func setupZoomEventTap() {
+        var mask: CGEventMask = 0
+        for t in Self.zoomEventTypes { mask |= (CGEventMask(1) << CGEventMask(t)) }
+
+        let refcon = unsafe Unmanaged.passUnretained(self).toOpaque()
+        guard
+            let tap = unsafe CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: .defaultTap,
+                eventsOfInterest: mask,
+                callback: { (_, type, event, refcon) -> Unmanaged<CGEvent>? in
+                    guard let refcon = unsafe refcon else {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    let manager = unsafe Unmanaged<MultitouchManager>.fromOpaque(refcon)
+                        .takeUnretainedValue()
+                    // Timeout/user-input disables: leave it off; didSet re-enables on next drag
+                    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    // Never interfere once MiddleDrag is disabled
+                    guard manager.isEnabled else {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    // 4+ fingers = system gesture (Mission Control, App Exposé, Spaces).
+                    // currentFingerCount is updated synchronously on the touch thread, so this
+                    // protects the gesture even before the async drag-cancel clears
+                    // isActivelyDragging on main.
+                    if manager.currentFingerCount >= 4 {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    // Also catch trailing (momentum) scroll right after a drag ends
+                    let justEnded = manager.lastGestureWasActive
+                        && CACurrentMediaTime() - manager.gestureEndTime < 0.4
+                    guard manager.isActivelyDragging || justEnded else {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    return nil  // swallow scroll during middle-drag
+                },
+                userInfo: unsafe refcon
+            )
+        else {
+            Log.warning("Could not create zoom event tap", category: .device)
+            return
+        }
+
+        zoomEventTap = tap
+        zoomRunLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        if let source = zoomRunLoopSource {
+            CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        CGEvent.tapEnable(tap: tap, enable: false)  // off until a drag starts
+    }
+
     private func teardownEventTap() {
+        if let tap = zoomEventTap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+            CFMachPortInvalidate(tap)
+        }
+        if let source = zoomRunLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        zoomEventTap = nil
+        zoomRunLoopSource = nil
+
         if let tap = eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
             CFMachPortInvalidate(tap)
@@ -805,6 +907,16 @@ public final class MultitouchManager: @unchecked Sendable {
         gestureRecognizer.configuration = configuration
         mouseGenerator.smoothingFactor = configuration.smoothingFactor
         mouseGenerator.minimumMovementThreshold = CGFloat(configuration.minimumMovementThreshold)
+        if configuration.requireModifierKey {
+            switch configuration.modifierKeyType {
+            case .shift: mouseGenerator.modifierFlagsToStrip = .maskShift
+            case .control: mouseGenerator.modifierFlagsToStrip = .maskControl
+            case .option: mouseGenerator.modifierFlagsToStrip = .maskAlternate
+            case .command: mouseGenerator.modifierFlagsToStrip = .maskCommand
+            }
+        } else {
+            mouseGenerator.modifierFlagsToStrip = []
+        }
     }
 
     /// Thread-safe check if cursor is over desktop (no window underneath)
