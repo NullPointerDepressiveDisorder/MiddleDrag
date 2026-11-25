@@ -52,7 +52,7 @@ public final class MultitouchManager: @unchecked Sendable {
     /// Currently unused for suppression but tracks the drag state precisely
     private(set) var isActivelyDragging = false {
         didSet {
-            // Only intercept scroll/zoom/gesture events while we're actually middle-dragging.
+            // Only intercept scroll events while we're actually middle-dragging.
             // macOS emits scroll-wheel events during three-finger movement, which apps like
             // Fusion (scroll = zoom) turn into zoom on top of our middle-drag pan.
             if oldValue != isActivelyDragging {
@@ -71,7 +71,7 @@ public final class MultitouchManager: @unchecked Sendable {
         }
     }
 
-    // Separate tap for scroll/zoom/gesture events, disabled except during an active drag.
+    // Separate tap for scroll events, disabled except during an active drag.
     // Kept separate (and off by default) because always-on gesture taps can stall
     // Mission Control / system gestures.
     private var zoomEventTap: CFMachPort?
@@ -718,16 +718,12 @@ public final class MultitouchManager: @unchecked Sendable {
         return true
     }
 
-    /// Event types blocked during an active middle-drag:
-    /// 18 = rotate, 22 = scroll wheel, 29 = gesture (raw trackpad/HID sub-events),
-    /// 30 = magnify, 32 = smart magnify.
+    /// Event types blocked during an active middle-drag: 22 = scroll wheel only.
     /// macOS keeps emitting scroll-wheel events while three fingers move on the trackpad;
     /// apps where scroll = zoom (Fusion's node editor and viewers) then zoom during the pan.
-    private static let zoomEventTypes: [UInt32] = [18, 22, 29, 30, 32]
-    /// Private CGEventField carrying the IOHIDEventType of a type-29 gesture event
-    private static let gestureHIDTypeField = CGEventField(rawValue: 110)
-    /// IOHIDEventType for scroll
-    private static let hidScrollEventType: Int64 = 6
+    /// Gesture types (29-32) are deliberately NOT included: even registering a tap for them
+    /// stalls system swipes (Mission Control, swipe between full-screen apps).
+    private static let zoomEventTypes: [UInt32] = [22]
 
     private func setupZoomEventTap() {
         var mask: CGEventMask = 0
@@ -767,19 +763,7 @@ public final class MultitouchManager: @unchecked Sendable {
                     guard manager.isActivelyDragging || justEnded else {
                         return unsafe Unmanaged.passUnretained(event)
                     }
-                    if type.rawValue == 29 {
-                        // Only drop the scroll sub-events (IOHIDEventType 6) macOS emits during a
-                        // 3-finger drag. Dock swipes (Mission Control / App Exposé, HID 23),
-                        // touch begin/end and everything else always pass through.
-                        guard manager.isActivelyDragging,
-                            let field = MultitouchManager.gestureHIDTypeField,
-                            event.getIntegerValueField(field) == MultitouchManager.hidScrollEventType
-                        else {
-                            return unsafe Unmanaged.passUnretained(event)
-                        }
-                        return nil
-                    }
-                    return nil  // swallow scroll / magnify / rotate during middle-drag
+                    return nil  // swallow scroll during middle-drag
                 },
                 userInfo: unsafe refcon
             )
