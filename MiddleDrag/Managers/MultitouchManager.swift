@@ -616,6 +616,10 @@ public final class MultitouchManager: @unchecked Sendable {
         if !isEnabled {
             mouseGenerator.cancelDrag()
             gestureRecognizer.reset()
+            // Clear drag state so the zoom/scroll tap (gated on isActivelyDragging)
+            // turns off. Otherwise disabling mid-drag leaves it swallowing scroll system-wide.
+            isActivelyDragging = false
+            isInThreeFingerGesture = false
             currentFingerCount = 0  // Reset finger count when disabled
             lastGestureWasActive = false
             gestureEndTime = 0
@@ -720,6 +724,10 @@ public final class MultitouchManager: @unchecked Sendable {
     /// macOS keeps emitting scroll-wheel events while three fingers move on the trackpad;
     /// apps where scroll = zoom (Fusion's node editor and viewers) then zoom during the pan.
     private static let zoomEventTypes: [UInt32] = [18, 22, 29, 30, 32]
+    /// Private CGEventField carrying the IOHIDEventType of a type-29 gesture event
+    private static let gestureHIDTypeField = CGEventField(rawValue: 110)
+    /// IOHIDEventType for scroll
+    private static let hidScrollEventType: Int64 = 6
 
     private func setupZoomEventTap() {
         var mask: CGEventMask = 0
@@ -742,19 +750,36 @@ public final class MultitouchManager: @unchecked Sendable {
                     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
                         return unsafe Unmanaged.passUnretained(event)
                     }
+                    // Never interfere once MiddleDrag is disabled
+                    guard manager.isEnabled else {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
+                    // 4+ fingers = system gesture (Mission Control, App Exposé, Spaces).
+                    // currentFingerCount is updated synchronously on the touch thread, so this
+                    // protects the gesture even before the async drag-cancel clears
+                    // isActivelyDragging on main.
+                    if manager.currentFingerCount >= 4 {
+                        return unsafe Unmanaged.passUnretained(event)
+                    }
                     // Also catch trailing (momentum) scroll right after a drag ends
                     let justEnded = manager.lastGestureWasActive
                         && CACurrentMediaTime() - manager.gestureEndTime < 0.4
                     guard manager.isActivelyDragging || justEnded else {
                         return unsafe Unmanaged.passUnretained(event)
                     }
-                    if type.rawValue == 29 && !manager.isActivelyDragging {
-                        return unsafe Unmanaged.passUnretained(event)  // fingers lifted: let touch-end through
+                    if type.rawValue == 29 {
+                        // Only drop the scroll sub-events (IOHIDEventType 6) macOS emits during a
+                        // 3-finger drag. Dock swipes (Mission Control / App Exposé, HID 23),
+                        // touch begin/end and everything else always pass through.
+                        guard manager.isActivelyDragging,
+                            let field = MultitouchManager.gestureHIDTypeField,
+                            event.getIntegerValueField(field) == MultitouchManager.hidScrollEventType
+                        else {
+                            return unsafe Unmanaged.passUnretained(event)
+                        }
+                        return nil
                     }
-                    if type.rawValue == 29 && manager.currentFingerCount < 2 {
-                        return unsafe Unmanaged.passUnretained(event)
-                    }
-                    return nil  // swallow scroll / zoom / rotate / gesture during middle-drag
+                    return nil  // swallow scroll / magnify / rotate during middle-drag
                 },
                 userInfo: unsafe refcon
             )
