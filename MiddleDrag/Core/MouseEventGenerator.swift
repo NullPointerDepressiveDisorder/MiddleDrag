@@ -180,6 +180,21 @@ final class MouseEventGenerator: @unchecked Sendable {
         startWatchdog()
     }
 
+    /// Modifier keys the user may need to hold during a middle-drag (e.g. Option+MMB orbit
+    /// in Fusion's 3D viewer, Shift+MMB pan in Blender). Set by MultitouchManager to the
+    /// "require modifier" key, if any, so that activation key isn't leaked into the app.
+    var modifierFlagsToStrip: CGEventFlags = []
+
+    /// Real keyboard modifiers currently held, minus any activation modifier.
+    /// Previously every synthesized event had flags cleared, which made
+    /// modifier + middle-drag combos impossible.
+    var currentModifierFlags: CGEventFlags {
+        let passthrough: CGEventFlags = [.maskShift, .maskControl, .maskAlternate, .maskCommand]
+        return CGEventSource.flagsState(.hidSystemState)
+            .intersection(passthrough)
+            .subtracting(modifierFlagsToStrip)
+    }
+
     /// Magic number to identify our own events (0x4D44 = 'MD')
     private let magicUserData: Int64 = 0x4D44
 
@@ -246,7 +261,7 @@ final class MouseEventGenerator: @unchecked Sendable {
         
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = currentModifierFlags
         event.post(tap: .cghidEventTap)
         
         // Warp the visible cursor to match the accumulated position.
@@ -325,7 +340,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             downEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             downEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             downEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            downEvent.flags = []
+            downEvent.flags = self.currentModifierFlags
 
             // Create mouse up event
             guard
@@ -340,7 +355,7 @@ final class MouseEventGenerator: @unchecked Sendable {
             upEvent.setIntegerValueField(.mouseEventClickState, value: 1)
             upEvent.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             upEvent.setIntegerValueField(.eventSourceUserData, value: self.magicUserData)
-            upEvent.flags = []
+            upEvent.flags = self.currentModifierFlags
 
             // Post events with small delay between them
             self._clickCount += 1
@@ -532,7 +547,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = currentModifierFlags
         event.post(tap: .cghidEventTap)
     }
 
@@ -549,7 +564,7 @@ final class MouseEventGenerator: @unchecked Sendable {
 
         event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
         event.setIntegerValueField(.eventSourceUserData, value: magicUserData)
-        event.flags = []
+        event.flags = currentModifierFlags
         event.post(tap: .cghidEventTap)
     }
     
